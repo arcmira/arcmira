@@ -1,0 +1,28 @@
+{
+  "name": "arcmira",
+  "version": "0.1.2",
+  "description": "Arcmira is an SF-based AI company and the search engine for the spoken web.",
+  "license": "UNLICENSED",
+  "author": "Arcmira",
+  "homepage": "https://arcmira.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcmira/arcmira.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arcmira/arcmira/issues"
+  },
+  "main": "index.js",
+  "files": ["index.js", "README.md", "LICENSE", "llms.txt"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "arcmira",
+    "ai",
+    "podcast monitoring",
+    "transcript",
+    "youtube monitoring",
+    "mcp"
+  ]
+}
