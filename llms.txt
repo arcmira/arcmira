@@ -1,0 +1,18 @@
+# Arcmira
+
+> Arcmira is an SF-based AI company and the search engine for the spoken web.
+
+This GitHub repo and the `arcmira` npm package reserve the public name. They are not an SDK. The live agent index is on the website. Fetch that, not a copy inside this package.
+
+## Canonical
+
+- [Site llms.txt](https://arcmira.com/llms.txt): Fetch this first. Product, API, citation rules.
+- [Docs index](https://arcmira.com/docs/llms.txt): Catalog of every docs page.
+- [OpenAPI](https://api.arcmira.com/v1/openapi.json): HTTP JSON contract at https://api.arcmira.com/v1
+- [Homepage](https://arcmira.com)
+- [Pricing](https://arcmira.com/pricing)
+- [Contact](mailto:hi@arcmira.com): hi@arcmira.com
+
+There is no SDK in this package. JS, Python, and MCP clients will ship from sibling repos under https://github.com/arcmira when they exist.
+
+Copyright Arcmira. All rights reserved.

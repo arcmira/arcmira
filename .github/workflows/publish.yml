@@ -1,0 +1,44 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install npm CLI 11.19.0
+        run: npm install -g npm@11.19.0
+
+      # setup-node writes an empty _authToken when NODE_AUTH_TOKEN is unset,
+      # which blocks the OIDC exchange trusted publishing needs.
+      - name: Remove empty setup-node auth token
+        run: |
+          cfg="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "$cfg" ]; then
+            sed -i '/_authToken/d' "$cfg"
+          fi
+
+      - name: Publish if this version is new
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "arcmira@${version}" version >/dev/null 2>&1; then
+            echo "arcmira@${version} is already on the registry. Skipping publish."
+            exit 0
+          fi
+          npm publish --access public
