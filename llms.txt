@@ -9,10 +9,13 @@ This GitHub repo and the `arcmira` npm package reserve the public name. They are
 - [Site llms.txt](https://arcmira.com/llms.txt): Fetch this first. Product, API, citation rules.
 - [Docs index](https://arcmira.com/docs/llms.txt): Catalog of every docs page.
 - [OpenAPI](https://api.arcmira.com/v1/openapi.json): HTTP JSON contract at https://api.arcmira.com/v1
+- [MCP server](https://github.com/arcmira/mcp): Remote MCP server at https://mcp.arcmira.com/mcp.
+- [Arcmira MCP](https://arcmira.com/mcp): What the MCP server does.
+- [Connect your AI](https://arcmira.com/agent-setup): Setup for each MCP host.
 - [Homepage](https://arcmira.com)
 - [Pricing](https://arcmira.com/pricing)
 - [Contact](mailto:hi@arcmira.com): hi@arcmira.com
 
-There is no SDK in this package. JS, Python, and MCP clients will ship from sibling repos under https://github.com/arcmira when they exist.
+There is no SDK in this package. The MCP server ships from https://github.com/arcmira/mcp.
 
 Copyright Arcmira. All rights reserved.
