@@ -2,16 +2,16 @@
 
 import type * as Arcmira from "../index.js";
 
-export interface TranscriptionListResponse {
+export interface TranscriptRequestListResponse {
     /** Your most recent requests, newest first: 20 without a filter, 5 when filtered to one video. */
-    requests: TranscriptionListResponse.Requests.Item[];
+    requests: TranscriptRequestListResponse.Requests.Item[];
 }
 
-export namespace TranscriptionListResponse {
+export namespace TranscriptRequestListResponse {
     export type Requests = Requests.Item[];
 
     export namespace Requests {
-        export interface Item extends Arcmira.TranscriptionRequest {
+        export interface Item extends Arcmira.TranscriptRequest {
             /** Video title for display. Null when unknown. */
             title: string | null;
         }

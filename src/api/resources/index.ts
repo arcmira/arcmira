@@ -29,8 +29,6 @@ export * from "./topics/client/requests/index.js";
 export * as topics from "./topics/index.js";
 export * from "./trackers/client/requests/index.js";
 export * as trackers from "./trackers/index.js";
-export * from "./transcriptions/client/requests/index.js";
-export * as transcriptions from "./transcriptions/index.js";
 export * from "./transcripts/client/requests/index.js";
 export * as transcripts from "./transcripts/index.js";
 export * from "./transcripts/types/index.js";

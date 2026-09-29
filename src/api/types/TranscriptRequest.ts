@@ -2,15 +2,15 @@
 
 import type * as Arcmira from "../index.js";
 
-export interface TranscriptionRequest {
+export interface TranscriptRequest {
     /** Transcription request id (UUID). Null only in the degenerate submit response for a video you already own that has no request history. */
     id: string | null;
     /** YouTube video id (11 characters). */
     videoId: string;
     /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (reserved terminal failure value; failures currently surface as refunded), refunded (terminal failure; the charged rows were returned and the unlock this submission bought was revoked). */
-    status: TranscriptionRequest.Status;
+    status: TranscriptRequest.Status;
     /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses. */
-    stage: TranscriptionRequest.Stage | null;
+    stage: TranscriptRequest.Stage | null;
     quote: Arcmira.TranscriptQuote;
     /** Estimated SECONDS until completion, re-derived from live pipeline telemetry on every poll. Only present while the request is in flight. */
     etaSeconds?: number | undefined;
@@ -26,7 +26,7 @@ export interface TranscriptionRequest {
     completedAt?: string | undefined;
 }
 
-export namespace TranscriptionRequest {
+export namespace TranscriptRequest {
     /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (reserved terminal failure value; failures currently surface as refunded), refunded (terminal failure; the charged rows were returned and the unlock this submission bought was revoked). */
     export const Status = {
         Queued: "queued",

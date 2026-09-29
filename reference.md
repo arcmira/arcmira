@@ -1091,6 +1091,197 @@ await client.transcripts.captions({
 </dl>
 </details>
 
+<details><summary><code>client.transcripts.<a href="/src/api/resources/transcripts/client/Client.ts">listRequests</a>({ ...params }) -> Arcmira.TranscriptRequestListResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Your most recent transcription requests (newest first; 20 without a filter, 5 when filtered to one video). Each entry has the same shape as the status poll plus a `title` field (the video title, null when unknown). Up to 5 in-flight rows are reconciled against live pipeline state per list call, and in-flight entries carry `etaSeconds` + `nextPollSeconds`.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```typescript
+await client.transcripts.listRequests();
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**request:** `Arcmira.ListRequestsTranscriptsRequest` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**requestOptions:** `TranscriptsClient.RequestOptions` 
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.transcripts.<a href="/src/api/resources/transcripts/client/Client.ts">request</a>({ ...params }) -> Arcmira.TranscriptRequestSubmitResponse</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Paid tiers only. Rows are debited up front (75 rows per 15-minute block, minimum one) and the permanent per-video unlock is granted at submit time, so the transcript GET auto-unlocks when the pipeline finishes. If a PREMIUM transcript already exists the request short-circuits to `complete`; a video with only a preliminary analysis does NOT short-circuit: the premium generation actually runs. An unlock purchased earlier makes this request free (rows_charged 0). An in-flight request for the same video is returned as-is (`existing: true`). Responses include `etaSeconds` + `nextPollSeconds` and a Retry-After header while in flight; poll GET /v1/transcriptions/{id} on that cadence. User requests ride a reserved pipeline fast lane. Terminal pipeline failure auto-refunds the rows and revokes the unlock.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```typescript
+await client.transcripts.request();
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**request:** `Arcmira.RequestTranscriptsRequest` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**requestOptions:** `TranscriptsClient.RequestOptions` 
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.transcripts.<a href="/src/api/resources/transcripts/client/Client.ts">status</a>({ ...params }) -> Arcmira.TranscriptRequest</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Agent-friendly polling contract: while the request is in flight the response carries a Retry-After header (seconds) and body fields `etaSeconds` + `nextPollSeconds`. Sleep on Retry-After and re-poll. `status` walks queued → downloading → transcribing → analyzing → complete (user-facing `stage` folds downloading into transcribing). Terminal statuses (`complete`, `failed`, `refunded`) drop Retry-After. On `complete`, fetch the transcript via GET /v1/transcripts/{video_id}; the unlock was granted at submission. `refunded` means the pipeline failed and the rows were returned. A caller with no account holds no jobs: it is refused with 401 job_requires_account, whose unlock points at sign-up.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```typescript
+await client.transcripts.status({
+    id: "id"
+});
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**request:** `Arcmira.StatusTranscriptsRequest` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**requestOptions:** `TranscriptsClient.RequestOptions` 
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 ## channels
 <details><summary><code>client.channels.<a href="/src/api/resources/channels/client/Client.ts">coverage</a>({ ...params }) -> Arcmira.ChannelCoverageResponse</code></summary>
 <dl>
@@ -2098,198 +2289,6 @@ await client.team.spend();
 <dd>
 
 **requestOptions:** `TeamClient.RequestOptions` 
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-## transcriptions
-<details><summary><code>client.transcriptions.<a href="/src/api/resources/transcriptions/client/Client.ts">list</a>({ ...params }) -> Arcmira.TranscriptionListResponse</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Your most recent transcription requests (newest first; 20 without a filter, 5 when filtered to one video). Each entry has the same shape as the status poll plus a `title` field (the video title, null when unknown). Up to 5 in-flight rows are reconciled against live pipeline state per list call, and in-flight entries carry `etaSeconds` + `nextPollSeconds`.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```typescript
-await client.transcriptions.list();
-
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**request:** `Arcmira.ListTranscriptionsRequest` 
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**requestOptions:** `TranscriptionsClient.RequestOptions` 
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.transcriptions.<a href="/src/api/resources/transcriptions/client/Client.ts">submit</a>({ ...params }) -> Arcmira.TranscriptionSubmitResponse</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Paid tiers only. Rows are debited up front (75 rows per 15-minute block, minimum one) and the permanent per-video unlock is granted at submit time, so the transcript GET auto-unlocks when the pipeline finishes. If a PREMIUM transcript already exists the request short-circuits to `complete`; a video with only a preliminary analysis does NOT short-circuit: the premium generation actually runs. An unlock purchased earlier makes this request free (rows_charged 0). An in-flight request for the same video is returned as-is (`existing: true`). Responses include `etaSeconds` + `nextPollSeconds` and a Retry-After header while in flight; poll GET /v1/transcriptions/{id} on that cadence. User requests ride a reserved pipeline fast lane. Terminal pipeline failure auto-refunds the rows and revokes the unlock.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```typescript
-await client.transcriptions.submit();
-
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**request:** `Arcmira.SubmitTranscriptionsRequest` 
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**requestOptions:** `TranscriptionsClient.RequestOptions` 
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.transcriptions.<a href="/src/api/resources/transcriptions/client/Client.ts">get</a>({ ...params }) -> Arcmira.TranscriptionRequest</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Agent-friendly polling contract: while the request is in flight the response carries a Retry-After header (seconds) and body fields `etaSeconds` + `nextPollSeconds`. Sleep on Retry-After and re-poll. `status` walks queued → downloading → transcribing → analyzing → complete (user-facing `stage` folds downloading into transcribing). Terminal statuses (`complete`, `failed`, `refunded`) drop Retry-After. On `complete`, fetch the transcript via GET /v1/transcripts/{video_id}; the unlock was granted at submission. `refunded` means the pipeline failed and the rows were returned. A caller with no account holds no jobs: it is refused with 401 job_requires_account, whose unlock points at sign-up.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```typescript
-await client.transcriptions.get({
-    id: "id"
-});
-
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**request:** `Arcmira.GetTranscriptionsRequest` 
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**requestOptions:** `TranscriptionsClient.RequestOptions` 
     
 </dd>
 </dl>

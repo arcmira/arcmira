@@ -4,7 +4,7 @@
  * @example
  *     {}
  */
-export interface ListTranscriptionsRequest {
+export interface ListRequestsTranscriptsRequest {
     /** Filter to your requests for one video. */
     video_id?: string;
 }

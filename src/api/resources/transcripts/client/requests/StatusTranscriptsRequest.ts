@@ -6,7 +6,7 @@
  *         id: "id"
  *     }
  */
-export interface GetTranscriptionsRequest {
+export interface StatusTranscriptsRequest {
     /** Transcription request id, the UUID POST /v1/transcriptions returned. */
     id: string;
 }

@@ -15,7 +15,6 @@ import { RecommendationsClient } from "./api/resources/recommendations/client/Cl
 import { TeamClient } from "./api/resources/team/client/Client.js";
 import { TopicsClient } from "./api/resources/topics/client/Client.js";
 import { TrackersClient } from "./api/resources/trackers/client/Client.js";
-import { TranscriptionsClient } from "./api/resources/transcriptions/client/Client.js";
 import { TranscriptsClient } from "./api/resources/transcripts/client/Client.js";
 import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "./BaseClient.js";
@@ -44,7 +43,6 @@ export class ArcmiraClient {
     protected _monitors: MonitorsClient | undefined;
     protected _trackers: TrackersClient | undefined;
     protected _team: TeamClient | undefined;
-    protected _transcriptions: TranscriptionsClient | undefined;
     protected _corrections: CorrectionsClient | undefined;
 
     constructor(options: ArcmiraClient.Options = {}) {
@@ -109,10 +107,6 @@ export class ArcmiraClient {
 
     public get team(): TeamClient {
         return (this._team ??= new TeamClient(this._options));
-    }
-
-    public get transcriptions(): TranscriptionsClient {
-        return (this._transcriptions ??= new TranscriptionsClient(this._options));
     }
 
     public get corrections(): CorrectionsClient {

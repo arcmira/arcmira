@@ -231,17 +231,6 @@
       },
       "default": "./dist/cjs/api/resources/team/exports.js"
     },
-    "./transcriptions": {
-      "import": {
-        "types": "./dist/esm/api/resources/transcriptions/exports.d.mts",
-        "default": "./dist/esm/api/resources/transcriptions/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/transcriptions/exports.d.ts",
-        "default": "./dist/cjs/api/resources/transcriptions/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/transcriptions/exports.js"
-    },
     "./corrections": {
       "import": {
         "types": "./dist/esm/api/resources/corrections/exports.d.mts",

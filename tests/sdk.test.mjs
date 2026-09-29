@@ -93,3 +93,14 @@ await new ArcmiraClient({ apiKey: "k", baseUrl: "http://127.0.0.1:${port}", maxR
     assert.equal(stdout.trim(), "ArcmiraError");
     assert.ok(elapsed < 5_000, `exited after ${elapsed} ms; the request timer outlived the failed fetch`);
 });
+
+test("transcript requests live on transcripts: request POSTs, status polls", async () => {
+    assert.equal("transcriptions" in client, false);
+    const order = await client.transcripts.request({ videoId: "dQw4w9WgXcQ", "Idempotency-Key": "order-1" });
+    assert.equal(last().method, "POST");
+    assert.equal(last().path, "/v1/transcriptions");
+    assert.equal(last().headers["idempotency-key"], "order-1");
+    const state = await client.transcripts.status({ id: order.request.id });
+    assert.equal(last().path, `/v1/transcriptions/${order.request.id}`);
+    assert.equal(state.id, order.request.id);
+});

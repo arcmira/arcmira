@@ -46,6 +46,14 @@ try {
 }
 ```
 
+Order a Premium transcript and poll it (paid plans; pass your own idempotency key so a retry cannot order twice):
+
+```ts
+const order = await client.transcripts.request({ videoId: "dQw4w9WgXcQ", "Idempotency-Key": "order-dQw4w9WgXcQ-1" });
+const state = await client.transcripts.status({ id: order.request.id! });
+console.log(state.status, state.nextPollSeconds);
+```
+
 Every method is listed with its request and response types in [reference.md](./reference.md). The same operations, with `curl` samples, are in the [API reference](https://arcmira.com/docs/api-reference).
 
 ### Pagination

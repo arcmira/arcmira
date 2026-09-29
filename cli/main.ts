@@ -588,9 +588,9 @@ const COMMANDS: Record<string, Command> = {
             const videoId = videoIdOf(video);
             const key = str(v["idempotency-key"]) ?? randomUUID();
             if (!v.json) note(`idempotency-key ${key}  (retry with --idempotency-key ${key} to avoid a second charge)`);
-            return client.transcriptions.submit({ "Idempotency-Key": key, videoId });
+            return client.transcripts.request({ "Idempotency-Key": key, videoId });
         },
-        print: ({ request: r, existing }: Arcmira.TranscriptionSubmitResponse) => {
+        print: ({ request: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
             const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left` : "";
             console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}  ${r.quote.rows} rows (${r.quote.quarters} x 15 min)${existing ? "  (already requested)" : ""}`);
             if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
@@ -605,8 +605,8 @@ const COMMANDS: Record<string, Command> = {
         examples: ["arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", "arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60 --json"],
         positionals: "one",
         options: {},
-        run: ({ client, positionals: [id] }) => client.transcriptions.get({ id }),
-        print: (r: Arcmira.TranscriptionRequest) => {
+        run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
+        print: (r: Arcmira.TranscriptRequest) => {
             const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
             console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
             if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
