@@ -420,6 +420,22 @@
       "note": "x"
     }
   },
+  "submit_transcription": {
+    "status": 200,
+    "body": {
+      "request": {
+        "id": "x",
+        "videoId": "x",
+        "status": "queued",
+        "stage": "queued",
+        "quote": {
+          "quarters": 1,
+          "rows": 1
+        },
+        "createdAt": "x"
+      }
+    }
+  },
   "get_transcription": {
     "status": 200,
     "body": {

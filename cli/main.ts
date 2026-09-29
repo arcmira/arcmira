@@ -62,20 +62,24 @@ const GLOBAL: Record<string, OptionSpec> = {
 /** Groups: `arcmira auth <sub>` runs the command named here. */
 const GROUPS: Record<string, Record<string, string>> = {
     auth: { login: "login", logout: "logout", status: "whoami", token: "auth token" },
+    transcripts: { get: "transcripts get", request: "transcripts request", status: "transcripts status" },
 };
+
+/** Short names for commands that live in a group; help lists them as aliases, not commands. */
+const ALIASES: Record<string, string> = { transcript: "transcripts get" };
 
 /** Names held for later versions, each with the way to reach the same endpoints today. */
 const RESERVED: Record<string, string> = {
     monitors: "use `arcmira api GET /v1/monitors` (arcmira schema monitors lists the endpoints)",
     trackers: "use `arcmira api GET /v1/trackers` (arcmira schema trackers lists the endpoints)",
-    transcriptions: "use `arcmira api POST /v1/transcriptions -f video_id=<id>` (arcmira schema transcriptions lists the endpoints)",
     corrections: "use `arcmira api POST /v1/videos/<video_id>/corrections --body @correction.json` (arcmira schema submit_correction)",
     feedback: "use `arcmira api POST /v1/feedback --body @feedback.json` (arcmira schema submit_feedback)",
     keys: "manage keys at https://arcmira.com/dashboard?tab=api-keys",
 };
 
 class UsageError extends Error {
-    constructor(message: string, readonly code = "invalid_usage", readonly hint?: string) {
+    /** oneLine: the message is the whole answer (a pointer elsewhere), so no hint or help line follows it. */
+    constructor(message: string, readonly code = "invalid_usage", readonly hint?: string, readonly oneLine = false) {
         super(message);
     }
 }
@@ -284,7 +288,7 @@ const mask = (key: string) => (key.length < 16 ? "****" : `${/^[a-z]+_[a-z]+_/i.
 
 function schemaFor(target: string | undefined): Operation[] {
     if (!target) return OPERATIONS;
-    const byCommand = COMMANDS[target]?.operations;
+    const byCommand = COMMANDS[ALIASES[target] ?? target]?.operations;
     const found = byCommand
         ? OPERATIONS.filter((op) => byCommand.includes(op.operationId))
         : OPERATIONS.filter((op) => op.operationId === target || op.path.split("/")[2] === target);
@@ -541,12 +545,12 @@ const COMMANDS: Record<string, Command> = {
             note(`indexed through ${day(r.indexed_through)}${r.index_age_days != null ? ` (${r.index_age_days} days ago)` : ""}`);
         },
     },
-    transcript: {
+    "transcripts get": {
         section: "data",
         operations: ["get_transcript"],
         summary: "Full transcript of one YouTube video from its URL or id.",
-        usage: "transcript <video-url-or-id> [--quality captions|premium] [--language de,en] [--paragraphs] [--start S --end S]",
-        examples: ["arcmira transcript https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120", "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'"],
+        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--language de,en] [--paragraphs] [--start S --end S]",
+        examples: ["arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120", "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'"],
         positionals: "one",
         options: {
             quality: { type: "string", oneOf: ["captions", "premium"], help: "captions (default) or premium (Arcmira's diarized transcript, paid plans)." },
@@ -570,6 +574,42 @@ const COMMANDS: Record<string, Command> = {
             for (const line of r.lines ?? []) console.log(`[${seconds(line.start)}] ${who(line.speaker)}${line.text}`);
             for (const p of r.paragraphs ?? []) console.log(`${who(p.speaker)}${p.text}\n`);
             note(`${r.video.title || r.video.id}  ${r.quality}  ${r.language}  rows billed ${r.rows_billed}`);
+        },
+    },
+    "transcripts request": {
+        section: "data",
+        operations: ["submit_transcription"],
+        summary: "Order a Premium transcript of one video. Paid plans; rows are charged up front and refunded on failure.",
+        usage: "transcripts request <video-url-or-id> [--idempotency-key KEY]",
+        examples: ["arcmira transcripts request https://www.youtube.com/watch?v=CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --idempotency-key order-CusJwCsDHHM-1 --json"],
+        positionals: "one",
+        options: { "idempotency-key": { type: "string", help: "Key that makes a retry return the first answer instead of ordering again. Default: a new UUID, printed on stderr (not with --json; scripts pass their own)." } },
+        run: async ({ client, positionals: [video], values: v }) => {
+            const videoId = videoIdOf(video);
+            const key = str(v["idempotency-key"]) ?? randomUUID();
+            if (!v.json) note(`idempotency-key ${key}  (retry with --idempotency-key ${key} to avoid a second charge)`);
+            return client.transcriptions.submit({ "Idempotency-Key": key, videoId });
+        },
+        print: ({ request: r, existing }: Arcmira.TranscriptionSubmitResponse) => {
+            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left` : "";
+            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}  ${r.quote.rows} rows (${r.quote.quarters} x 15 min)${existing ? "  (already requested)" : ""}`);
+            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
+            else if (r.id) note(`poll: arcmira transcripts status ${r.id}`);
+        },
+    },
+    "transcripts status": {
+        section: "data",
+        operations: ["get_transcription"],
+        summary: "The state of a transcript request: queued, transcribing, analyzing, complete or refunded.",
+        usage: "transcripts status <request-id>",
+        examples: ["arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", "arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60 --json"],
+        positionals: "one",
+        options: {},
+        run: ({ client, positionals: [id] }) => client.transcriptions.get({ id }),
+        print: (r: Arcmira.TranscriptionRequest) => {
+            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
+            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
+            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
         },
     },
     occurrences: {
@@ -615,15 +655,14 @@ const COMMANDS: Record<string, Command> = {
     },
     status: {
         section: "data",
-        operations: ["get_me", "get_channel_coverage", "get_transcription"],
-        summary: "Your key and plan; what the index holds for a channel; or the state of a transcription job.",
-        usage: "status [UC...|@handle|name | job-id]",
+        operations: ["get_me", "get_channel_coverage"],
+        summary: "Your key and plan, or what the index holds for a channel.",
+        usage: "status [UC...|@handle|name]",
         examples: ["arcmira status", "arcmira status UC-DRzaGnL_vtBUpCFH5M0tg"],
         positionals: "optional",
         options: {},
         run: async ({ client, positionals: [id] }) => {
             if (!id) return client.me.get();
-            if (UUID.test(id)) return client.transcriptions.get({ id });
             return client.channels.coverage({ channel_id: await channelId(client, id) });
         },
         print: (r: any) => {
@@ -632,11 +671,8 @@ const COMMANDS: Record<string, Command> = {
                 console.log(`${c.youtube_channel_id}: ${c.searchable_videos} searchable videos, indexed through ${day(c.indexed_through)}`);
                 return note(r.note);
             }
-            if (r.tier) {
-                const me = r as Arcmira.MeResponse;
-                return console.log(`plan ${me.tier}  rows used ${me.usage.rows_used}  remaining ${me.usage.rows_remaining}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
-            }
-            console.log(JSON.stringify(r));
+            const me = r as Arcmira.MeResponse;
+            console.log(`plan ${me.tier}  rows used ${me.usage.rows_used}  remaining ${me.usage.rows_remaining}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
         },
     },
     login: {
@@ -737,11 +773,11 @@ const COMMANDS: Record<string, Command> = {
         section: "any",
         summary: "Method, path, parameters and body fields of a command or endpoint, from the OpenAPI bundled in this version.",
         usage: "schema [command|operationId|path group]",
-        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema create_monitor", "arcmira schema monitors --json"],
-        positionals: "optional",
+        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema transcripts request", "arcmira schema create_monitor", "arcmira schema monitors --json"],
+        positionals: "any",
         needsKey: false,
         options: {},
-        run: async ({ positionals: [target] }) => schemaFor(target),
+        run: async ({ positionals }) => schemaFor(positionals.join(" ") || undefined),
         print: printSchema,
     },
     docs: {
@@ -786,6 +822,8 @@ function closest(input: string, candidates: string[]): string | undefined {
 const optionLine = (key: string, spec: OptionSpec, width: number) =>
     `  --${key}${spec.short ? `, -${spec.short}` : ""}${spec.type === "string" ? " <value>" : ""}${spec.multiple ? " (repeatable)" : ""}`.padEnd(width) + spec.help;
 
+const COLUMN = Math.max(...Object.keys(COMMANDS).map((key) => key.length)) + 2;
+
 function help(name?: string): string {
     const lines: string[] = [];
     if (name && COMMANDS[name]) {
@@ -793,12 +831,15 @@ function help(name?: string): string {
         lines.push(`arcmira ${c.usage}`, "", c.summary, "", "Options:");
         for (const [key, spec] of Object.entries({ ...c.options, ...GLOBAL })) if (!spec.reserved) lines.push(optionLine(key, spec, 40));
         lines.push("", "Examples:", ...c.examples.map((e) => `  ${e}`));
-        if (c.operations) lines.push("", `Endpoint: arcmira schema ${name.split(" ").pop()}`);
+        const alias = Object.keys(ALIASES).find((a) => ALIASES[a] === name);
+        if (alias) lines.push("", `Alias: arcmira ${alias}`);
+        if (c.operations) lines.push("", `Endpoint: arcmira schema ${name}`);
         return lines.join("\n");
     }
     if (name && GROUPS[name]) {
         lines.push(`arcmira ${name} <${Object.keys(GROUPS[name]).join("|")}> [options]`, "", "Commands:");
-        for (const [sub, target] of Object.entries(GROUPS[name])) lines.push(`  ${name} ${sub}`.padEnd(19) + (target === `${name} ${sub}` ? COMMANDS[target].summary : `Same as arcmira ${target}.`));
+        for (const [sub, target] of Object.entries(GROUPS[name])) lines.push(`  ${name} ${sub}`.padEnd(COLUMN + 2) + (target === `${name} ${sub}` ? COMMANDS[target].summary : `Same as arcmira ${target}.`));
+        for (const [alias, target] of Object.entries(ALIASES)) if (target.startsWith(`${name} `)) lines.push("", `Alias: arcmira ${alias} is arcmira ${target}.`);
         lines.push("", `Each command: arcmira ${name} <command> --help`);
         return lines.join("\n");
     }
@@ -806,9 +847,10 @@ function help(name?: string): string {
     lines.push("arcmira <command> [options]", "", "Search the spoken web from the command line.");
     for (const [section, title] of sections) {
         lines.push("", title);
-        for (const [key, c] of Object.entries(COMMANDS)) if (c.section === section) lines.push(`  ${key.padEnd(17)}${c.summary}`);
-        if (section === "account") lines.push(`  ${"auth".padEnd(17)}auth login, auth logout and auth status are login, logout and whoami.`);
+        for (const [key, c] of Object.entries(COMMANDS)) if (c.section === section) lines.push(`  ${key.padEnd(COLUMN)}${c.summary}`);
+        if (section === "account") lines.push(`  ${"auth".padEnd(COLUMN)}auth login, auth logout and auth status are login, logout and whoami.`);
     }
+    lines.push("", `Aliases: ${Object.entries(ALIASES).map(([alias, target]) => `${alias} is ${target}`).join(", ")}.`);
     lines.push("", `Not available yet, use arcmira api: ${Object.keys(RESERVED).join(", ")}.`, "", "Global options:");
     for (const [key, spec] of Object.entries(GLOBAL)) if (!spec.reserved) lines.push(optionLine(key, spec, 24));
     const reserved = Object.entries(GLOBAL).filter(([, spec]) => spec.reserved).map(([key, spec]) => `--${key}${spec.short ? `/-${spec.short}` : ""}`);
@@ -852,7 +894,11 @@ function validate(name: string, command: Command, values: Values, positionals: s
     }
     for (const key of ["entity", "channel"] as const) if (key in command.options) for (const value of many(values[key])) checkIdShape(value, key);
     if (name === "momentum" || name === "recommendations") for (const p of positionals) checkIdShape(p, "entity");
-    if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0] && !UUID.test(positionals[0]))) checkIdShape(positionals[0], "channel");
+    if (name === "status" && positionals[0] && UUID.test(positionals[0])) {
+        throw new UsageError(`transcript requests moved: arcmira transcripts status ${positionals[0]}`, "command_moved", undefined, true);
+    }
+    if (name === "transcripts status" && !UUID.test(positionals[0])) throw new UsageError(`"${positionals[0]}" is not a request id (the UUID transcripts request printed)`, "invalid_request_id");
+    if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0])) checkIdShape(positionals[0], "channel");
 }
 
 function parse(name: string | undefined, argv: string[]) {
@@ -873,8 +919,8 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
     if (error instanceof UsageError) {
         const hint = error.hint ? (error.hint.startsWith("--") ? `did you mean ${error.hint}?` : error.hint.startsWith("arcmira") ? `try: ${error.hint}` : `did you mean ${error.hint}?`) : undefined;
         const more = `run: arcmira ${name && COMMANDS[name] ? `${name} ` : ""}--help`;
-        if (json) console.error(JSON.stringify({ error: { type: "usage_error", code: error.code, message: error.message, hint: hint ?? more } }));
-        else console.error(`error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
+        if (json) console.error(JSON.stringify({ error: { type: "usage_error", code: error.code, message: error.message, ...(error.oneLine ? {} : { hint: hint ?? more }) } }));
+        else console.error(error.oneLine ? error.message : `error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
         return 2;
     }
     if (error instanceof ArcmiraError && error.statusCode === undefined) {
@@ -906,12 +952,13 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
 }
 
 const GLOBAL_WITH_VALUE = Object.entries(GLOBAL).filter(([, spec]) => spec.type === "string").map(([key]) => `--${key}`);
-const TOP_NAMES = [...Object.keys(COMMANDS).filter((key) => !key.includes(" ")), ...Object.keys(GROUPS), ...Object.keys(RESERVED)];
+const TOP_NAMES = [...Object.keys(COMMANDS).filter((key) => !key.includes(" ")), ...Object.keys(GROUPS), ...Object.keys(ALIASES), ...Object.keys(RESERVED)];
 
 /** The command a word (and for a group, the next word) names, and how many words it took. */
 function commandAt(words: string[]): { key: string; depth: number } | { group: string } | undefined {
     const [first, second] = words;
     if (COMMANDS[first] && !first.includes(" ")) return { key: first, depth: 1 };
+    if (ALIASES[first]) return { key: ALIASES[first], depth: 1 };
     if (!GROUPS[first]) return undefined;
     if (!second || second.startsWith("-")) return { group: first };
     if (GROUPS[first][second]) return { key: GROUPS[first][second], depth: 2 };
@@ -929,7 +976,7 @@ async function main(argv: string[]): Promise<number> {
     const json = argv.includes("--json");
     const words = nameAt === -1 ? [] : argv.slice(nameAt);
     if (words[0] === "help") {
-        const target = words[1] && GROUPS[words[1]] && words[2] ? GROUPS[words[1]][words[2]] : words[1];
+        const target = words[1] && GROUPS[words[1]] && words[2] ? GROUPS[words[1]][words[2]] : ALIASES[words[1]] ?? words[1];
         return (console.log(help(target)), 0);
     }
     if (words[0] && RESERVED[words[0]]) return notAvailable(words[0], json);

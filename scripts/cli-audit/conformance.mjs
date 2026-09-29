@@ -23,6 +23,7 @@ const bin = resolve(opts.bin ?? join(root, "dist/cli/main.js"));
 
 const TBPN = "UC-DRzaGnL_vtBUpCFH5M0tg";
 const BIG_VIDEO = "bigBigBig01";
+const JOB = "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60";
 const ENTITIES = {
     ramp: [{ id: "ent_14", name: "Ramp", type: "organization", suggested: true }],
     mercury: [{ id: "ent_20", name: "Mercury", type: "organization", suggested: true }],
@@ -145,10 +146,20 @@ const COMMANDS = {
         typo: [["episodes", TBPN, "--limt", "2"], "--limit"],
         names: [["episodes", "TBPN"], (r) => r.some((q) => q.path === `/v1/channels/${TBPN}/videos`)],
     },
-    transcript: {
-        ok: ["transcript", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
-        bad: [["transcript"], ["transcript", "not a video"], ["transcript", "dQw4w9WgXcQ", "--quality", "best"], ["transcript", "dQw4w9WgXcQ", "--start", "ten"]],
-        typo: [["transcript", "dQw4w9WgXcQ", "--qualty", "premium"], "--quality"],
+    "transcripts get": {
+        ok: ["transcripts", "get", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+        bad: [["transcripts", "get"], ["transcripts", "get", "not a video"], ["transcripts", "get", "dQw4w9WgXcQ", "--quality", "best"], ["transcripts", "get", "dQw4w9WgXcQ", "--start", "ten"]],
+        typo: [["transcripts", "get", "dQw4w9WgXcQ", "--qualty", "premium"], "--quality"],
+    },
+    "transcripts request": {
+        ok: ["transcripts", "request", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+        bad: [["transcripts", "request"], ["transcripts", "request", "not a video"], ["transcripts", "request", "dQw4w9WgXcQ", "extra"]],
+        typo: [["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-kye", "k"], "--idempotency-key"],
+    },
+    "transcripts status": {
+        ok: ["transcripts", "status", JOB],
+        bad: [["transcripts", "status"], ["transcripts", "status", "job-1"], ["transcripts", "status", JOB, "extra"]],
+        typo: [["transcripts", "status", JOB, "--jsn"], "--json"],
     },
     occurrences: {
         ok: ["occurrences", "--channel", TBPN, "--type", "topic"],
@@ -193,7 +204,7 @@ const CHECKS = {
 const rows = {};
 for (const [name, spec] of Object.entries(COMMANDS)) {
     const row = (rows[name] = {});
-    const help = await run([name, "--help"]);
+    const help = await run([...name.split(" "), "--help"]);
     row.help_examples = help.code === 0 && /^examples?:/im.test(help.stdout) && new RegExp(`^\\s+(npx )?arcmira ${name}\\b`, "m").test(help.stdout.split(/^examples?:/im)[1] ?? "");
 
     const human = await run(spec.ok);
@@ -271,10 +282,10 @@ g.onboarding = {
         afterSignup.requests[0]?.auth === "Bearer arc_sk_verified_by_ruler",
     rule: "key onboarding from the CLI: email -> code -> saved key (POST /v1/signups and /v1/signups/verify)",
 };
-const big = await run(["transcript", BIG_VIDEO, "--json"]);
+const big = await run(["transcripts", "get", BIG_VIDEO, "--json"]);
 const bigParsed = parses(big.stdout);
 g.pipe_complete = { pass: big.code === 0 && bigParsed?.lines?.length === 20000, rule: `large --json output to a pipe arrives whole (${(big.stdout.length / 1e6).toFixed(1)} MB)` };
-const bigHuman = await run(["transcript", BIG_VIDEO]);
+const bigHuman = await run(["transcripts", "get", BIG_VIDEO]);
 g.pipe_complete_human = { pass: bigHuman.code === 0 && bigHuman.stdout.split("\n").filter((l) => l.startsWith("[")).length === 20000, rule: "large human output to a pipe arrives whole" };
 const multi = await run(["resolve", "Sam", "Altman"]);
 g.multiword = { pass: multi.code === 0 && multi.requests[0]?.query.q === "Sam Altman", rule: "an unquoted multi-word query (resolve Sam Altman) is sent whole, not truncated to its first word" };
@@ -362,7 +373,35 @@ g.api_errors = {
     rule: "api exit codes match the rest of the CLI: non-2xx exits 1 with the API error on stderr",
 };
 
-const RESERVED = ["monitors", "trackers", "transcriptions", "corrections", "feedback", "keys"];
+const alias = await run(["transcript", "dQw4w9WgXcQ"]);
+const aliasFull = await run(["transcripts", "get", "dQw4w9WgXcQ"]);
+const aliasHelp = await run(["help", "transcript"], { key: null });
+const groupBare = await run(["transcripts"], { key: null });
+g.transcripts_group = {
+    pass:
+        alias.code === 0 && alias.stdout === aliasFull.stdout && alias.requests[0]?.path === "/v1/transcripts/dQw4w9WgXcQ" && /arcmira transcripts get/.test(aliasHelp.stdout) &&
+        !/^  transcript /m.test(top.stdout) && /^Aliases: transcript is transcripts get/m.test(top.stdout) && ["get", "request", "status"].every((sub) => new RegExp(`^  transcripts ${sub} `, "m").test(top.stdout)) &&
+        groupBare.code === 0 && /transcripts request/.test(groupBare.stdout) && !/transcriptions/.test(top.stdout),
+    rule: "transcripts get|request|status; transcript is an alias of transcripts get, listed under Aliases, not as a command",
+};
+const order = await run(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ"]);
+const orderKey = order.requests[0]?.headers["idempotency-key"] ?? "";
+const orderOwn = await run(["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-key", "order-1", "--json"]);
+g.transcripts_request = {
+    pass:
+        order.code === 0 && order.requests.length === 1 && order.requests[0].method === "POST" && order.requests[0].path === "/v1/transcriptions" && parses(order.requests[0].body)?.videoId === "dQw4w9WgXcQ" &&
+        /^[0-9a-f-]{36}$/.test(orderKey) && order.stderr.includes(`idempotency-key ${orderKey}`) && new RegExp(`transcripts status ${JOB}`).test(order.stderr) &&
+        orderOwn.code === 0 && orderOwn.requests[0]?.headers["idempotency-key"] === "order-1" && parses(orderOwn.stdout)?.request?.id === JOB,
+    rule: "transcripts request POSTs /v1/transcriptions with videoId and an Idempotency-Key (printed; --idempotency-key sets it), then names the poll command",
+};
+const moved = await run(["status", JOB]);
+const movedJson = await run(["status", JOB, "--json"]);
+g.status_job_moved = {
+    pass: moved.code === 2 && moved.requests.length === 0 && moved.stderr.trim() === `transcript requests moved: arcmira transcripts status ${JOB}` && errorCodeIn(movedJson.stderr) === "command_moved",
+    rule: "status with a request id prints a one-line pointer to transcripts status and exits 2 before any call",
+};
+
+const RESERVED = ["monitors", "trackers", "corrections", "feedback", "keys"];
 const reservedRuns = [];
 for (const name of RESERVED) reservedRuns.push(await run([name, "list"]));
 g.reserved_commands = {
@@ -394,7 +433,7 @@ g.docs = {
     rule: "docs prints the docs address; docs <query> searches the docs site and prints titles and links",
 };
 const readme = readFileSync(join(root, "README.md"), "utf8");
-const treeNames = [...Object.keys(COMMANDS), "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
+const treeNames = [...Object.keys(COMMANDS), "transcript", "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
 g.readme = { pass: /telemetry/i.test(readme) && treeNames.every((n) => readme.includes(`arcmira ${n}`)), rule: "README states the telemetry policy and lists the full command tree" };
 
 const times = [];

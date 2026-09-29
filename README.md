@@ -5,7 +5,7 @@ The official `arcmira` package: a typed client for the [Arcmira API](https://arc
 - Zero runtime dependencies. Uses the global `fetch`, so it runs in Node 18 and later, Cloudflare Workers, Deno, Bun and browsers.
 - ESM and CommonJS builds with types.
 - Every list pages itself. Every error is a typed class carrying the parsed API body.
-- Full API scope: search, transcripts, mentions, momentum, sponsors and recommendations, monitors, trackers, team, transcriptions, corrections and feedback.
+- Full API scope: search, transcripts (reading and ordering them), mentions, momentum, sponsors and recommendations, monitors, trackers, team, corrections and feedback.
 
 ## Install
 
@@ -85,9 +85,14 @@ Data commands (they mirror the MCP tools)
   arcmira sponsors <channel>          recurring sponsors of a YouTube channel
   arcmira recommendations <id|name>   who recommends an entity on air, paid or organic
   arcmira episodes <channel>          newest indexed videos of a channel
-  arcmira transcript <video>          full transcript of one YouTube video
+  arcmira transcripts get <video>     full transcript of one YouTube video
+  arcmira transcripts request <video> order a Premium transcript (paid plans; sends an Idempotency-Key)
+  arcmira transcripts status <id>     state of a transcript request, with the next poll time
   arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
-  arcmira status [channel|job-id]     your plan, a channel's coverage, or a transcription job
+  arcmira status [channel]            your plan, or a channel's coverage
+
+Aliases
+  arcmira transcript <video>          same as arcmira transcripts get (the MCP tool get_transcript)
 
 Account
   arcmira login [email] [--code N] [--key arc_sk_...]
@@ -104,12 +109,14 @@ Any endpoint
   arcmira docs [query]                search the docs, or print their address
 
 Not available yet (each prints the arcmira api call that does the same, and exits 2)
-  arcmira monitors, arcmira trackers, arcmira transcriptions, arcmira corrections, arcmira feedback, arcmira keys
+  arcmira monitors, arcmira trackers, arcmira corrections, arcmira feedback, arcmira keys
 
 Also: arcmira help [command], --help, --version
 ```
 
 Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call) and says what it picked on stderr. An ambiguous name exits 2 with the candidate ids.
+
+`arcmira transcripts request` sends a new `Idempotency-Key` (a UUID) with each order and prints it on stderr; with `--json` stderr stays reserved for the error, so scripts pass their own key. To retry an order whose answer you did not see, pass the same key with `--idempotency-key`; the API returns the first answer and charges nothing more. A request for a video already in flight returns that request.
 
 `arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. Every POST carries an automatic `Idempotency-Key` (a UUID, shown with `--verbose`; pass `-H 'Idempotency-Key: ...'` to set your own), so a retried write does not run twice. The path may drop the `/v1` prefix.
 

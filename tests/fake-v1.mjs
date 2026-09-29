@@ -72,7 +72,16 @@ const ROUTES = [
         b.lines = [{ start: 0, end: 4, text: "Welcome back to the show." }, { start: 4, end: 9, text: "Today we talk about agent payments." }];
         return [200, b];
     }],
-    ["GET", /^\/v1\/transcriptions\/([^/]+)$/, () => [200, body("get_transcription")]],
+    ["POST", /^\/v1\/transcriptions$/, (_m, _url, json) => {
+        const b = body("submit_transcription");
+        Object.assign(b.request, { id: "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", videoId: json?.videoId ?? "", etaSeconds: 540, nextPollSeconds: 30 });
+        return [fixtures.submit_transcription.status, b];
+    }],
+    ["GET", /^\/v1\/transcriptions\/([^/]+)$/, (m) => {
+        const b = body("get_transcription");
+        Object.assign(b, { id: m[1], videoId: "dQw4w9WgXcQ", status: "transcribing", stage: "transcribing", etaSeconds: 300, nextPollSeconds: 30 });
+        return [200, b];
+    }],
     ["POST", /^\/v1\/monitors$/, (_m, _url, json) => {
         const b = body("create_monitor");
         b.monitor.name = json?.name ?? "";
