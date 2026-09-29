@@ -286,7 +286,7 @@ g.no_color = { pass: !/\x1b\[/.test(noColor.stdout + noColor.stderr), rule: "NO_
 const whoami = await run(["whoami"]);
 const authStatus = await run(["auth", "status"]);
 g.whoami = {
-    pass: whoami.code === 0 && whoami.requests.length === 1 && whoami.requests[0].path === "/v1/me" && /key from ARCMIRA_API_KEY/.test(whoami.stdout) && authStatus.code === 0 && authStatus.stdout === whoami.stdout,
+    pass: whoami.code === 0 && whoami.requests.length === 1 && whoami.requests[0].path === "/v1/me" && /from ARCMIRA_API_KEY/.test(whoami.stdout) && /key /.test(whoami.stdout) && authStatus.code === 0 && authStatus.stdout === whoami.stdout,
     rule: "whoami reads GET /v1/me and names the key source; auth status prints the same",
 };
 const authHome = freshHome();

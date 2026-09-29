@@ -8,6 +8,8 @@
  *     }
  */
 export interface CreateTrackersRequest {
+    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    "Idempotency-Key"?: string;
     /** The entity name to resolve and watch. Required on create. Creating a duplicate (same name + type) returns 409 with the existingId. */
     entityName: string;
     /** Entity type of the tracked entity. Required on create. */

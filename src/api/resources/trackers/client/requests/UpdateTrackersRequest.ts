@@ -9,6 +9,8 @@
 export interface UpdateTrackersRequest {
     /** Tracker id, trk_ form. */
     id: string;
+    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    "Idempotency-Key"?: string;
     /** Optional label shown in alerts and the dashboard. */
     displayName?: string;
     /** Per-tracker email delivery. Default true. */

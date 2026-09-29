@@ -2,7 +2,7 @@
 
 import type { BaseClientOptions, BaseRequestOptions } from "../../../../../../BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../../../BaseClient.js";
-import { mergeHeaders } from "../../../../../../core/headers.js";
+import { mergeHeaders, mergeOnlyDefinedHeaders } from "../../../../../../core/headers.js";
 import * as core from "../../../../../../core/index.js";
 import { mergeAdditionalBodyParameters } from "../../../../../../core/requestBody.js";
 import * as environments from "../../../../../../environments.js";
@@ -24,7 +24,7 @@ export class EditsClient {
     }
 
     /**
-     * Purpose-built wrapper for the line_edit kind. The edit is pending review: visible to you immediately (returned in the transcript GET `edits[]`), applied for everyone once approved. Free (0 rows), attributed to your API key. Supports Idempotency-Key.
+     * Purpose-built wrapper for the line_edit kind. The edit is pending review: visible to you immediately (returned in the transcript GET `edits[]`), applied for everyone once approved. Free (0 rows), attributed to your API key.
      *
      * @param {Arcmira.transcripts.SubmitEditsRequest} request
      * @param {EditsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -58,11 +58,12 @@ export class EditsClient {
         request: Arcmira.transcripts.SubmitEditsRequest,
         requestOptions?: EditsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.TranscriptEditSubmittedResponse>> {
-        const { video_id: videoId, ..._body } = request;
+        const { video_id: videoId, "Idempotency-Key": idempotencyKey, ..._body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
             this._options?.headers,
+            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
             requestOptions?.headers,
         );
         const _response = await core.fetcher({

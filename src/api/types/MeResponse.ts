@@ -5,6 +5,16 @@ import type * as Arcmira from "../index.js";
 export interface MeResponse {
     /** Id of the user the API key belongs to. */
     user_id: string | null;
+    /** Id of the credential making this request: the account key id, or the OAuth token id. Never a secret. Null on a browser session. */
+    key_id: string | null;
+    /** The key name set in the dashboard, or the name of the connected OAuth client. Null when none is known. */
+    key_label: string | null;
+    /** How the request authenticated: account_key is an arc_sk_ key, oauth is a token from a connected client, session is a signed-in browser. */
+    credential_kind: MeResponse.CredentialKind;
+    /** The account email with the local part masked after its first character, e.g. z***@example.com. Null when the account has none. */
+    email_masked: string | null;
+    /** ISO 8601 time the monthly row pool resets: 00:00 UTC on the first of next month. Null on the free plan, whose rows are a lifetime pool. */
+    period_resets_at: string | null;
     /** Plan tier, e.g. free, hobby, pro, teams, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
@@ -18,6 +28,14 @@ export interface MeResponse {
 }
 
 export namespace MeResponse {
+    /** How the request authenticated: account_key is an arc_sk_ key, oauth is a token from a connected client, session is a signed-in browser. */
+    export const CredentialKind = {
+        AccountKey: "account_key",
+        Oauth: "oauth",
+        Session: "session",
+    } as const;
+    export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind];
+
     export interface Usage {
         /** Premium rows consumed this period. */
         rows_used: number;

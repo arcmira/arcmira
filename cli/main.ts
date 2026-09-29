@@ -685,7 +685,7 @@ const COMMANDS: Record<string, Command> = {
     whoami: {
         section: "account",
         operations: ["get_me"],
-        summary: "The plan, scopes, rate limit and row usage of the key in use, and where the key came from.",
+        summary: "The key in use: its id, label, account, plan, scopes, rate limit, row usage, and where it came from.",
         usage: "whoami",
         examples: ["arcmira whoami", "arcmira whoami --json"],
         positionals: "none",
@@ -693,8 +693,9 @@ const COMMANDS: Record<string, Command> = {
         run: ({ client }) => client.me.get(),
         print: (me: Arcmira.MeResponse) => {
             console.log(`plan ${me.tier}  scopes ${me.scopes.join(",")}  rate limit ${me.rate_limit} a minute`);
-            console.log(`rows used ${me.usage.rows_used} of ${me.usage.monthly_rows}, ${me.usage.rows_remaining} left`);
-            console.log(`key from ${keySource}`);
+            console.log(`rows used ${me.usage.rows_used} of ${me.usage.monthly_rows}, ${me.usage.rows_remaining} left${me.period_resets_at ? `, resets ${day(me.period_resets_at)}` : ""}`);
+            const credential = [me.credential_kind === "oauth" ? "oauth token" : "key", me.key_label ? `"${me.key_label}"` : "", me.key_id ?? ""].filter(Boolean).join(" ");
+            console.log(`${credential}${me.email_masked ? `  account ${me.email_masked}` : ""}  from ${keySource}`);
         },
     },
     "auth token": {

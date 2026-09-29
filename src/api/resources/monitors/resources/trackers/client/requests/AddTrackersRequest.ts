@@ -10,6 +10,8 @@
 export interface AddTrackersRequest {
     /** Monitor id. */
     id: string;
+    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    "Idempotency-Key"?: string;
     /** Ids of existing trackers ("trk_...") to attach to this monitor. Create trackers first via POST /v1/trackers. */
     trackerIds: string[];
 }

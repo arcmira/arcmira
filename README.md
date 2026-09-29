@@ -92,7 +92,7 @@ Data commands (they mirror the MCP tools)
 Account
   arcmira login [email] [--code N] [--key arc_sk_...]
   arcmira logout
-  arcmira whoami                      plan, scopes, rate limit, row usage, and where the key came from
+  arcmira whoami                      key id, label and account, plan, scopes, rate limit, rows, and where the key came from
   arcmira auth login                  same as arcmira login
   arcmira auth logout                 same as arcmira logout
   arcmira auth status                 same as arcmira whoami

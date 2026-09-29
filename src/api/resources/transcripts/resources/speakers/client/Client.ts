@@ -2,7 +2,7 @@
 
 import type { BaseClientOptions, BaseRequestOptions } from "../../../../../../BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../../../BaseClient.js";
-import { mergeHeaders } from "../../../../../../core/headers.js";
+import { mergeHeaders, mergeOnlyDefinedHeaders } from "../../../../../../core/headers.js";
 import * as core from "../../../../../../core/index.js";
 import { mergeAdditionalBodyParameters } from "../../../../../../core/requestBody.js";
 import * as environments from "../../../../../../environments.js";
@@ -24,7 +24,7 @@ export class SpeakersClient {
     }
 
     /**
-     * Links a diarization speaker id to a person entity (or proposes a new person via `name`). Creates a community-attributed appearance immediately. It shows on the person page right away, flagged pending review; reviewers can revert it. Free (0 rows). Supports Idempotency-Key.
+     * Links a diarization speaker id to a person entity (or proposes a new person via `name`). Creates a community-attributed appearance immediately. It shows on the person page right away, flagged pending review; reviewers can revert it. Free (0 rows).
      *
      * @param {Arcmira.transcripts.IdentifySpeakersRequest} request
      * @param {SpeakersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -56,11 +56,12 @@ export class SpeakersClient {
         request: Arcmira.transcripts.IdentifySpeakersRequest,
         requestOptions?: SpeakersClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.SpeakerIdentificationSubmittedResponse>> {
-        const { video_id: videoId, ..._body } = request;
+        const { video_id: videoId, "Idempotency-Key": idempotencyKey, ..._body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
             this._options?.headers,
+            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
             requestOptions?.headers,
         );
         const _response = await core.fetcher({

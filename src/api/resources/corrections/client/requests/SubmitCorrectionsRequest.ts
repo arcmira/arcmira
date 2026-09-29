@@ -13,6 +13,8 @@
 export interface SubmitCorrectionsRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
+    /** The client event id, such as a UUID. A retry with the same key returns the stored final response with Idempotency-Replayed: true. A 412 is never stored, so a rebased resend under the same key runs again. */
+    "Idempotency-Key"?: string;
     kind: SubmitCorrectionsRequest.Kind;
     /** Per-video monotonic sequence number (strict FIFO per user+video). Optional for one-off submissions; required for outbox-style clients that depend on ordering. Any mismatch returns 412 with the expected value. */
     seq?: number;

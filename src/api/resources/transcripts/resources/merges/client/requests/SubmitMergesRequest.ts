@@ -11,6 +11,8 @@
 export interface SubmitMergesRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
+    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    "Idempotency-Key"?: string;
     /** The name as it appears in this video (e.g. a first-name-only mention). */
     sourceName: string;
     /** The canonical entity these mentions actually refer to. */

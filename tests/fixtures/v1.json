@@ -11,6 +11,11 @@
     "status": 200,
     "body": {
       "user_id": "x",
+      "key_id": "x",
+      "key_label": "x",
+      "credential_kind": "account_key",
+      "email_masked": "x",
+      "period_resets_at": "x",
       "tier": "x",
       "scopes": [
         "x"

@@ -7,6 +7,8 @@
  *     }
  */
 export interface CreateMonitorsRequest {
+    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    "Idempotency-Key"?: string;
     /** Display name (1-100 characters). Required on create. */
     name: string;
     /** Desired email recipients. External recipients must confirm before delivery. Free includes one additional recipient per monitor; paid plans allow up to 20 total. Default []. */

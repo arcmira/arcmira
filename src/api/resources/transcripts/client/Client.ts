@@ -53,6 +53,7 @@ export class TranscriptsClient {
      * @throws {@link Arcmira.NotFoundError}
      * @throws {@link Arcmira.TooManyRequestsError}
      * @throws {@link Arcmira.InternalServerError}
+     * @throws {@link Arcmira.ServiceUnavailableError}
      * @throws {@link errors.ArcmiraError}
      * @throws {@link errors.ArcmiraTimeoutError}
      *
@@ -142,6 +143,11 @@ export class TranscriptsClient {
                     );
                 case 500:
                     throw new Arcmira.InternalServerError(
+                        _response.error.body as Arcmira.Error_,
+                        _response.rawResponse,
+                    );
+                case 503:
+                    throw new Arcmira.ServiceUnavailableError(
                         _response.error.body as Arcmira.Error_,
                         _response.rawResponse,
                     );
