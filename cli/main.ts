@@ -755,7 +755,8 @@ const COMMANDS: Record<string, Command> = {
         print: (r: { url?: string; results?: DocHit[] }) => {
             if (r.url) return console.log(`${r.url}\nEvery page is also served as markdown: append .md to its address. Search: arcmira docs <query>`);
             if (r.results!.length === 0) return console.log("No docs match.");
-            for (const hit of r.results!) console.log(`${hit.title}\n  ${hit.link}\n  ${hit.content.replace(/\s+/g, " ").slice(0, 200)}\n`);
+            for (const hit of r.results!.slice(0, 5)) console.log(`${hit.title}\n  ${hit.link}\n  ${hit.content.replace(/\s+/g, " ").slice(0, 200)}\n`);
+            if (r.results!.length > 5) note(`${r.results!.length - 5} more with --json`);
         },
     },
 };
