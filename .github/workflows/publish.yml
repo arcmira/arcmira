@@ -1,4 +1,5 @@
 name: Publish to npm
+run-name: Publish arcmira to npm from ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
