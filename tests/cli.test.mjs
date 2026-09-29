@@ -59,14 +59,14 @@ test("kind maps to the API's mention_class", async () => {
 });
 
 test("a plan gate exits 1 with the unlock link", async () => {
-    const out = await arcmira(["momentum", "ent_gated"]);
+    const out = await arcmira(["momentum", "ent_402"]);
     assert.equal(out.code, 1);
     assert.match(out.stderr, /quota_exceeded usage_limit_exceeded/);
     assert.match(out.stderr, /https:\/\/arcmira\.com\/pricing/);
 });
 
 test("usage errors exit 2", async () => {
-    assert.equal((await arcmira(["sponsors", "not-a-channel"])).code, 2);
+    assert.equal((await arcmira(["sponsors", "UC-DRzaGnL_vtBUpCFH5M0t"])).code, 2);
     assert.equal((await arcmira(["nonsense"])).code, 2);
     assert.equal((await arcmira(["search", "x"], {})).code, 2);
 });
@@ -74,4 +74,10 @@ test("usage errors exit 2", async () => {
 test("--key overrides the environment", async () => {
     await arcmira(["status", "UC-DRzaGnL_vtBUpCFH5M0tg", "--key", "flag-key", "--json"]);
     assert.equal(fake.requests[fake.requests.length - 1].headers.authorization, "Bearer flag-key");
+});
+
+test("the conformance ruler passes every check", async () => {
+    const { stdout } = await run(process.execPath, [new URL("../scripts/cli-audit/conformance.mjs", import.meta.url).pathname], { maxBuffer: 1 << 24 });
+    const total = /total (\d+)\/(\d+)/.exec(stdout);
+    assert.ok(total && total[1] === total[2], stdout);
 });

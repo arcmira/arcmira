@@ -52,7 +52,7 @@ test("a write sends a JSON body", async () => {
 });
 
 test("a plan gate is a typed PaymentRequiredError with the parsed body", async () => {
-    const err = await client.entities.momentum({ id: "ent_gated" }).catch((e) => e);
+    const err = await client.entities.momentum({ id: "ent_402" }).catch((e) => e);
     assert.ok(err instanceof Arcmira.PaymentRequiredError);
     assert.ok(err instanceof ArcmiraError);
     assert.equal(err.statusCode, 402);

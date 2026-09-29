@@ -65,19 +65,28 @@ Every non-2xx answer throws a subclass of `ArcmiraError` named for the status: `
 The package ships the `arcmira` binary. Its commands mirror the tools of the [Arcmira MCP server](https://github.com/arcmira/mcp), so a workflow you prototype with an agent runs the same from a shell.
 
 ```sh
+npx arcmira login you@example.com                 # emails a six digit code
+npx arcmira login you@example.com --code 482913   # saves the key; later commands need no ARCMIRA_API_KEY
 npx arcmira resolve Ramp
 npx arcmira search "agent payments" --limit 3
-npx arcmira mentions --entity ent_14
-npx arcmira momentum ent_14
-npx arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg
+npx arcmira mentions --entity Ramp --after 2026-09-01
+npx arcmira momentum Ramp Brex
+npx arcmira sponsors TBPN
 npx arcmira recommendations ent_14 --kind organic
-npx arcmira episodes UC-DRzaGnL_vtBUpCFH5M0tg
+npx arcmira episodes UC-DRzaGnL_vtBUpCFH5M0tg --limit 1
 npx arcmira transcript https://www.youtube.com/watch?v=dQw4w9WgXcQ
 npx arcmira occurrences --channel UC-DRzaGnL_vtBUpCFH5M0tg --type topic
-npx arcmira status UC-DRzaGnL_vtBUpCFH5M0tg
+npx arcmira status
 ```
 
-`--json` prints the API response; `--key` overrides `ARCMIRA_API_KEY`; `arcmira <command> --help` lists each option. Exit codes: 0 ok, 1 an API error (the message names the code and any unlock link), 2 a usage error.
+Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call) and says what it picked on stderr. An ambiguous name exits 2 with the candidate ids.
+
+- Key: `--key`, then `ARCMIRA_API_KEY`, then the key `arcmira login` saved in `~/.config/arcmira/config.json` (mode 0600; `XDG_CONFIG_HOME` is honored). `arcmira login --key arc_sk_...` saves a key you already have; `arcmira logout` deletes it.
+- Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
+- Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`.
+- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name). Input is checked before any request.
+
+`arcmira <command> --help` lists each option with examples. `scripts/cli-audit/conformance.mjs` scores every command against a local fake of the API.
 
 ## Links
 

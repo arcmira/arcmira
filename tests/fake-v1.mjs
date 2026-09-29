@@ -52,9 +52,9 @@ const ROUTES = [
         return [200, b];
     }],
     ["GET", /^\/v1\/mentions\/counts$/, () => [200, body("count_mentions")]],
-    ["GET", /^\/v1\/entities\/([^/]+)\/momentum$/, (m) => (m[1] === "ent_gated" ? [402, gateBody()] : [200, body("get_entity_momentum")])],
+    ["GET", /^\/v1\/entities\/([^/]+)\/momentum$/, (m) => (m[1] === "ent_402" ? [402, gateBody()] : [200, body("get_entity_momentum")])],
     ["GET", /^\/v1\/entities\/([^/]+)\/recommendations$/, (m, url) => {
-        if (m[1] === "ent_gated") return [402, gateBody()];
+        if (m[1] === "ent_402") return [402, gateBody()];
         const b = body("list_entity_recommendations");
         const cls = url.searchParams.get("mention_class");
         b.data[0].mention_class = cls && cls !== "all" ? cls : "endorsement";
