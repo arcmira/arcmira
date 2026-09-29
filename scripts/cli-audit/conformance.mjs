@@ -11,7 +11,7 @@
  */
 import { spawn, execFileSync } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
-import { mkdtempSync, rmSync, writeFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -38,11 +38,19 @@ const front = createServer((req, res) => {
     req.on("data", (c) => (raw += c));
     req.on("end", () => {
         const url = new URL(req.url, "http://front");
-        seen.push({ method: req.method, path: url.pathname, query: Object.fromEntries(url.searchParams), auth: req.headers.authorization ?? null, body: raw });
-        const send = (status, body) => {
-            res.writeHead(status, { "content-type": "application/json" });
+        seen.push({ method: req.method, path: url.pathname, query: Object.fromEntries(url.searchParams), auth: req.headers.authorization ?? null, ua: req.headers["user-agent"] ?? null, headers: req.headers, body: raw });
+        const send = (status, body, headers = {}) => {
+            res.writeHead(status, { "content-type": "application/json", ...headers });
             res.end(JSON.stringify(body));
         };
+        if (req.method === "POST" && url.pathname === "/docs/mcp") {
+            const call = JSON.parse(raw);
+            const text = `Title: List recurring channel sponsors\nLink: https://arcmira.com/docs/api-reference/recommendations/list-recurring-channel-sponsors\nPage: x\nContent: Rollup of recurring sponsors for ${call.params.arguments.query}.`;
+            res.writeHead(200, { "content-type": "text/event-stream" });
+            return res.end(`event: message\ndata: ${JSON.stringify({ result: { content: [{ type: "text", text }] }, jsonrpc: "2.0", id: call.id })}\n\n`);
+        }
+        if (req.headers.authorization === "Bearer revoked") return send(401, { error: { type: "authentication_error", code: "invalid_api_key", message: "Unknown key.", doc_url: "https://arcmira.com/docs/errors#invalid_api_key", request_id: "req_401" } });
+        if (req.headers.authorization === "Bearer headeronly") return send(500, { error: { type: "api_error", code: "internal_error", message: "boom" } }, { "x-request-id": "req_header_only" });
         if (req.method === "POST" && url.pathname === "/v1/signups") return send(202, { sent: true, email: JSON.parse(raw).email, expires_in_seconds: 600, next: "POST /v1/signups/verify" });
         if (req.method === "POST" && url.pathname === "/v1/signups/verify") {
             const body = JSON.parse(raw);
@@ -70,14 +78,15 @@ const front = createServer((req, res) => {
 await new Promise((r) => front.listen(0, "127.0.0.1", r));
 const baseUrl = `http://127.0.0.1:${front.address().port}`;
 
-function run(args, { key = "test-key", home, env = {} } = {}) {
+function run(args, { key = "test-key", home, env = {}, input = "" } = {}) {
     const started = performance.now();
     const cleanEnv = { ...process.env };
     for (const k of Object.keys(cleanEnv)) if (k.startsWith("ARCMIRA_") || k === "XDG_CONFIG_HOME" || k === "FORCE_COLOR") delete cleanEnv[k];
-    const childEnv = { ...cleanEnv, HOME: home ?? freshHome(), ARCMIRA_BASE_URL: baseUrl, ...(key ? { ARCMIRA_API_KEY: key } : {}), ...env };
+    const childEnv = { ...cleanEnv, HOME: home ?? freshHome(), ARCMIRA_BASE_URL: baseUrl, ARCMIRA_DOCS_URL: `${baseUrl}/docs`, ...(key ? { ARCMIRA_API_KEY: key } : {}), ...env };
     return new Promise((done) => {
         const before = seen.length;
-        const child = spawn(process.execPath, [bin, ...args], { env: childEnv, stdio: ["ignore", "pipe", "pipe"] });
+        const child = spawn(process.execPath, [bin, ...args], { env: childEnv, stdio: ["pipe", "pipe", "pipe"] });
+        child.stdin.end(input);
         let stdout = "";
         let stderr = "";
         child.stdout.on("data", (c) => (stdout += c));
@@ -147,6 +156,17 @@ const COMMANDS = {
         typo: [["occurrences", "--chanel", TBPN], "--channel"],
         names: [["occurrences", "--channel", "TBPN"], (r) => r.some((q) => q.path === "/v1/mentions/counts" && q.query.channel_ids === TBPN)],
     },
+    whoami: {
+        ok: ["whoami"],
+        bad: [["whoami", "extra"]],
+        typo: [["whoami", "--jsn"], "--json"],
+    },
+    api: {
+        ok: ["api", "GET", "/v1/me"],
+        bad: [["api"], ["api", "FETCH", "/v1/me"], ["api", "GET", "/v1/me", "-f", "novalue"], ["api", "POST", "/v1/monitors", "--paginate"], ["api", "GET", "https://example.com/v1/me"], ["api", "POST", "/v1/monitors", "--body", "@/nonexistent/file.json"]],
+        typo: [["api", "GET", "/v1/me", "--paginat"], "--paginate"],
+        noKeyNeeded: true,
+    },
     status: {
         ok: ["status", TBPN],
         bad: [["status", "UC-DRzaGnL_vtBUpCFH5M0t"], ["status", TBPN, "extra"]],
@@ -197,8 +217,11 @@ for (const [name, spec] of Object.entries(COMMANDS)) {
     const typo = await run(spec.typo[0]);
     row.typo_flag = typo.code === 2 && typo.stderr.includes(spec.typo[1]) && /did you mean/i.test(typo.stderr);
 
-    const nokey = await run(spec.ok, { key: null });
-    row.no_key = nokey.code === 2 && nokey.requests.length === 0 && /arcmira (login|signup)/.test(nokey.stderr);
+    if (spec.noKeyNeeded) row.no_key = null;
+    else {
+        const nokey = await run(spec.ok, { key: null });
+        row.no_key = nokey.code === 2 && nokey.requests.length === 0 && /arcmira (login|signup)/.test(nokey.stderr);
+    }
 
     if (spec.names) {
         const n = await run(spec.names[0]);
@@ -259,6 +282,120 @@ const offline = await run(["status", TBPN, "--base-url", "http://127.0.0.1:9"]);
 g.network_error = { pass: offline.code === 1 && /127\.0\.0\.1:9/.test(offline.stderr) && offline.ms < 5000, rule: `an unreachable API exits 1 within 5 s and names the host it tried (${(offline.ms / 1000).toFixed(1)} s)` };
 const noColor = await run(spec("search"), { env: { NO_COLOR: "1", FORCE_COLOR: "1" } });
 g.no_color = { pass: !/\x1b\[/.test(noColor.stdout + noColor.stderr), rule: "NO_COLOR respected (no escapes even with FORCE_COLOR)" };
+
+const whoami = await run(["whoami"]);
+const authStatus = await run(["auth", "status"]);
+g.whoami = {
+    pass: whoami.code === 0 && whoami.requests.length === 1 && whoami.requests[0].path === "/v1/me" && /key from ARCMIRA_API_KEY/.test(whoami.stdout) && authStatus.code === 0 && authStatus.stdout === whoami.stdout,
+    rule: "whoami reads GET /v1/me and names the key source; auth status prints the same",
+};
+const authHome = freshHome();
+const authLogin = await run(["auth", "login", "--key", "arc_sk_group_saved_key_1234"], { key: null, home: authHome });
+const authToken = await run(["auth", "token"], { key: null, home: authHome });
+const authReveal = await run(["auth", "token", "--reveal"], { key: null, home: authHome });
+const authLogout = await run(["auth", "logout"], { key: null, home: authHome });
+const afterLogout = await run(["auth", "token"], { key: null, home: authHome });
+const authBare = await run(["auth"], { key: null });
+const authTypo = await run(["auth", "tokn"], { key: null });
+g.auth_group = {
+    pass:
+        authLogin.code === 0 && authToken.code === 0 && authToken.requests.length === 0 && !authToken.stdout.includes("arc_sk_group_saved_key_1234") && /\.\.\.1234/.test(authToken.stdout) &&
+        authReveal.stdout.trim() === "arc_sk_group_saved_key_1234" && authLogout.code === 0 && afterLogout.code === 2 &&
+        authBare.code === 0 && /auth token/.test(authBare.stdout) && authTypo.code === 2 && /did you mean token/.test(authTypo.stderr),
+    rule: "auth login/logout/status/token: token is masked unless --reveal, and makes no call; bare auth prints its commands; a typo suggests",
+};
+const loginAlias = await run(["login", "--help"], { key: null });
+const logoutAlias = await run(["logout", "--help"], { key: null });
+g.login_aliases = { pass: loginAlias.code === 0 && logoutAlias.code === 0 && /^  login /m.test(top.stdout) && /^  logout /m.test(top.stdout), rule: "top-level login and logout stay beside the auth group" };
+const unauthorized = await run(["status", TBPN], { key: "revoked" });
+const unauthorizedApi = await run(["api", "GET", "/v1/me"], { key: "revoked" });
+g.login_hint_401 = { pass: unauthorized.code === 1 && /try: arcmira login/.test(unauthorized.stderr) && unauthorizedApi.code === 1 && /try: arcmira login/.test(unauthorizedApi.stderr), rule: "a 401 exits 1 and prints try: arcmira login" };
+const gateHuman = await run(["momentum", "ent_14"], { key: "gate" });
+const gateJson = await run(["momentum", "ent_14", "--json"], { key: "gate" });
+const headerOnly = await run(["whoami"], { key: "headeronly" });
+const headerOnlyJson = await run(["whoami", "--json"], { key: "headeronly" });
+const headerOnlyApi = await run(["api", "GET", "/v1/me"], { key: "headeronly" });
+g.request_id = {
+    pass:
+        /request_id: req_gate/.test(gateHuman.stderr) && parses(gateJson.stderr)?.error?.request_id === "req_gate" &&
+        /request_id: req_header_only/.test(headerOnly.stderr) && parses(headerOnlyJson.stderr)?.error?.request_id === "req_header_only" && /request_id: req_header_only/.test(headerOnlyApi.stderr),
+    rule: "every printed API error carries request_id, from the body or else the X-Request-Id header, human and --json",
+};
+const uaData = await run(["status", TBPN]);
+const uaApi = await run(["api", "GET", "/v1/me"]);
+const uaLogin = await run(["login", "dev@example.com"], { key: null });
+const cliUa = (r) => r.requests.length > 0 && r.requests.every((q) => /^arcmira-cli\/\d+\.\d+\.\d+$/.test(q.ua ?? ""));
+g.user_agent = { pass: cliUa(uaData) && cliUa(uaApi) && cliUa(uaLogin), rule: "every CLI request sends User-Agent arcmira-cli/<version> (the SDK alone sends arcmira/<version>)" };
+
+const apiQuery = await run(["api", "GET", "/v1/mentions", "-f", "entity_id=ent_14", "-F", "limit=2", "-H", "X-Test: yes"]);
+g.api_get = {
+    pass: apiQuery.code === 0 && apiQuery.requests[0]?.query.entity_id === "ent_14" && apiQuery.requests[0]?.query.limit === "2" && apiQuery.requests[0]?.headers["x-test"] === "yes" && Array.isArray(parses(apiQuery.stdout)?.data),
+    rule: "api GET: -f and -F go to the query string, -H is sent, stdout is the JSON body",
+};
+const apiPost = await run(["api", "post", "v1/monitors", "-f", "name=Launches", "-F", "notifyWebhook=false", "-F", "sortOrder=3", "-F", "notifyEmails[]=a@example.com", "--verbose"]);
+const postReq = apiPost.requests[0];
+const postBody = parses(postReq?.body ?? "");
+const idem = postReq?.headers["idempotency-key"] ?? "";
+g.api_post = {
+    pass:
+        apiPost.code === 0 && postReq?.method === "POST" && postReq.path === "/v1/monitors" && postBody?.name === "Launches" && postBody?.notifyWebhook === false && postBody?.sortOrder === 3 &&
+        postBody?.notifyEmails?.[0] === "a@example.com" && /^[0-9a-f-]{36}$/.test(idem) && apiPost.stderr.includes(`idempotency-key: ${idem}`) && /request_id req_fake/.test(apiPost.stderr),
+    rule: "api POST: fields become a typed JSON body, an Idempotency-Key is sent automatically and --verbose prints it with the request_id",
+};
+const bodyDir = freshHome();
+writeFileSync(join(bodyDir, "monitor.json"), JSON.stringify({ name: "From file" }));
+const apiFile = await run(["api", "POST", "/v1/monitors", "--body", `@${join(bodyDir, "monitor.json")}`, "-H", "Idempotency-Key: mine"]);
+const apiStdin = await run(["api", "POST", "/v1/monitors", "--body", "-"], { input: JSON.stringify({ name: "From stdin" }) });
+g.api_body = {
+    pass: apiFile.code === 0 && parses(apiFile.requests[0]?.body)?.name === "From file" && apiFile.requests[0]?.headers["idempotency-key"] === "mine" && apiStdin.code === 0 && parses(apiStdin.requests[0]?.body)?.name === "From stdin",
+    rule: "api --body @file and --body - (stdin); a caller's own Idempotency-Key wins",
+};
+const apiPages = await run(["api", "GET", "/v1/mentions", "-f", "entity_id=ent_14", "--paginate"]);
+g.api_paginate = {
+    pass: apiPages.code === 0 && apiPages.requests.length === 2 && apiPages.requests[1].query.cursor === "c2" && parses(apiPages.stdout)?.data?.length === 3 && parses(apiPages.stdout)?.has_more === false,
+    rule: "api --paginate follows next_cursor and prints every page's rows as one list",
+};
+const apiGate = await run(["api", "GET", "/v1/entities/ent_14/momentum"], { key: "gate" });
+const apiMissing = await run(["api", "GET", "/v1/nothing/here"]);
+g.api_errors = {
+    pass: apiGate.code === 1 && apiGate.stdout === "" && /usage_limit_exceeded/.test(apiGate.stderr) && apiMissing.code === 1 && /route_not_found/.test(apiMissing.stderr),
+    rule: "api exit codes match the rest of the CLI: non-2xx exits 1 with the API error on stderr",
+};
+
+const RESERVED = ["monitors", "trackers", "transcriptions", "corrections", "feedback", "keys"];
+const reservedRuns = [];
+for (const name of RESERVED) reservedRuns.push(await run([name, "list"]));
+g.reserved_commands = {
+    pass: reservedRuns.every((r, i) => r.code === 2 && r.requests.length === 0 && r.stdout === "" && r.stderr.trim().split("\n").length === 1 && /not available yet/.test(r.stderr) && (RESERVED[i] === "keys" || /arcmira api/.test(r.stderr))) && RESERVED.every((n) => top.stdout.includes(n)),
+    rule: `reserved commands (${RESERVED.join(", ")}): exit 2, no call, one line pointing at arcmira api`,
+};
+const reservedFlags = [["--dry-run"], ["--force"], ["-y"], ["--profile", "work"], ["--jq", ".data"]];
+const flagRuns = [];
+for (const flag of reservedFlags) flagRuns.push(await run(["status", TBPN, ...flag]));
+g.reserved_flags = {
+    pass: flagRuns.every((r, i) => r.code === 2 && r.requests.length === 0 && /reserved/.test(r.stderr) && r.stderr.includes(reservedFlags[i][0] === "-y" ? "--yes" : reservedFlags[i][0])),
+    rule: "reserved flags (--dry-run, --force, -y, --profile, --jq): exit 2 before any call, naming the flag",
+};
+const schemaList = await run(["schema"], { key: null });
+const schemaCmd = await run(["schema", "sponsors"], { key: null });
+const schemaJson = await run(["schema", "create_monitor", "--json"], { key: null });
+const schemaBad = await run(["schema", "sponsrs"], { key: null });
+g.schema = {
+    pass:
+        schemaList.code === 0 && /\/v1\/monitors/.test(schemaList.stdout) && schemaCmd.code === 0 && /GET \/v1\/channels\/\{channel_id\}\/sponsors/.test(schemaCmd.stdout) && /call: arcmira api GET/.test(schemaCmd.stdout) &&
+        parses(schemaJson.stdout)?.[0]?.body?.some((f) => f.name === "name" && f.required) && schemaBad.code === 2 && /did you mean sponsors/.test(schemaBad.stderr) &&
+        [schemaList, schemaCmd, schemaJson].every((r) => r.requests.length === 0),
+    rule: "schema lists every operation, describes a command or operationId offline (method, path, params, body), suggests on a typo",
+};
+const docsBare = await run(["docs"], { key: null });
+const docsQuery = await run(["docs", "recurring", "sponsors"], { key: null });
+g.docs = {
+    pass: docsBare.code === 0 && /https:\/\/arcmira\.com\/docs/.test(docsBare.stdout) && docsBare.requests.length === 0 && docsQuery.code === 0 && /list-recurring-channel-sponsors/.test(docsQuery.stdout) && /recurring sponsors/.test(docsQuery.stdout),
+    rule: "docs prints the docs address; docs <query> searches the docs site and prints titles and links",
+};
+const readme = readFileSync(join(root, "README.md"), "utf8");
+const treeNames = [...Object.keys(COMMANDS), "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
+g.readme = { pass: /telemetry/i.test(readme) && treeNames.every((n) => readme.includes(`arcmira ${n}`)), rule: "README states the telemetry policy and lists the full command tree" };
 
 const times = [];
 for (let i = 0; i < 9; i++) times.push((await run(["--version"], { key: null })).ms);

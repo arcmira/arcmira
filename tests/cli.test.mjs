@@ -30,6 +30,8 @@ const COMMANDS = {
     transcript: ["transcript", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
     occurrences: ["occurrences", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "topic"],
     status: ["status", "UC-DRzaGnL_vtBUpCFH5M0tg"],
+    whoami: ["whoami"],
+    api: ["api", "GET", "/v1/me"],
 };
 
 for (const [name, args] of Object.entries(COMMANDS)) {

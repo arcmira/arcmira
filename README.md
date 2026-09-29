@@ -62,29 +62,66 @@ Every non-2xx answer throws a subclass of `ArcmiraError` named for the status: `
 
 ## Command line
 
-The package ships the `arcmira` binary. Its commands mirror the tools of the [Arcmira MCP server](https://github.com/arcmira/mcp), so a workflow you prototype with an agent runs the same from a shell.
+The package ships the `arcmira` binary. Its data commands mirror the tools of the [Arcmira MCP server](https://github.com/arcmira/mcp), so a workflow you prototype with an agent runs the same from a shell.
 
 ```sh
 npx arcmira login you@example.com                 # emails a six digit code
 npx arcmira login you@example.com --code 482913   # saves the key; later commands need no ARCMIRA_API_KEY
+npx arcmira whoami
 npx arcmira resolve Ramp
 npx arcmira search "agent payments" --limit 3
-npx arcmira mentions --entity Ramp --after 2026-09-01
-npx arcmira momentum Ramp Brex
 npx arcmira sponsors TBPN
-npx arcmira recommendations ent_14 --kind organic
-npx arcmira episodes UC-DRzaGnL_vtBUpCFH5M0tg --limit 1
-npx arcmira transcript https://www.youtube.com/watch?v=dQw4w9WgXcQ
-npx arcmira occurrences --channel UC-DRzaGnL_vtBUpCFH5M0tg --type topic
-npx arcmira status
+npx arcmira api GET /v1/mentions -f entity_id=ent_14 --paginate
+```
+
+### Commands
+
+```text
+Data commands (they mirror the MCP tools)
+  arcmira search <query>              spoken transcript slices for a topic or phrase
+  arcmira resolve <query>             names, aliases, URLs, @handles and UC ids to typed entity rows
+  arcmira mentions --entity <id|name> where an entity was mentioned, newest first
+  arcmira momentum <id|name>...       7 and 30 day volume for one to four entities
+  arcmira sponsors <channel>          recurring sponsors of a YouTube channel
+  arcmira recommendations <id|name>   who recommends an entity on air, paid or organic
+  arcmira episodes <channel>          newest indexed videos of a channel
+  arcmira transcript <video>          full transcript of one YouTube video
+  arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
+  arcmira status [channel|job-id]     your plan, a channel's coverage, or a transcription job
+
+Account
+  arcmira login [email] [--code N] [--key arc_sk_...]
+  arcmira logout
+  arcmira whoami                      plan, scopes, rate limit, row usage, and where the key came from
+  arcmira auth login                  same as arcmira login
+  arcmira auth logout                 same as arcmira logout
+  arcmira auth status                 same as arcmira whoami
+  arcmira auth token [--reveal]       the key in use, masked unless --reveal
+
+Any endpoint
+  arcmira api <method> <path>         -f key=value, -F key=value|@file, -H 'Name: value', --body @file|-, --paginate, --verbose
+  arcmira schema [command|operationId] method, path, parameters and body fields, offline
+  arcmira docs [query]                search the docs, or print their address
+
+Not available yet (each prints the arcmira api call that does the same, and exits 2)
+  arcmira monitors, arcmira trackers, arcmira transcriptions, arcmira corrections, arcmira feedback, arcmira keys
+
+Also: arcmira help [command], --help, --version
 ```
 
 Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call) and says what it picked on stderr. An ambiguous name exits 2 with the candidate ids.
 
+`arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. Every POST carries an automatic `Idempotency-Key` (a UUID, shown with `--verbose`; pass `-H 'Idempotency-Key: ...'` to set your own), so a retried write does not run twice. The path may drop the `/v1` prefix.
+
 - Key: `--key`, then `ARCMIRA_API_KEY`, then the key `arcmira login` saved in `~/.config/arcmira/config.json` (mode 0600; `XDG_CONFIG_HOME` is honored). `arcmira login --key arc_sk_...` saves a key you already have; `arcmira logout` deletes it.
-- Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
-- Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`.
-- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name). Input is checked before any request.
+- Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message","request_id",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
+- Errors: every API error names its `request_id` (quote it to support). A 401 adds `try: arcmira login`.
+- Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`. `arcmira api --paginate` follows every page.
+- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet). Input is checked before any request.
+- Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version; their names are held for write commands to come.
+- Requests carry `User-Agent: arcmira-cli/<version>`. The SDK used on its own sends `arcmira/<version>`.
+- Telemetry: none. The CLI sends only the API requests you ask for, plus a docs search when you run `arcmira docs <query>`.
+- Environment: `ARCMIRA_API_KEY`, `ARCMIRA_BASE_URL` (API origin), `ARCMIRA_DOCS_URL` (docs origin, for tests), `XDG_CONFIG_HOME`, `NO_COLOR`.
 
 `arcmira <command> --help` lists each option with examples. `scripts/cli-audit/conformance.mjs` scores every command against a local fake of the API.
 
