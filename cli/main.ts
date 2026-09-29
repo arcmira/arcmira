@@ -634,8 +634,7 @@ async function main(argv: string[]): Promise<number> {
     }
 }
 
-// Exit once stdout and stderr have drained: process.exit alone cuts a piped write short, and the
-// SDK's request timer keeps the process alive for its full timeout after a failed fetch.
+// Exit once stdout and stderr have drained: process.exit alone cuts a piped write short.
 main(process.argv.slice(2)).then((code) => {
     let open = 2;
     const drained = () => --open === 0 && process.exit(code);

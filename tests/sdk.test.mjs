@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { createServer } from "node:http";
+import { promisify } from "node:util";
 import { Arcmira, ArcmiraClient, ArcmiraError } from "arcmira";
 import { startFake } from "./fake-v1.mjs";
 
@@ -72,4 +75,21 @@ test("an entity page list 404 carries the v1 envelope", async () => {
     assert.ok(err instanceof Arcmira.NotFoundError);
     assert.equal(err.body.error.type, "not_found");
     assert.equal(err.body.error.code, "entity_not_found");
+});
+
+test("a process exits promptly after a request that could not connect", async () => {
+    const closed = createServer();
+    await new Promise((ready) => closed.listen(0, "127.0.0.1", ready));
+    const { port } = closed.address();
+    await new Promise((done) => closed.close(done));
+    const script = `import { ArcmiraClient } from "arcmira";
+await new ArcmiraClient({ apiKey: "k", baseUrl: "http://127.0.0.1:${port}", maxRetries: 0 }).me.get().catch((e) => console.log(e.constructor.name));`;
+    const started = Date.now();
+    const { stdout } = await promisify(execFile)(process.execPath, ["--input-type=module", "-e", script], {
+        cwd: new URL("..", import.meta.url),
+        timeout: 15_000,
+    });
+    const elapsed = Date.now() - started;
+    assert.equal(stdout.trim(), "ArcmiraError");
+    assert.ok(elapsed < 5_000, `exited after ${elapsed} ms; the request timer outlived the failed fetch`);
 });
