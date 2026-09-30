@@ -4,20 +4,25 @@
  * The commands mirror the tools of the Arcmira MCP server (https://github.com/arcmira/mcp).
  */
 import { parseArgs } from "node:util";
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Arcmira, ArcmiraClient, ArcmiraError } from "arcmira";
 import { OPERATIONS, type Operation } from "./operations";
-import { AGENTS, apply, describe, hosts, plan, redact, refreshSkills, writeRecord, type AgentId, type Auth } from "./setup";
+import { AGENTS, MARKETPLACE, apply, describe, hosts, plan, redact, refreshSkills, skillRoot, writeRecord, type AgentId, type Auth, type Skill } from "./setup";
+import { updateNotice } from "./update-check";
 import { createInterface } from "node:readline/promises";
 
 const VERSION: string = require("../../package.json").version;
 /** The SDK sends User-Agent arcmira/<version>; the CLI overrides it so API logs separate the two. */
 const USER_AGENT = `arcmira-cli/${VERSION}`;
 const DOCS_URL = "https://arcmira.com/docs";
-const SKILL: string = readFileSync(join(__dirname, "..", "..", "skills", "arcmira", "SKILL.md"), "utf8");
+const SKILLS_DIR = join(__dirname, "..", "..", "skills");
+/** Every skill bundled with this version: the arcmira reference skill and the task skills, synced from arcmira/mcp. */
+const SKILLS: Skill[] = readdirSync(SKILLS_DIR)
+    .filter((name) => existsSync(join(SKILLS_DIR, name, "SKILL.md")))
+    .map((name) => ({ name, content: readFileSync(join(SKILLS_DIR, name, "SKILL.md"), "utf8") }));
 
 type OptionSpec = {
     type: "string" | "boolean";
@@ -392,7 +397,7 @@ const WORKED_EXAMPLES = [
 
 const FIRST_PROMPT = "Use Arcmira: has TBPN mentioned Ramp this month? Resolve both names first, then give first and last seen with watch links.";
 
-type SetupResult = { dry_run: boolean; auth: Auth["kind"]; lines: string[]; next: string[]; first_prompt: string; cli_key: boolean; failed: number };
+type SetupResult = { dry_run: boolean; auth: Auth["kind"]; lines: string[]; next: string[]; updates: string[]; first_prompt: string; cli_key: boolean; failed: number };
 
 const interactive = () => Boolean(process.stdin.isTTY && process.stderr.isTTY);
 
@@ -432,7 +437,7 @@ async function runSetup({ values: v, apiKey, baseUrl }: Context): Promise<SetupR
     if (!key && canAsk) key = await signInInteractively(baseUrl, v.auth === "key" ? "--auth key needs an Arcmira key." : "The arcmira command line needs a key; agents sign in on their own.");
     if (v.auth === "key" && !key) throw new UsageError("--auth key needs a key: arcmira login you@example.com, or set ARCMIRA_API_KEY", "missing_key", "arcmira login you@example.com");
     const auth: Auth = v.auth === "key" ? { kind: "key", key: key! } : { kind: "oauth" };
-    const actions = plan(selected, auth, SKILL);
+    const actions = plan(selected, auth, SKILLS);
     const changes = actions.filter((a) => a.kind === "run" || a.kind === "json" || a.kind === "file");
     if (canAsk && changes.length > 0) {
         for (const action of changes) console.error(describe(action, auth, true));
@@ -455,13 +460,20 @@ async function runSetup({ values: v, apiKey, baseUrl }: Context): Promise<SetupR
             lines.push(`${describe(action, auth, true).replace("would ", "failed to ")}  (${redact(detail, auth)})`);
         }
     }
-    const skills = actions.flatMap((a) => (a.kind === "file" ? [a.path] : a.kind === "unchanged" && a.target === "skill" ? [a.detail] : []));
-    if (!dryRun && skills.length > 0) writeRecord(configDir(), VERSION, skills);
-    const connected = new Set(actions.filter((a) => a.target === "mcp" && (a.kind === "run" || a.kind === "json" || a.kind === "unchanged")).map((a) => a.host));
+    const roots = actions.flatMap((a) => (a.kind === "file" ? [skillRoot(a.path)] : a.kind === "unchanged" && a.target === "skill" ? [skillRoot(a.detail)] : []));
+    if (!dryRun && roots.length > 0) writeRecord(configDir(), VERSION, [...new Set(roots)], SKILLS.map((s) => s.name));
+    const connected = new Set(actions.filter((a) => (a.target === "mcp" || a.target === "plugin") && (a.kind === "run" || a.kind === "json" || a.kind === "unchanged")).map((a) => a.host));
+    const viaPlugin = actions.some((a) => a.target === "plugin");
+    const viaFiles = actions.some((a) => a.target === "skill" && (a.kind === "file" || a.kind === "unchanged"));
+    const updates = [
+        ...(viaPlugin ? [`Claude Code: the arcmira plugin updates itself (auto-update on for the ${MARKETPLACE.name} marketplace). Now: claude plugin update ${MARKETPLACE.plugin}`] : []),
+        ...(viaFiles ? ["Other agents: skills are copies this CLI refreshes after each upgrade, and it checks for a new version once a day. Update: npm i -g arcmira@latest"] : []),
+        "The MCP server is remote: its tools and describe reference are current on every call, with nothing to update.",
+    ];
     const next = auth.kind === "oauth" ? selected.filter((h) => connected.has(h.id)).map((h) => `${h.name}: ${h.signIn}`) : [];
     if (auth.kind === "key" && connected.has("codex")) next.push("Codex: export ARCMIRA_API_KEY in the shell that starts Codex; it reads the key from there.");
     process.exitCode = failed > 0 ? 1 : 0;
-    return { dry_run: dryRun, auth: auth.kind, lines, next, first_prompt: FIRST_PROMPT, cli_key: Boolean(key), failed };
+    return { dry_run: dryRun, auth: auth.kind, lines, next, updates, first_prompt: FIRST_PROMPT, cli_key: Boolean(key), failed };
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -867,7 +879,7 @@ const COMMANDS: Record<string, Command> = {
     },
     setup: {
         section: "account",
-        summary: "Connect the Arcmira MCP server and the arcmira skill to Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop.",
+        summary: "Connect the Arcmira MCP server and skills to Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop, with updates on.",
         usage: `setup [--only ${AGENTS.join("|")}] [--auth oauth|key] [--dry-run] [--yes]`,
         examples: ["arcmira setup", "arcmira setup --dry-run", "arcmira setup --only claude-code --only cursor --yes", "arcmira setup --auth key --yes"],
         positionals: "none",
@@ -883,6 +895,7 @@ const COMMANDS: Record<string, Command> = {
             for (const line of r.lines) console.log(line);
             if (r.dry_run) return note("dry run: nothing changed. Apply: arcmira setup --yes");
             if (r.next.length > 0) console.log(["", "Next, sign in once per agent:", ...r.next.map((step) => `  ${step}`)].join("\n"));
+            console.log(["", "Updates (Arcmira ships weekly):", ...r.updates.map((line) => `  ${line}`)].join("\n"));
             console.log(`\nThen ask your agent: "${r.first_prompt}"`);
             if (!r.cli_key) note("The arcmira command line has no key yet: arcmira login you@example.com");
         },
@@ -1015,7 +1028,7 @@ function help(name?: string): string {
         `Reserved flags, not available yet: ${reserved.join(", ")}.`,
         "",
         "Examples:",
-        "  arcmira setup                          connect the MCP server and skill to your coding agents",
+        "  arcmira setup                          connect the MCP server and skills to your coding agents, updates on",
         "  arcmira login you@example.com          email a code, then: arcmira login you@example.com --code 123456",
         "  arcmira resolve Ramp                   names to ent_ ids; filter with the id: arcmira mentions --entity ent_14",
         "  arcmira sponsors TBPN",
@@ -1162,9 +1175,17 @@ async function main(argv: string[]): Promise<number> {
     const positionals = parsed.positionals.slice(found!.depth);
     const baseUrl = str(values["base-url"]) ?? process.env.ARCMIRA_BASE_URL ?? "https://api.arcmira.com";
     try {
-        const refreshed = refreshSkills(configDir(), VERSION, SKILL);
-        if (refreshed > 0) note(`arcmira ${VERSION}: refreshed the arcmira skill in ${refreshed} agent${refreshed === 1 ? "" : "s"}`);
+        const refreshed = refreshSkills(configDir(), VERSION, SKILLS);
+        if (refreshed > 0) note(`arcmira ${VERSION}: refreshed the Arcmira skills in ${refreshed} agent${refreshed === 1 ? "" : "s"}`);
     } catch {}
+    const notice = process.stderr.isTTY && !values.json ? updateNotice(configDir(), VERSION).catch(() => undefined) : Promise.resolve(undefined);
+    const code = await runCommand(name, command, values, positionals, baseUrl);
+    const line = await notice;
+    if (line) note(line);
+    return code;
+}
+
+async function runCommand(name: string, command: Command, values: Values, positionals: string[], baseUrl: string): Promise<number> {
     try {
         for (const [key, spec] of Object.entries(GLOBAL)) {
             if (spec.reserved && !(key in command.options) && values[key] !== undefined) throw new UsageError(`--${key} is reserved for a later version of arcmira and does nothing yet`, "reserved_option");

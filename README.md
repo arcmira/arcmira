@@ -13,7 +13,7 @@ The official `arcmira` package: a typed client for the [Arcmira API](https://arc
 npm install arcmira
 ```
 
-To give your coding agent Arcmira, run setup. It finds Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop, adds the [Arcmira MCP server](https://github.com/arcmira/mcp) to each, and installs the `arcmira` skill:
+To give your coding agent Arcmira, run setup. It finds Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop, adds the [Arcmira MCP server](https://github.com/arcmira/mcp) to each, installs the Arcmira skills, and turns updates on. Arcmira ships changes weekly, so keep them on:
 
 ```sh
 npx arcmira setup --dry-run   # print what would change
@@ -91,22 +91,29 @@ npx arcmira api GET /v1/mentions -f entity_id=ent_14 --paginate
 
 ### Setup
 
-`arcmira setup` connects `https://mcp.arcmira.com/mcp` and installs the `arcmira` skill in each agent it finds:
+`arcmira setup` connects `https://mcp.arcmira.com/mcp` and installs the Arcmira skills in each agent it finds: `arcmira` (the client reference) plus one skill per task (`sponsor-research`, `company-watch`, `find-quotes`, `person-research`, `compare-shows`).
 
-| Agent | MCP server | Skill |
-| --- | --- | --- |
-| Claude Code | `claude mcp add --transport http --scope user arcmira ...` | `~/.claude/skills/arcmira/SKILL.md` |
-| Codex | `codex mcp add arcmira --url ...` | `~/.agents/skills/arcmira/SKILL.md` |
-| Cursor | `~/.cursor/mcp.json` | `~/.cursor/skills/arcmira/SKILL.md` |
-| VS Code | the user profile's `mcp.json` | `~/.copilot/skills/arcmira/SKILL.md` |
-| Gemini CLI | `~/.gemini/settings.json` | `~/.gemini/skills/arcmira/SKILL.md` |
-| Claude Desktop | printed steps (Customize, then Connectors) | printed steps (a skill upload) |
+| Agent | MCP server | Skills | Updates |
+| --- | --- | --- | --- |
+| Claude Code | the `arcmira` plugin: `claude plugin marketplace add arcmira/mcp`, `claude plugin install arcmira@arcmira` | in the plugin | auto-update on: `autoUpdate: true` on `extraKnownMarketplaces.arcmira` in `~/.claude/settings.json` |
+| Codex | `codex mcp add arcmira --url ...` | `~/.agents/skills/<name>/SKILL.md` | refreshed by a newer `arcmira` |
+| Cursor | `~/.cursor/mcp.json` | `~/.cursor/skills/<name>/SKILL.md` | refreshed by a newer `arcmira` |
+| VS Code | the user profile's `mcp.json` | `~/.copilot/skills/<name>/SKILL.md` | refreshed by a newer `arcmira` |
+| Gemini CLI | `~/.gemini/settings.json` | `~/.gemini/skills/<name>/SKILL.md` | refreshed by a newer `arcmira` |
+| Claude Desktop | printed steps (Customize, then Connectors) | printed steps (a skill upload) | the connector is remote |
 
 - Idempotent: an agent that already has the server is left alone, and a second run prints `unchanged` for every line.
-- `--auth oauth` (default) leaves sign-in to each agent, in the browser. `--auth key` sends the key in use as a bearer header instead; Codex reads it from `ARCMIRA_API_KEY`. The key is never printed.
+- `--auth oauth` (default) leaves sign-in to each agent, in the browser. `--auth key` sends the key in use as a bearer header instead; Codex reads it from `ARCMIRA_API_KEY`. The key is never printed. With `--auth key`, Claude Code gets `claude mcp add --header ...` and skill copies instead of the plugin, because a plugin's server entry cannot carry your key.
 - `--only <agent>` (repeatable) limits the run, `--dry-run` changes nothing, `--yes` skips the confirmation. Without a key and at a terminal, setup offers the `arcmira login` email flow first.
 - A JSON config that is not plain JSON (comments, trailing commas) is not rewritten; setup prints the entry to add by hand.
-- Upgrades: setup records where it installed the skill in `~/.config/arcmira/setup.json`. The first command a newer `arcmira` runs rewrites those copies with the skill it bundles.
+
+### Updates
+
+Arcmira changes weekly. Three parts keep you current:
+
+- **The MCP server** is remote. Every client fetches its tools and instructions on connect, and `describe` returns the reference from the server on every call, so the MCP server alone is always current.
+- **The Claude Code plugin** updates in the background once auto-update is on. `arcmira setup` turns it on. By hand: run `/plugin`, open **Marketplaces**, pick `arcmira`, and choose **Enable auto-update**. Update now: `claude plugin update arcmira@arcmira`.
+- **Skill copies and this CLI.** `arcmira` checks npm for a newer version at most once a day and prints one line when there is one (`ARCMIRA_NO_UPDATE_CHECK=1` or `CI` turns the check off). Update with `npm i -g arcmira@latest`. The first command the new version runs rewrites every skill directory setup used (recorded in `~/.config/arcmira/setup.json`), adding skills that are new in that version.
 
 `arcmira examples` prints worked tasks: resolve a name, check the row, then filter by its id.
 
@@ -131,7 +138,7 @@ Aliases
   arcmira transcript <video>          same as arcmira transcripts get (the MCP tool get_transcript)
 
 Account
-  arcmira setup [--only agent]        connect the MCP server and the arcmira skill to your coding agents
+  arcmira setup [--only agent]        connect the MCP server and skills to your coding agents, updates on
   arcmira login [email] [--code N] [--key arc_sk_...]
   arcmira logout
   arcmira whoami                      key id, label and account, plan, scopes, rate limit, rows, and where the key came from
