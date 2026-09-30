@@ -128,7 +128,7 @@ function checkIdShape(value: string, kind: "entity" | "channel"): void {
 
 type EntityRow = Arcmira.EntitySearchResponse["data"][number];
 
-async function resolveName(client: ArcmiraClient, name: string, type?: "channel"): Promise<EntityRow> {
+async function resolveName(client: ArcmiraClient, name: string, type?: "channel" | "person"): Promise<EntityRow> {
     const { data } = await client.entities.search({ q: name, type, limit: 5 });
     const exact = data.filter((row) => row.name.toLowerCase() === name.replace(/^@/, "").toLowerCase());
     const pick = data.find((row) => row.suggested) ?? (exact.length === 1 ? exact[0] : undefined) ?? (data.length === 1 ? data[0] : undefined);
@@ -137,15 +137,15 @@ async function resolveName(client: ArcmiraClient, name: string, type?: "channel"
         throw new UsageError(
             data.length === 0 ? `no ${type ?? "entity"} matches "${name}"` : `"${name}" is ambiguous; pass one of these ids:\n${options}`,
             data.length === 0 ? "name_not_found" : "name_ambiguous",
-            `arcmira resolve "${name}"${type ? " --type channel" : ""}`,
+            `arcmira resolve "${name}"${type ? ` --type ${type}` : ""}`,
         );
     }
     note(`resolved "${name}" to ${pick.id} (${pick.type} ${pick.name}${pick.youtube_channel_id ? ` ${pick.youtube_channel_id}` : ""})`);
     return pick;
 }
 
-async function entityId(client: ArcmiraClient, value: string): Promise<string> {
-    return ENTITY_ID.test(value) ? value : (await resolveName(client, value)).id;
+async function entityId(client: ArcmiraClient, value: string, type?: "person"): Promise<string> {
+    return ENTITY_ID.test(value) ? value : (await resolveName(client, value, type)).id;
 }
 
 async function channelId(client: ArcmiraClient, value: string): Promise<string> {
@@ -469,12 +469,19 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["search_transcripts"],
         summary: "Search spoken transcript slices for one topic or phrase.",
-        usage: "search <query> [--channel UC...|name] [--entity ent_...|name] [--source ...] [--after DATE] [--limit N]",
-        examples: ['arcmira search "agent payments" --limit 3', "arcmira search stablecoins --channel TBPN --after 2026-06-01"],
+        usage: "search <query> [--channel UC...|name] [--about ent_...|name] [--by ent_...|name] [--kind K] [--entity ent_...] [--source ...] [--after DATE] [--limit N]",
+        examples: [
+            'arcmira search "agent payments" --limit 3',
+            "arcmira resolve Ramp && arcmira search \"corporate cards\" --about ent_14 --kind recommendation_organic",
+            "arcmira search stablecoins --channel UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-06-01",
+        ],
         positionals: "text",
         options: {
             channel: { type: "string", multiple: true, short: "c", help: "Channel to search: UC id, @handle or name. Repeat for up to 8." },
             entity: { type: "string", multiple: true, short: "e", help: "Entity to scope by: ent_ id or name. Repeat for up to 8." },
+            about: { type: "string", multiple: true, help: "Passages about this entity: ent_ id or name. Repeat for up to 8." },
+            by: { type: "string", multiple: true, help: "Passages spoken by this person: ent_ id or name. Repeat for up to 8." },
+            kind: { type: "string", multiple: true, oneOf: ["mention", "recommendation_sponsored", "recommendation_organic"], help: "Passage kind: mention, recommendation_sponsored or recommendation_organic. Repeat to combine." },
             source: { type: "string", oneOf: ["arcmira_premium", "creator_captions", "third_party_quick"], help: "arcmira_premium, creator_captions or third_party_quick." },
             ...dateOptions,
             ...limit(20, "Chunks to return, 1 to 20. Default 5."),
@@ -482,6 +489,9 @@ const COMMANDS: Record<string, Command> = {
         run: async ({ client, positionals, values: v }) => {
             const channels = await Promise.all(many(v.channel).map((c) => channelId(client, c)));
             const entities = await Promise.all(many(v.entity).map((e) => entityId(client, e)));
+            const about = await Promise.all(many(v.about).map((e) => entityId(client, e)));
+            const by = await Promise.all(many(v.by).map((e) => entityId(client, e, "person")));
+            const extra = { about: about.join(",") || undefined, by: by.join(",") || undefined, kind: many(v.kind).join(",") || undefined };
             return client.transcripts.search({
                 q: positionals.join(" "),
                 channel_ids: channels.join(",") || undefined,
@@ -490,7 +500,7 @@ const COMMANDS: Record<string, Command> = {
                 published_after: str(v.after),
                 published_before: str(v.before),
                 limit: num(v.limit),
-            });
+            }, { queryParams: extra });
         },
         print: (r: Arcmira.TranscriptSearchResponse) => {
             if (r.chunks.length === 0) return console.log("No hits in the index.");
@@ -1041,6 +1051,7 @@ function validate(name: string, command: Command, values: Values, positionals: s
         }
     }
     for (const key of ["entity", "channel"] as const) if (key in command.options) for (const value of many(values[key])) checkIdShape(value, key);
+    for (const key of ["about", "by"]) if (key in command.options) for (const value of many(values[key])) checkIdShape(value, "entity");
     if (name === "momentum" || name === "recommendations") for (const p of positionals) checkIdShape(p, "entity");
     if (name === "status" && positionals[0] && UUID.test(positionals[0])) {
         throw new UsageError(`transcript requests moved: arcmira transcripts status ${positionals[0]}`, "command_moved", undefined, true);

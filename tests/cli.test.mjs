@@ -134,3 +134,19 @@ test("examples resolve a name before filtering by its id", async () => {
     assert.equal(r.code, 0, r.stderr);
     assert.ok(r.stdout.indexOf("arcmira resolve Ramp") < r.stdout.indexOf("arcmira mentions --entity ent_14"));
 });
+
+test("search sends about, by and kind as ids; names resolve first, by as a person", async () => {
+    const r = await arcmira(["search", "corporate cards", "--about", "ent_14", "--by", "Eric Glyman", "--kind", "recommendation_organic", "--kind", "mention"]);
+    assert.equal(r.code, 0, r.stderr);
+    const resolve = fake.requests.findLast((q) => q.path === "/v1/entities/search");
+    assert.equal(resolve.query.type, "person");
+    const sent = fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query;
+    assert.equal(sent.about, "ent_14");
+    assert.equal(sent.by, "ent_14");
+    assert.equal(sent.kind, "recommendation_organic,mention");
+    const plain = await arcmira(["search", "corporate cards"]);
+    assert.equal(plain.code, 0, plain.stderr);
+    assert.deepEqual(Object.keys(fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query).filter((k) => ["about", "by", "kind"].includes(k)), []);
+    const bad = await arcmira(["search", "x y", "--about", "ent_abc"]);
+    assert.equal(bad.code, 2);
+});

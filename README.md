@@ -114,7 +114,7 @@ npx arcmira api GET /v1/mentions -f entity_id=ent_14 --paginate
 
 ```text
 Data commands (they mirror the MCP tools)
-  arcmira search <query>              spoken transcript slices for a topic or phrase
+  arcmira search <query>              spoken transcript slices for a topic or phrase; --about, --by (ids) and --kind filter them
   arcmira resolve <query>             names, aliases, URLs, @handles and UC ids to typed entity rows
   arcmira mentions --entity <id|name> where an entity was mentioned, newest first
   arcmira momentum <id|name>...       7 and 30 day volume for one to four entities
