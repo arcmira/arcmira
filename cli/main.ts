@@ -10,11 +10,14 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Arcmira, ArcmiraClient, ArcmiraError } from "arcmira";
 import { OPERATIONS, type Operation } from "./operations";
+import { AGENTS, apply, describe, hosts, plan, redact, refreshSkills, writeRecord, type AgentId, type Auth } from "./setup";
+import { createInterface } from "node:readline/promises";
 
 const VERSION: string = require("../../package.json").version;
 /** The SDK sends User-Agent arcmira/<version>; the CLI overrides it so API logs separate the two. */
 const USER_AGENT = `arcmira-cli/${VERSION}`;
 const DOCS_URL = "https://arcmira.com/docs";
+const SKILL: string = readFileSync(join(__dirname, "..", "..", "skills", "arcmira", "SKILL.md"), "utf8");
 
 type OptionSpec = {
     type: "string" | "boolean";
@@ -152,7 +155,8 @@ async function channelId(client: ArcmiraClient, value: string): Promise<string> 
     return row.youtube_channel_id;
 }
 
-const configPath = () => join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "arcmira", "config.json");
+const configDir = () => join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "arcmira");
+const configPath = () => join(configDir(), "config.json");
 
 function savedKey(): string | undefined {
     try {
@@ -351,6 +355,113 @@ function nextPage(response: { has_more?: boolean; next_cursor?: string | null })
     const dropped = ["--cursor", "--key"];
     const args = process.argv.slice(2).filter((arg, index, all) => !dropped.includes(arg) && !dropped.includes(all[index - 1]) && !dropped.some((flag) => arg.startsWith(`${flag}=`)));
     note(`more rows: arcmira ${args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(" ")} --cursor ${response.next_cursor}`);
+}
+
+
+/** Filters take ids; each example resolves first when it starts from a name. */
+const WORKED_EXAMPLES = [
+    {
+        task: "Has a show mentioned a company? Resolve both names, check the rows, then filter by the ids.",
+        steps: ["arcmira resolve Ramp                      # ent_14  organization  Ramp", "arcmira resolve TBPN --type channel        # UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira mentions --entity ent_14 --channel UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-09-01"],
+    },
+    {
+        task: "Who talks about a topic, on which shows, and when.",
+        steps: ['arcmira search "agent payments" --after 2026-09-01 --limit 5', 'arcmira search "stablecoins" --channel UC-DRzaGnL_vtBUpCFH5M0tg --json | jq -r \'.chunks[].watchUrl\''],
+    },
+    {
+        task: "Who sponsors a show, and who recommends a product for free.",
+        steps: ["arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg --status active", "arcmira recommendations ent_14 --kind organic --limit 20"],
+    },
+    {
+        task: "Is a company getting more airtime than a rival.",
+        steps: ["arcmira resolve Brex                      # check the type is organization", "arcmira momentum ent_14 <brex ent_ id>"],
+    },
+    {
+        task: "Read one video.",
+        steps: ["arcmira transcript https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 300", "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'"],
+    },
+    {
+        task: "Check coverage before you cite a channel.",
+        steps: ["arcmira status UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira episodes UC-DRzaGnL_vtBUpCFH5M0tg --limit 5"],
+    },
+    {
+        task: "Any endpoint the commands do not cover.",
+        steps: ["arcmira schema monitors", "arcmira api GET /v1/monitors"],
+    },
+];
+
+const FIRST_PROMPT = "Use Arcmira: has TBPN mentioned Ramp this month? Resolve both names first, then give first and last seen with watch links.";
+
+type SetupResult = { dry_run: boolean; auth: Auth["kind"]; lines: string[]; next: string[]; first_prompt: string; cli_key: boolean; failed: number };
+
+const interactive = () => Boolean(process.stdin.isTTY && process.stderr.isTTY);
+
+async function ask(question: string): Promise<string> {
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
+    try {
+        return (await rl.question(question)).trim();
+    } finally {
+        rl.close();
+    }
+}
+
+/** `arcmira login` in one sitting: email, then the emailed code. Returns the saved key, or undefined when skipped. */
+async function signInInteractively(baseUrl: string, why: string): Promise<string | undefined> {
+    const email = await ask(`${why}\nEmail for an Arcmira key (Enter to skip): `);
+    if (!email) return undefined;
+    if (!email.includes("@")) throw new UsageError(`"${email}" is not an email address`, "missing_email", "arcmira login you@example.com");
+    await postJson(baseUrl, "v1/signups", { email, src: "cli-setup" });
+    const code = await ask(`Sent a code to ${email}. Code: `);
+    if (!/^\d{6}$/.test(code)) throw new UsageError("the code is the six digits from the email", "invalid_code", `arcmira login ${email} --code <code>`);
+    const verified = (await postJson(baseUrl, "v1/signups/verify", { email, code })) as { key: string };
+    saveKey(verified.key);
+    note(`Key saved to ${configPath()}.`);
+    return verified.key;
+}
+
+async function runSetup({ values: v, apiKey, baseUrl }: Context): Promise<SetupResult> {
+    const dryRun = Boolean(v["dry-run"]);
+    const only = many(v.only) as AgentId[];
+    const all = hosts();
+    const selected = only.length > 0 ? all.filter((h) => only.includes(h.id)) : all.filter((h) => h.present);
+    if (selected.length === 0) {
+        throw new UsageError(`found none of ${all.map((h) => h.name).join(", ")} on this machine`, "no_agents", `arcmira setup --only ${AGENTS[0]}`);
+    }
+    let key = apiKey;
+    const canAsk = interactive() && !v.yes && !dryRun;
+    if (!key && canAsk) key = await signInInteractively(baseUrl, v.auth === "key" ? "--auth key needs an Arcmira key." : "The arcmira command line needs a key; agents sign in on their own.");
+    if (v.auth === "key" && !key) throw new UsageError("--auth key needs a key: arcmira login you@example.com, or set ARCMIRA_API_KEY", "missing_key", "arcmira login you@example.com");
+    const auth: Auth = v.auth === "key" ? { kind: "key", key: key! } : { kind: "oauth" };
+    const actions = plan(selected, auth, SKILL);
+    const changes = actions.filter((a) => a.kind === "run" || a.kind === "json" || a.kind === "file");
+    if (canAsk && changes.length > 0) {
+        for (const action of changes) console.error(describe(action, auth, true));
+        const answer = await ask("Apply these changes? [Y/n] ");
+        if (/^n/i.test(answer)) throw new UsageError("setup cancelled; nothing changed", "cancelled", undefined, true);
+    }
+    const lines: string[] = [];
+    let failed = 0;
+    for (const action of actions) {
+        if (dryRun) {
+            lines.push(describe(action, auth, true));
+            continue;
+        }
+        try {
+            apply(action);
+            lines.push(describe(action, auth, false));
+        } catch (error) {
+            failed++;
+            const detail = ((error as { stderr?: Buffer }).stderr?.toString().trim() || (error as Error).message).split("\n")[0];
+            lines.push(`${describe(action, auth, true).replace("would ", "failed to ")}  (${redact(detail, auth)})`);
+        }
+    }
+    const skills = actions.flatMap((a) => (a.kind === "file" ? [a.path] : a.kind === "unchanged" && a.target === "skill" ? [a.detail] : []));
+    if (!dryRun && skills.length > 0) writeRecord(configDir(), VERSION, skills);
+    const connected = new Set(actions.filter((a) => a.target === "mcp" && (a.kind === "run" || a.kind === "json" || a.kind === "unchanged")).map((a) => a.host));
+    const next = auth.kind === "oauth" ? selected.filter((h) => connected.has(h.id)).map((h) => `${h.name}: ${h.signIn}`) : [];
+    if (auth.kind === "key" && connected.has("codex")) next.push("Codex: export ARCMIRA_API_KEY in the shell that starts Codex; it reads the key from there.");
+    process.exitCode = failed > 0 ? 1 : 0;
+    return { dry_run: dryRun, auth: auth.kind, lines, next, first_prompt: FIRST_PROMPT, cli_key: Boolean(key), failed };
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -708,7 +819,7 @@ const COMMANDS: Record<string, Command> = {
         section: "account",
         summary: "Delete the key saved by `arcmira login`.",
         usage: "logout",
-        examples: ["arcmira logout"],
+        examples: ["arcmira logout", "arcmira logout && arcmira login you@example.com"],
         positionals: "none",
         needsKey: false,
         options: {},
@@ -744,6 +855,42 @@ const COMMANDS: Record<string, Command> = {
         run: async ({ apiKey, values }) => ({ key: values.reveal ? apiKey : mask(apiKey ?? ""), source: keySource }),
         print: (r: { key: string; source: string }, { values }) => console.log(values.reveal ? r.key : `${r.key}  from ${r.source}`),
     },
+    setup: {
+        section: "account",
+        summary: "Connect the Arcmira MCP server and the arcmira skill to Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop.",
+        usage: `setup [--only ${AGENTS.join("|")}] [--auth oauth|key] [--dry-run] [--yes]`,
+        examples: ["arcmira setup", "arcmira setup --dry-run", "arcmira setup --only claude-code --only cursor --yes", "arcmira setup --auth key --yes"],
+        positionals: "none",
+        needsKey: false,
+        options: {
+            only: { type: "string", multiple: true, oneOf: AGENTS, help: `Set up this agent only, found or not. Repeat for more. One of ${AGENTS.join(", ")}.` },
+            auth: { type: "string", oneOf: ["oauth", "key"], help: "oauth (default): each agent signs in through the browser. key: send the key in use as a bearer header, no browser." },
+            "dry-run": { type: "boolean", help: "Print what setup would change and change nothing." },
+            yes: { type: "boolean", short: "y", help: "Apply without asking." },
+        },
+        run: runSetup,
+        print: (r: SetupResult) => {
+            for (const line of r.lines) console.log(line);
+            if (r.dry_run) return note("dry run: nothing changed. Apply: arcmira setup --yes");
+            if (r.next.length > 0) console.log(["", "Next, sign in once per agent:", ...r.next.map((step) => `  ${step}`)].join("\n"));
+            console.log(`\nThen ask your agent: "${r.first_prompt}"`);
+            if (!r.cli_key) note("The arcmira command line has no key yet: arcmira login you@example.com");
+        },
+    },
+    examples: {
+        section: "any",
+        summary: "Worked examples: resolve a name, filter by its id, read a transcript, script with --json.",
+        usage: "examples",
+        examples: ["arcmira examples", "arcmira examples | grep sponsors"],
+        positionals: "none",
+        needsKey: false,
+        options: {},
+        run: async () => ({ examples: WORKED_EXAMPLES }),
+        print: (r: { examples: typeof WORKED_EXAMPLES }) => {
+            for (const e of r.examples) console.log(`# ${e.task}\n${e.steps.join("\n")}\n`);
+            note(`Docs: ${DOCS_URL}   Each command: arcmira <command> --help`);
+        },
+    },
     api: {
         section: "any",
         summary: "Call any /v1 endpoint with the key in use and print the response body as JSON.",
@@ -773,7 +920,7 @@ const COMMANDS: Record<string, Command> = {
         section: "any",
         summary: "Method, path, parameters and body fields of a command or endpoint, from the OpenAPI bundled in this version.",
         usage: "schema [command|operationId|path group]",
-        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema transcripts request", "arcmira schema create_monitor", "arcmira schema monitors --json"],
+        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema transcripts request", "arcmira schema monitors --json"],
         positionals: "any",
         needsKey: false,
         options: {},
@@ -858,8 +1005,9 @@ function help(name?: string): string {
         `Reserved flags, not available yet: ${reserved.join(", ")}.`,
         "",
         "Examples:",
+        "  arcmira setup                          connect the MCP server and skill to your coding agents",
         "  arcmira login you@example.com          email a code, then: arcmira login you@example.com --code 123456",
-        "  arcmira resolve Ramp                   names to ent_ ids; commands also take names directly",
+        "  arcmira resolve Ramp                   names to ent_ ids; filter with the id: arcmira mentions --entity ent_14",
         "  arcmira sponsors TBPN",
         "  arcmira mentions --entity Ramp --after 2026-09-01 --json",
         "  arcmira api GET /v1/monitors           any endpoint; arcmira schema lists them",
@@ -869,7 +1017,7 @@ function help(name?: string): string {
         "Errors: every API error line carries the request_id to quote to support.",
         "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name).",
         "Telemetry: none. The CLI sends only the API requests you ask for.",
-        "Docs: https://arcmira.com/docs   Each command: arcmira <command> --help",
+        "Docs: https://arcmira.com/docs   Worked examples: arcmira examples   Each command: arcmira <command> --help",
     );
     return lines.join("\n");
 }
@@ -942,6 +1090,7 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         else if (detail?.doc_url) lines.push(`docs: ${detail.doc_url}`);
         if (requestId) lines.push(`request_id: ${requestId}`);
         if (error.statusCode === 401) lines.push("try: arcmira login");
+        else if (/entity|channel|id_required/.test(detail?.code ?? "")) lines.push('try: arcmira resolve "<name>" and pass the id it prints');
         console.error(lines.join("\n"));
         return 1;
     }
@@ -1002,8 +1151,12 @@ async function main(argv: string[]): Promise<number> {
     const positionals = parsed.positionals.slice(found!.depth);
     const baseUrl = str(values["base-url"]) ?? process.env.ARCMIRA_BASE_URL ?? "https://api.arcmira.com";
     try {
+        const refreshed = refreshSkills(configDir(), VERSION, SKILL);
+        if (refreshed > 0) note(`arcmira ${VERSION}: refreshed the arcmira skill in ${refreshed} agent${refreshed === 1 ? "" : "s"}`);
+    } catch {}
+    try {
         for (const [key, spec] of Object.entries(GLOBAL)) {
-            if (spec.reserved && values[key] !== undefined) throw new UsageError(`--${key} is reserved for a later version of arcmira and does nothing yet`, "reserved_option");
+            if (spec.reserved && !(key in command.options) && values[key] !== undefined) throw new UsageError(`--${key} is reserved for a later version of arcmira and does nothing yet`, "reserved_option");
         }
         validate(name, command, values, positionals);
         const flagKey = str(values.key);

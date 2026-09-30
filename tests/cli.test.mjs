@@ -117,3 +117,20 @@ test("the conformance ruler passes every check", async () => {
     const total = /total (\d+)\/(\d+)/.exec(stdout);
     assert.ok(total && total[1] === total[2], stdout);
 });
+
+test("every command's help ends with 2 to 4 examples", async () => {
+    const top = await arcmira(["--help"], {});
+    const names = [...top.stdout.split("\nAliases:")[0].matchAll(/^  ([a-z]+(?: [a-z]+)?)  /gm)].map((m) => m[1]).filter((name) => name !== "auth");
+    assert.ok(names.includes("setup") && names.includes("examples"), names.join(","));
+    for (const name of names) {
+        const help = await arcmira([...name.split(" "), "--help"], {});
+        const examples = help.stdout.split("Examples:\n")[1]?.split("\n\n")[0].split("\n").filter(Boolean) ?? [];
+        assert.ok(examples.length >= 2 && examples.length <= 4, `${name}: ${examples.length} examples`);
+    }
+});
+
+test("examples resolve a name before filtering by its id", async () => {
+    const r = await arcmira(["examples"], {});
+    assert.equal(r.code, 0, r.stderr);
+    assert.ok(r.stdout.indexOf("arcmira resolve Ramp") < r.stdout.indexOf("arcmira mentions --entity ent_14"));
+});

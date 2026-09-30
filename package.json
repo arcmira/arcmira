@@ -27,6 +27,7 @@
   },
   "files": [
     "dist",
+    "skills",
     "reference.md",
     "README.md",
     "LICENSE",
@@ -38,7 +39,8 @@
     "build:esm": "tsc --project ./tsconfig.esm.json && node scripts/rename-to-esm-files.js dist/esm",
     "build:cli": "tsc --project ./tsconfig.cli.json",
     "test": "npm run build && node --test \"tests/*.test.mjs\"",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "sync-skill": "node scripts/sync-skill.mjs"
   },
   "devDependencies": {
     "@types/node": "20.19.43",

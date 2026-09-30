@@ -13,6 +13,13 @@ The official `arcmira` package: a typed client for the [Arcmira API](https://arc
 npm install arcmira
 ```
 
+To give your coding agent Arcmira, run setup. It finds Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop, adds the [Arcmira MCP server](https://github.com/arcmira/mcp) to each, and installs the `arcmira` skill:
+
+```sh
+npx arcmira setup --dry-run   # print what would change
+npx arcmira setup             # apply, then sign in once per agent
+```
+
 Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authentication) and set `ARCMIRA_API_KEY`, or pass `apiKey` to the client.
 
 ## Quickstart
@@ -82,6 +89,27 @@ npx arcmira sponsors TBPN
 npx arcmira api GET /v1/mentions -f entity_id=ent_14 --paginate
 ```
 
+### Setup
+
+`arcmira setup` connects `https://mcp.arcmira.com/mcp` and installs the `arcmira` skill in each agent it finds:
+
+| Agent | MCP server | Skill |
+| --- | --- | --- |
+| Claude Code | `claude mcp add --transport http --scope user arcmira ...` | `~/.claude/skills/arcmira/SKILL.md` |
+| Codex | `codex mcp add arcmira --url ...` | `~/.agents/skills/arcmira/SKILL.md` |
+| Cursor | `~/.cursor/mcp.json` | `~/.cursor/skills/arcmira/SKILL.md` |
+| VS Code | the user profile's `mcp.json` | `~/.copilot/skills/arcmira/SKILL.md` |
+| Gemini CLI | `~/.gemini/settings.json` | `~/.gemini/skills/arcmira/SKILL.md` |
+| Claude Desktop | printed steps (Customize, then Connectors) | printed steps (a skill upload) |
+
+- Idempotent: an agent that already has the server is left alone, and a second run prints `unchanged` for every line.
+- `--auth oauth` (default) leaves sign-in to each agent, in the browser. `--auth key` sends the key in use as a bearer header instead; Codex reads it from `ARCMIRA_API_KEY`. The key is never printed.
+- `--only <agent>` (repeatable) limits the run, `--dry-run` changes nothing, `--yes` skips the confirmation. Without a key and at a terminal, setup offers the `arcmira login` email flow first.
+- A JSON config that is not plain JSON (comments, trailing commas) is not rewritten; setup prints the entry to add by hand.
+- Upgrades: setup records where it installed the skill in `~/.config/arcmira/setup.json`. The first command a newer `arcmira` runs rewrites those copies with the skill it bundles.
+
+`arcmira examples` prints worked tasks: resolve a name, check the row, then filter by its id.
+
 ### Commands
 
 ```text
@@ -103,6 +131,7 @@ Aliases
   arcmira transcript <video>          same as arcmira transcripts get (the MCP tool get_transcript)
 
 Account
+  arcmira setup [--only agent]        connect the MCP server and the arcmira skill to your coding agents
   arcmira login [email] [--code N] [--key arc_sk_...]
   arcmira logout
   arcmira whoami                      key id, label and account, plan, scopes, rate limit, rows, and where the key came from
@@ -115,6 +144,7 @@ Any endpoint
   arcmira api <method> <path>         -f key=value, -F key=value|@file, -H 'Name: value', --body @file|-, --paginate, --verbose
   arcmira schema [command|operationId] method, path, parameters and body fields, offline
   arcmira docs [query]                search the docs, or print their address
+  arcmira examples                    worked examples, resolve first then filter by id
 
 Not available yet (each prints the arcmira api call that does the same, and exits 2)
   arcmira monitors, arcmira trackers, arcmira corrections, arcmira feedback, arcmira keys
@@ -133,7 +163,7 @@ Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI r
 - Errors: every API error names its `request_id` (quote it to support). A 401 adds `try: arcmira login`.
 - Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`. `arcmira api --paginate` follows every page.
 - Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet). Input is checked before any request.
-- Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version; their names are held for write commands to come.
+- Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version outside `arcmira setup`; their names are held for write commands to come.
 - Requests carry `User-Agent: arcmira-cli/<version>`. The SDK used on its own sends `arcmira/<version>`.
 - Telemetry: none. The CLI sends only the API requests you ask for, plus a docs search when you run `arcmira docs <query>`.
 - Environment: `ARCMIRA_API_KEY`, `ARCMIRA_BASE_URL` (API origin), `ARCMIRA_DOCS_URL` (docs origin, for tests), `XDG_CONFIG_HOME`, `NO_COLOR`.
