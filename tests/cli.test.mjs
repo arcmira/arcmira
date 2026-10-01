@@ -138,7 +138,7 @@ test("examples resolve a name before filtering by its id", async () => {
 test("search sends about, by and kind as ids; names resolve first, by as a person", async () => {
     const r = await arcmira(["search", "corporate cards", "--about", "ent_14", "--by", "Eric Glyman", "--kind", "recommendation_organic", "--kind", "mention"]);
     assert.equal(r.code, 0, r.stderr);
-    const resolve = fake.requests.findLast((q) => q.path === "/v1/entities/search");
+    const resolve = fake.requests.findLast((q) => q.path === "/v1/entities/resolve");
     assert.equal(resolve.query.type, "person");
     const sent = fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query;
     assert.equal(sent.about, "ent_14");
@@ -149,4 +149,22 @@ test("search sends about, by and kind as ids; names resolve first, by as a perso
     assert.deepEqual(Object.keys(fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query).filter((k) => ["about", "by", "kind"].includes(k)), []);
     const bad = await arcmira(["search", "x y", "--about", "ent_abc"]);
     assert.equal(bad.code, 2);
+});
+
+test("resolve prints best, states an assumed suggestion, and lists ask options plainly", async () => {
+    const best = await arcmira(["resolve", "Ramp", "--context", "the corporate card"]);
+    assert.equal(best.code, 0, best.stderr);
+    assert.match(best.stdout, /^ent_14  organization  Ramp/m);
+    assert.equal(fake.requests.findLast((q) => q.path === "/v1/entities/resolve").query.context, "the corporate card");
+    const assumed = await arcmira(["resolve", "Sam"]);
+    assert.match(assumed.stdout, /Assumed: Sam Altman \(person\), because it has 4,401 appearances/);
+    const ask = await arcmira(["resolve", "Jordan"]);
+    assert.equal(ask.code, 0, ask.stderr);
+    assert.match(ask.stdout, /Which Jordan do you mean\?\n  ent_7  Jordan \(organization\), sneaker brand\n  ent_8  Michael Jordan \(person\), basketball player/);
+    const filtered = await arcmira(["mentions", "--entity", "Jordan"]);
+    assert.equal(filtered.code, 2);
+    assert.match(filtered.stderr, /ent_8  Michael Jordan/);
+    const guessed = await arcmira(["mentions", "--entity", "Sam"]);
+    assert.equal(guessed.code, 0, guessed.stderr);
+    assert.match(guessed.stderr, /assumed "Sam" is ent_14  person  Sam Altman, because it has 4,401 appearances/);
 });

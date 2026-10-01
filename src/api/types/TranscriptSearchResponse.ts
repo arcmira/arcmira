@@ -32,26 +32,29 @@ export namespace TranscriptSearchResponse {
         channelIds: string[];
         publishedAfter: string | null;
         publishedBefore: string | null;
+        /** The about ids, each with its name and type. */
+        about: Arcmira.NamedEntityRef[];
+        /** The by ids, each with its name and type. */
+        by: Arcmira.NamedEntityRef[];
+        /** The kind values applied. */
+        kind: string[];
     }
 
     /**
      * Health of the search index behind these results. Catalog routes are unaffected by it.
      */
     export interface SearchIndex {
-        /** Whether the transcript search index is current. Anything but live is explained in note. */
+        /** Whether every indexed transcript is searchable. catching_up means older transcripts are still being added; note says so when the asked window reaches them. */
         state: SearchIndex.State;
-        /** While paused, the newest publish date the index holds. */
-        indexed_through: string | null;
-        /** While catching up, files still waiting to be indexed. */
-        queued: number | null;
+        /** While catching up, transcripts published before this date may be missing from search. */
+        missing_before: string | null;
     }
 
     export namespace SearchIndex {
-        /** Whether the transcript search index is current. Anything but live is explained in note. */
+        /** Whether every indexed transcript is searchable. catching_up means older transcripts are still being added; note says so when the asked window reaches them. */
         export const State = {
             Live: "live",
             CatchingUp: "catching_up",
-            Paused: "paused",
             Unknown: "unknown",
         } as const;
         export type State = (typeof State)[keyof typeof State];

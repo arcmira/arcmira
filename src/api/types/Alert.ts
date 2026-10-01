@@ -15,9 +15,7 @@ export interface Alert {
     media_id: number | null;
     /** Appearance row that triggered the alert. A raw integer database id, matching the numeric appearance_id on mention rows (same number as in mention_id). Null when not appearance-scoped. */
     appearance_id: number | null;
-    /** Id of the published attributed quote used as mention evidence, when present. Null when the alert used an excerpt or was sent before evidence was recorded. */
-    quote_id: string | null;
-    /** Id of the active mention excerpt used as mention evidence, when present. Null when the alert used a quote or was sent before evidence was recorded. */
+    /** Id of the active mention excerpt used as mention evidence. Null when the alert was sent before evidence was recorded. */
     excerpt_id: string | null;
     /** Which evidence layer was sent. Null on older rows. */
     evidence_kind: Alert.EvidenceKind | null;
@@ -44,7 +42,6 @@ export interface Alert {
 export namespace Alert {
     /** Which evidence layer was sent. Null on older rows. */
     export const EvidenceKind = {
-        Quote: "quote",
         Excerpt: "excerpt",
     } as const;
     export type EvidenceKind = (typeof EvidenceKind)[keyof typeof EvidenceKind];

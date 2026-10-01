@@ -9,8 +9,12 @@ import type * as Arcmira from "../../../../index.js";
  *     }
  */
 export interface ResolveEntitiesRequest {
-    /** Entity name to resolve. Exact, case-insensitive match; curated merge-rule aliases (e.g. "Ford" resolving to Ford Motor Company) are honored. */
+    /** A name, @handle, YouTube URL or channel id (UC...). One thing per call. */
     q: string;
-    /** Restrict the match to one entity type. When the name resolves to an entity of a different type, the response is { found: false }. organization also matches legacy company/brand rows. */
+    /** Restrict candidates to one type. Pass channel for a show and read best.youtube_channel_id. */
     type?: Arcmira.ResolveEntitiesRequestType;
+    /** Candidates to return, 1 to 15. Default 8. */
+    limit?: number;
+    /** What the user said about the name, in their words ("the startup bank", "Canada's prime minister", "on My First Million"). Ranks candidates by their description and by the episodes they share with what the context names; a clear winner comes back as suggested with reason context. */
+    context?: string;
 }

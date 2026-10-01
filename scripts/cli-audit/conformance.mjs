@@ -59,6 +59,14 @@ const front = createServer((req, res) => {
             return send(200, { key: "arc_sk_verified_by_ruler", key_id: "key_1", header: "Authorization: Bearer arc_sk_verified_by_ruler", scopes: ["read"], tier: "free", rows_allotted: 1000, next: "curl", docs_url: "https://arcmira.com/docs/authentication" });
         }
         if (req.headers.authorization === "Bearer gate") return send(402, gateBody());
+        if (url.pathname === "/v1/entities/resolve") {
+            const q = url.searchParams.get("q") ?? "";
+            const type = url.searchParams.get("type");
+            const rows = (ENTITIES[q.toLowerCase()] ?? []).filter((r) => !type || r.type === type).map(({ suggested, ...r }) => ({ slug: r.name.toLowerCase(), page: `https://arcmira.com/x/${r.id}`, youtube_channel_id: null, description: null, match: "exact", ...r }));
+            const best = rows.length === 1 ? rows[0] : null;
+            const ask = rows.length > 1 ? { question: `Which ${q} do you mean?`, options: rows.map((r) => ({ id: r.id, name: r.name, type: r.type, label: `${r.name} (${r.type})` })) } : null;
+            return send(200, { query: q, context: url.searchParams.get("context"), confidence: best ? "exact" : ask ? "ambiguous" : "none", best, suggested: null, ask, candidates: rows, note: "x" });
+        }
         if (url.pathname === "/v1/entities/search") {
             const rows = ENTITIES[(url.searchParams.get("q") ?? "").toLowerCase()] ?? [];
             const type = url.searchParams.get("type");

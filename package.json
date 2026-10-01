@@ -1,7 +1,7 @@
 {
   "name": "arcmira",
   "version": "0.2.0",
-  "description": "Arcmira SDK and CLI for TypeScript and JavaScript. Search the spoken web, read transcripts, track mentions, sponsors and recommendations.",
+  "description": "Search YouTube and podcast transcripts. Mentions, momentum, sponsors, and organic recommendations. The Arcmira TypeScript SDK and the arcmira CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
   "homepage": "https://arcmira.com/docs",

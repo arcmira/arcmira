@@ -131,22 +131,26 @@ function checkIdShape(value: string, kind: "entity" | "channel"): void {
     if (value.trim().length < 2) throw new UsageError(`"${value}" is too short to resolve; pass an id or a name of 2 or more characters`, "invalid_name");
 }
 
-type EntityRow = Arcmira.EntitySearchResponse["data"][number];
+type EntityRow = Arcmira.ResolveCandidate;
 
+const rowLine = (row: { id: string; type: string; name: string; youtube_channel_id?: string | null }) => `${row.id}  ${row.type}  ${row.name}${row.youtube_channel_id ? `  ${row.youtube_channel_id}` : ""}`;
+
+/** The pick GET /v1/entities/resolve makes for a name, stated on stderr: best as is, suggested as an assumption, ask as a usage error listing the options. */
 async function resolveName(client: ArcmiraClient, name: string, type?: "channel" | "person"): Promise<EntityRow> {
-    const { data } = await client.entities.search({ q: name, type, limit: 5 });
-    const exact = data.filter((row) => row.name.toLowerCase() === name.replace(/^@/, "").toLowerCase());
-    const pick = data.find((row) => row.suggested) ?? (exact.length === 1 ? exact[0] : undefined) ?? (data.length === 1 ? data[0] : undefined);
-    if (!pick) {
-        const options = data.map((row) => `  ${row.id}  ${row.type}  ${row.name}${row.youtube_channel_id ? `  ${row.youtube_channel_id}` : ""}`).join("\n");
-        throw new UsageError(
-            data.length === 0 ? `no ${type ?? "entity"} matches "${name}"` : `"${name}" is ambiguous; pass one of these ids:\n${options}`,
-            data.length === 0 ? "name_not_found" : "name_ambiguous",
-            `arcmira resolve "${name}"${type ? ` --type ${type}` : ""}`,
-        );
+    const r = await client.entities.resolve({ q: name, type });
+    if (r.best) {
+        note(`resolved "${name}" to ${rowLine(r.best)}`);
+        return r.best;
     }
-    note(`resolved "${name}" to ${pick.id} (${pick.type} ${pick.name}${pick.youtube_channel_id ? ` ${pick.youtube_channel_id}` : ""})`);
-    return pick;
+    if (r.suggested) {
+        note(`assumed "${name}" is ${rowLine(r.suggested)}, because ${r.suggested.evidence}. Pass an id to pick another.`);
+        return r.suggested;
+    }
+    if (r.ask) {
+        const options = r.ask.options.map((o) => `  ${o.id}  ${o.label}`).join("\n");
+        throw new UsageError(`${r.ask.question} Pass one of these ids:\n${options}`, "name_ambiguous", `arcmira resolve "${name}"${type ? ` --type ${type}` : ""} --context "<what you mean>"`);
+    }
+    throw new UsageError(`no ${type ?? "entity"} matches "${name}"`, "name_not_found", `arcmira resolve "${name}"`);
 }
 
 async function entityId(client: ArcmiraClient, value: string, type?: "person"): Promise<string> {
@@ -379,7 +383,7 @@ const WORKED_EXAMPLES = [
     },
     {
         task: "Is a company getting more airtime than a rival.",
-        steps: ["arcmira resolve Brex                      # check the type is organization", "arcmira momentum ent_14 <brex ent_ id>"],
+        steps: ["arcmira resolve Brex                      # ent_258320  organization  brex", "arcmira momentum ent_14 ent_258320"],
     },
     {
         task: "Read one video.",
@@ -484,7 +488,7 @@ const COMMANDS: Record<string, Command> = {
         usage: "search <query> [--channel UC...|name] [--about ent_...|name] [--by ent_...|name] [--kind K] [--entity ent_...] [--source ...] [--after DATE] [--limit N]",
         examples: [
             'arcmira search "agent payments" --limit 3',
-            "arcmira resolve Ramp && arcmira search \"corporate cards\" --about ent_14 --kind recommendation_organic",
+            "arcmira resolve Ramp && arcmira search \"corporate cards\" --about ent_14 --kind recommendation_sponsored",
             "arcmira search stablecoins --channel UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-06-01",
         ],
         positionals: "text",
@@ -503,42 +507,57 @@ const COMMANDS: Record<string, Command> = {
             const entities = await Promise.all(many(v.entity).map((e) => entityId(client, e)));
             const about = await Promise.all(many(v.about).map((e) => entityId(client, e)));
             const by = await Promise.all(many(v.by).map((e) => entityId(client, e, "person")));
-            const extra = { about: about.join(",") || undefined, by: by.join(",") || undefined, kind: many(v.kind).join(",") || undefined };
             return client.transcripts.search({
                 q: positionals.join(" "),
                 channel_ids: channels.join(",") || undefined,
                 entity_ids: entities.join(",") || undefined,
+                about: about.join(",") || undefined,
+                by: by.join(",") || undefined,
+                kind: many(v.kind).join(",") || undefined,
                 source: str(v.source) as Arcmira.SearchTranscriptsRequestSource | undefined,
                 published_after: str(v.after),
                 published_before: str(v.before),
                 limit: num(v.limit),
-            }, { queryParams: extra });
+            });
         },
-        print: (r: Arcmira.TranscriptSearchResponse) => {
-            if (r.chunks.length === 0) return console.log("No hits in the index.");
+        print: (r: Arcmira.TranscriptSearchResponse, { values: v }) => {
+            if (r.chunks.length === 0) console.log("No hits in the index.");
             for (const c of r.chunks) {
                 console.log(`${c.score.toFixed(3)}  ${c.channelName ?? c.channelId ?? "-"}  ${day(c.publishedAt)}  ${c.watchUrl}`);
                 console.log(`  ${c.text}`);
             }
+            if (r.filters.publishedBefore && !str(v.before)) note(`Results stop at media published before ${day(r.filters.publishedBefore)}, where your plan's window ends.`);
+            if (r.access) note(r.access.message);
+            if (r.search_index.state === "catching_up" && r.search_index.missing_before) note(`Transcripts published before ${r.search_index.missing_before} are still being added to search.`);
         },
     },
     resolve: {
         section: "data",
-        operations: ["search_entities"],
-        summary: "Turn a name, alias, YouTube URL, @handle or UC id into typed entity rows.",
-        usage: "resolve <query> [--type person|organization|product|topic|channel] [--limit N]",
-        examples: ["arcmira resolve Ramp", 'arcmira resolve "Lex Fridman" --type channel', "arcmira resolve @TBPNLive"],
+        operations: ["resolve_entity"],
+        summary: "Turn a name into one entity id: the best match, an assumed pick with its reason, or options to choose from.",
+        usage: "resolve <name> [--type person|organization|product|topic|channel] [--context TEXT] [--limit N]",
+        examples: ["arcmira resolve Ramp", "arcmira resolve TBPN --type channel", 'arcmira resolve Mercury --context "the startup bank"', "arcmira resolve Jordan --json | jq '.ask.options'"],
         positionals: "text",
         options: {
-            type: { type: "string", short: "t", oneOf: ENTITY_TYPES, help: "Restrict to one entity type." },
-            ...limit(25, "Rows to return, 1 to 25. Default 8."),
+            type: { type: "string", short: "t", oneOf: ENTITY_TYPES, help: "Restrict candidates to one type. For a show pass channel and use its UC id." },
+            context: { type: "string", help: 'What the user said about the name, in their words ("the startup bank", "on My First Million"). Settles close calls.' },
+            ...limit(15, "Candidates to return, 1 to 15. Default 8."),
         },
-        run: ({ client, positionals, values: v }) => client.entities.search({ q: positionals.join(" "), type: str(v.type) as Arcmira.SearchEntitiesRequestType | undefined, limit: num(v.limit) }),
-        print: (r: Arcmira.EntitySearchResponse) => {
-            if (r.data.length === 0) return console.log("No entity matches.");
-            for (const e of r.data) {
-                console.log(`${e.id}  ${e.type.padEnd(12)}  ${e.name}${e.suggested ? "  (suggested)" : ""}${e.youtube_channel_id ? `  ${e.youtube_channel_id}` : ""}  ${e.page ?? ""}`);
-            }
+        run: ({ client, positionals, values: v }) => client.entities.resolve({ q: positionals.join(" "), type: str(v.type) as Arcmira.ResolveEntitiesRequestType | undefined, context: str(v.context), limit: num(v.limit) }),
+        print: (r: Arcmira.EntityResolveResponse) => {
+            const page = (row: { page: string | null }) => (row.page ? `  ${row.page}` : "");
+            if (r.best) console.log(`${rowLine(r.best)}${page(r.best)}`);
+            else if (r.suggested) {
+                console.log(`${rowLine(r.suggested)}${page(r.suggested)}`);
+                console.log(`Assumed: ${r.suggested.name} (${r.suggested.type}), because ${r.suggested.evidence}. Say so when you use it, or pass --context to be sure.`);
+            } else if (r.ask) {
+                console.log(r.ask.question);
+                for (const o of r.ask.options) console.log(`  ${o.id}  ${o.label}`);
+                console.log("Pick one id, or pass --context with what you mean.");
+            } else return console.log("No entity matches.");
+            const picked = r.best?.id ?? r.suggested?.id;
+            const others = r.ask ? [] : r.candidates.filter((c): c is Arcmira.ResolveCandidate => c !== null && c.id !== picked);
+            if (others.length > 0) note(`Other matches:\n${others.map((c) => `  ${rowLine(c)}`).join("\n")}`);
         },
     },
     mentions: {
@@ -735,7 +754,7 @@ const COMMANDS: Record<string, Command> = {
         operations: ["get_transcription"],
         summary: "The state of a transcript request: queued, transcribing, analyzing, complete or refunded.",
         usage: "transcripts status <request-id>",
-        examples: ["arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", "arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60 --json"],
+        examples: ["arcmira api GET /v1/transcriptions | jq -r '.requests[0].id' | xargs arcmira transcripts status", "arcmira transcripts status \"$(arcmira api GET /v1/transcriptions | jq -r '.requests[0].id')\" --json"],
         positionals: "one",
         options: {},
         run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),

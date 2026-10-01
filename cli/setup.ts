@@ -99,7 +99,7 @@ export function hosts(env: NodeJS.ProcessEnv = process.env): Host[] {
                 settings: join(home, ".claude", "settings.json"),
             },
             skills: join(home, ".claude", "skills"),
-            signIn: "In Claude Code, run /mcp, pick the arcmira server and sign in.",
+            signIn: "In Claude Code, run /mcp, pick plugin:arcmira:arcmira (or arcmira) and choose Authenticate.",
         },
         {
             id: "codex",

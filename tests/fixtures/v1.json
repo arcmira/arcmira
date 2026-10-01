@@ -48,7 +48,24 @@
           "x"
         ],
         "publishedAfter": "x",
-        "publishedBefore": "x"
+        "publishedBefore": "x",
+        "about": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "by": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "kind": [
+          "x"
+        ]
       },
       "chunks": [
         {
@@ -66,8 +83,7 @@
       "as_of": "x",
       "search_index": {
         "state": "live",
-        "indexed_through": "x",
-        "queued": 1
+        "missing_before": "x"
       },
       "note": "x"
     }
@@ -83,12 +99,68 @@
           "slug": "x",
           "type": "x",
           "youtube_channel_id": "x",
+          "description": "x",
           "page": "x",
           "suggested": true
         }
       ],
       "query": "x",
       "has_more": true
+    }
+  },
+  "resolve_entity": {
+    "status": 200,
+    "body": {
+      "query": "x",
+      "context": "x",
+      "confidence": "exact",
+      "best": {
+        "id": "x",
+        "name": "x",
+        "slug": "x",
+        "type": "x",
+        "youtube_channel_id": "x",
+        "description": "x",
+        "page": "x",
+        "match": "exact"
+      },
+      "suggested": {
+        "id": "x",
+        "name": "x",
+        "slug": "x",
+        "type": "x",
+        "youtube_channel_id": "x",
+        "description": "x",
+        "page": "x",
+        "match": "exact",
+        "reason": "dominant",
+        "evidence": "x",
+        "assumed": true
+      },
+      "ask": {
+        "question": "x",
+        "options": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "label": "x"
+          }
+        ]
+      },
+      "candidates": [
+        {
+          "id": "x",
+          "name": "x",
+          "slug": "x",
+          "type": "x",
+          "youtube_channel_id": "x",
+          "description": "x",
+          "page": "x",
+          "match": "exact"
+        }
+      ],
+      "note": "x"
     }
   },
   "list_mentions": {

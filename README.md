@@ -29,18 +29,27 @@ import { Arcmira, ArcmiraClient } from "arcmira";
 
 const client = new ArcmiraClient({ apiKey: process.env.ARCMIRA_API_KEY });
 
-// Who is "Ramp"? Names, handles, URLs and channel ids resolve to typed rows with stable ids.
-const found = await client.entities.search({ q: "Ramp", limit: 3 });
-const ramp = found.data[0];
+// Who is "Ramp"? Filters take ids, so resolve the name first. The answer is best (one row is meant),
+// suggested (one row stands out: use it and say you assumed it), or ask (show the options to the user).
+// context carries the user's own words about the name and settles close calls.
+const resolved = await client.entities.resolve({ q: "Ramp", context: "the corporate card company" });
+const ramp = resolved.best ?? resolved.suggested;
+if (!ramp) throw new Error(resolved.ask ? `${resolved.ask.question} ${resolved.ask.options.map((o) => o.label).join("; ")}` : "no match");
+if (resolved.suggested) console.log(`Assuming ${ramp.name} (${ramp.type}): ${resolved.suggested.evidence}`);
 console.log(ramp.id, ramp.type, ramp.page);
 
-// Spoken slices that answer a phrase.
-const hits = await client.transcripts.search({ q: "agent payments", limit: 5 });
-for (const chunk of hits.chunks) console.log(chunk.channelName, chunk.watchUrl, chunk.text);
+// Spoken slices that answer a phrase. about, by and channel_ids take ids only; a name answers 400 id_required.
+const hits = await client.transcripts.search({ q: "corporate cards", about: ramp.id, kind: "recommendation_sponsored", limit: 5 });
+for (const chunk of hits.chunks) console.log(chunk.channelName, chunk.publishedAt, chunk.watchUrl, chunk.text);
+// The plan window and index state come back with every search: say where the results stop.
+if (hits.filters.publishedBefore) console.log(`results stop before ${hits.filters.publishedBefore}`);
+if (hits.search_index.missing_before) console.log(`transcripts before ${hits.search_index.missing_before} are still being added`);
 
-// Catalog rows page themselves: iterate and the client follows next_cursor.
-for await (const mention of await client.mentions.list({ entity_id: ramp.id, limit: 50 })) {
+// Catalog rows page themselves: iterate and the client follows next_cursor. Each row bills, so stop when you have enough.
+let seen = 0;
+for await (const mention of await client.mentions.list({ entity_id: ramp.id, limit: 25 })) {
     console.log(mention.media.title, mention.start_seconds);
+    if (++seen === 40) break;
 }
 
 // Gates and failures are typed. The body is the API's error object.
@@ -122,7 +131,7 @@ Arcmira changes weekly. Three parts keep you current:
 ```text
 Data commands (they mirror the MCP tools)
   arcmira search <query>              spoken transcript slices for a topic or phrase; --about, --by (ids) and --kind filter them
-  arcmira resolve <query>             names, aliases, URLs, @handles and UC ids to typed entity rows
+  arcmira resolve <name>              a name to one entity id: the best match, an assumed pick, or options; --context settles close calls
   arcmira mentions --entity <id|name> where an entity was mentioned, newest first
   arcmira momentum <id|name>...       7 and 30 day volume for one to four entities
   arcmira sponsors <channel>          recurring sponsors of a YouTube channel
@@ -159,7 +168,7 @@ Not available yet (each prints the arcmira api call that does the same, and exit
 Also: arcmira help [command], --help, --version
 ```
 
-Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call) and says what it picked on stderr. An ambiguous name exits 2 with the candidate ids.
+Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call to `GET /v1/entities/resolve`) and says what it picked on stderr. A suggested pick is used and stated as an assumption with its reason. An ambiguous name exits 2 and lists the options with their ids.
 
 `arcmira transcripts request` sends a new `Idempotency-Key` (a UUID) with each order and prints it on stderr; with `--json` stderr stays reserved for the error, so scripts pass their own key. To retry an order whose answer you did not see, pass the same key with `--idempotency-key`; the API returns the first answer and charges nothing more. A request for a video already in flight returns that request.
 

@@ -11,10 +11,18 @@ import type * as Arcmira from "../../../../index.js";
 export interface SearchTranscriptsRequest {
     /** One topic or phrase. Do not concatenate unrelated names; make one call per topic. */
     q: string;
-    /** Comma-separated YouTube channel ids (UC...), at most 8. Pass every show in scope unless drilling into one. */
+    /** Comma-separated YouTube channel ids (UC...), at most 8. Pass every show in scope unless drilling into one. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
     channel_ids?: string;
-    /** Comma-separated entity ids (ent_{n}), at most 8. A person id filters to that person's appearances; a channel id widens channel_ids. */
+    /** Alias of channel_ids for code-mode clients; the union of both is the scope. */
+    channel?: string;
+    /** Comma-separated entity ids (ent_{n}), at most 8. A person id filters to that person's appearances; a channel id widens channel_ids. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
     entity_ids?: string;
+    /** Comma-separated entity ids (ent_{n}), at most 8. Only passages about these entities: excerpt pins, exact-name mentions and ad verdicts. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
+    about?: string;
+    /** Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people says the query words (each line of a chunk is labeled with its speaker); a non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
+    by?: string;
+    /** Comma-separated passage kinds: mention, recommendation_sponsored, recommendation_organic. Combine with about to read what was said about a brand in ad reads or in organic talk. */
+    kind?: string;
     /** ISO date. Only media published on or after this day. A window narrower than your plan's freshness gate is refused with freshness_requires_paid rather than widened. */
     published_after?: string;
     /** ISO date. Only media published before this day. */

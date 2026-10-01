@@ -37,6 +37,16 @@ const ROUTES = [
         b.chunks[0].watchUrl = "https://arcmira.com/watch?v=dQw4w9WgXcQ&t=1";
         return [200, b];
     }],
+    ["GET", /^\/v1\/entities\/resolve$/, (_m, url) => {
+        const b = body("resolve_entity");
+        const q = url.searchParams.get("q");
+        const row = { ...b.best, id: "ent_14", name: q, type: url.searchParams.get("type") ?? "organization", youtube_channel_id: null, page: "https://arcmira.com/org/ramp" };
+        Object.assign(b, { query: q, best: null, suggested: null, ask: null, candidates: [row] });
+        if (q === "Jordan") b.ask = { question: "Which Jordan do you mean?", options: [{ id: "ent_7", name: "Jordan", type: "organization", label: "Jordan (organization), sneaker brand" }, { id: "ent_8", name: "Michael Jordan", type: "person", label: "Michael Jordan (person), basketball player" }] };
+        else if (q === "Sam") b.suggested = { ...row, name: "Sam Altman", type: "person", reason: "dominant", evidence: "it has 4,401 appearances, 11x the next match", assumed: true };
+        else b.best = row;
+        return [200, b];
+    }],
     ["GET", /^\/v1\/entities\/search$/, (_m, url) => {
         const b = body("search_entities");
         Object.assign(b.data[0], { id: "ent_14", name: url.searchParams.get("q"), type: "organization", suggested: true, page: "https://arcmira.com/org/ramp" });
