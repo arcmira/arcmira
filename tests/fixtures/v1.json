@@ -1,0 +1,659 @@
+{
+  "get_health": {
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "version": "v1",
+      "time": "x"
+    }
+  },
+  "get_me": {
+    "status": 200,
+    "body": {
+      "user_id": "x",
+      "key_id": "x",
+      "key_label": "x",
+      "credential_kind": "account_key",
+      "email_masked": "x",
+      "period_resets_at": "x",
+      "tier": "x",
+      "scopes": [
+        "x"
+      ],
+      "rate_limit": 1,
+      "recommendations_api_enabled": true,
+      "usage": {
+        "rows_used": 1,
+        "rows_remaining": 1,
+        "monthly_rows": 1,
+        "current_spend_cents": 1
+      },
+      "settings": {
+        "transcripts": {
+          "quality": "captions",
+          "language": "x",
+          "timestamps": true
+        }
+      }
+    }
+  },
+  "search_transcripts": {
+    "status": 200,
+    "body": {
+      "query": "x",
+      "requestedK": 1,
+      "returnedN": 1,
+      "filters": {
+        "channelIds": [
+          "x"
+        ],
+        "publishedAfter": "x",
+        "publishedBefore": "x",
+        "about": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "by": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "kind": [
+          "x"
+        ]
+      },
+      "chunks": [
+        {
+          "id": "x",
+          "videoId": "x",
+          "channelId": "x",
+          "source": "x",
+          "publishedAt": "x",
+          "text": "x",
+          "startSeconds": 1,
+          "watchUrl": "x",
+          "score": 1
+        }
+      ],
+      "as_of": "x",
+      "search_index": {
+        "state": "live",
+        "missing_before": "x"
+      },
+      "note": "x"
+    }
+  },
+  "search_entities": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "x",
+          "numeric_id": 1,
+          "name": "x",
+          "slug": "x",
+          "type": "x",
+          "youtube_channel_id": "x",
+          "description": "x",
+          "page": "x",
+          "suggested": true
+        }
+      ],
+      "query": "x",
+      "has_more": true
+    }
+  },
+  "resolve_entity": {
+    "status": 200,
+    "body": {
+      "query": "x",
+      "context": "x",
+      "confidence": "exact",
+      "best": {
+        "id": "x",
+        "name": "x",
+        "slug": "x",
+        "type": "x",
+        "youtube_channel_id": "x",
+        "description": "x",
+        "page": "x",
+        "match": "exact"
+      },
+      "suggested": {
+        "id": "x",
+        "name": "x",
+        "slug": "x",
+        "type": "x",
+        "youtube_channel_id": "x",
+        "description": "x",
+        "page": "x",
+        "match": "exact",
+        "reason": "dominant",
+        "evidence": "x",
+        "assumed": true
+      },
+      "ask": {
+        "question": "x",
+        "options": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "label": "x"
+          }
+        ]
+      },
+      "candidates": [
+        {
+          "id": "x",
+          "name": "x",
+          "slug": "x",
+          "type": "x",
+          "youtube_channel_id": "x",
+          "description": "x",
+          "page": "x",
+          "match": "exact"
+        }
+      ],
+      "note": "x"
+    }
+  },
+  "list_mentions": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "x",
+          "appearance_id": 1,
+          "entity": {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "slug": "x",
+            "page": "x"
+          },
+          "media": {
+            "id": 1,
+            "video_id": "x",
+            "title": "x",
+            "url": "x",
+            "published_at": "x",
+            "channel_id": "x",
+            "view_count": 1,
+            "source_channel": {
+              "id": "x",
+              "name": "x",
+              "url": "x"
+            }
+          },
+          "start_timestamp": "x",
+          "end_timestamp": "x",
+          "start_seconds": 1,
+          "end_seconds": 1,
+          "is_appearance": true,
+          "description": "x",
+          "confidence": 1,
+          "sentiment_score": 1,
+          "sentiment": "positive",
+          "referenced_url": "x",
+          "referenced_platform": "x",
+          "extracted_content": "x"
+        }
+      ],
+      "has_more": true,
+      "next_cursor": "x",
+      "entity": {
+        "id": "x",
+        "numeric_id": 1,
+        "canonical_id": "x",
+        "name": "x",
+        "type": "x",
+        "platform": "x",
+        "url": "x",
+        "image_url": "x",
+        "image_checked_at": "x",
+        "owner_entity_id": "x",
+        "is_canonical": true,
+        "merged_from_id": "x",
+        "slug": "x",
+        "route": "x",
+        "page": "x",
+        "appearances_page": "x",
+        "mentions_page": "x"
+      }
+    }
+  },
+  "get_entity_momentum": {
+    "status": 200,
+    "body": {
+      "entity": {
+        "id": "x",
+        "name": "x",
+        "type": "x",
+        "slug": "x",
+        "page": "x"
+      },
+      "verdict": "accelerating",
+      "as_of": "x",
+      "coverage": "x",
+      "volume": {
+        "mentions_7d": 1,
+        "mentions_30d": 1,
+        "mentions_prior_30d": 1,
+        "delta_30d_absolute": 1,
+        "delta_30d_pct": 1,
+        "mentions_90d": 1,
+        "total": 1
+      },
+      "top_shows": [
+        {
+          "channel_id": "x",
+          "channel_name": "x",
+          "channel_page": "x",
+          "mentions": 1
+        }
+      ],
+      "note": "x"
+    }
+  },
+  "list_channel_sponsors": {
+    "status": 200,
+    "body": {
+      "channel": {
+        "id": "x",
+        "youtube_channel_id": "x",
+        "name": "x",
+        "page": "x"
+      },
+      "sponsors": [
+        {
+          "entity": {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "slug": "x",
+            "page": "x"
+          },
+          "ad_reads": 1,
+          "videos": 1,
+          "first_seen": "x",
+          "last_seen": "x",
+          "sponsor_status": {
+            "status": "x",
+            "ad_count": 1,
+            "first_ad_date": "x",
+            "last_ad_date": "x"
+          }
+        }
+      ],
+      "meta": {
+        "min_ad_reads": 1,
+        "count": 1,
+        "total": 1
+      }
+    }
+  },
+  "list_entity_recommendations": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "x",
+          "recommendation_id": 1,
+          "mention_class": "x",
+          "entity": {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "slug": "x",
+            "page": "x"
+          },
+          "media": {
+            "video_id": "x",
+            "title": "x",
+            "published_at": "x",
+            "channel_id": "x",
+            "source_channel": {
+              "id": "x",
+              "name": "x"
+            }
+          },
+          "start_timestamp": "x",
+          "end_timestamp": "x",
+          "start_seconds": 1,
+          "end_seconds": 1,
+          "verbatim_quote": "x",
+          "promo_code": "x",
+          "offer": "x",
+          "sentiment": 1,
+          "sentiment_score": 1,
+          "confidence": 1,
+          "speaker_role": "x",
+          "conflict_status": "x",
+          "resolution": "x"
+        }
+      ],
+      "has_more": true,
+      "next_cursor": "x",
+      "entity": {
+        "id": "x",
+        "numeric_id": 1,
+        "canonical_id": "x",
+        "name": "x",
+        "type": "x",
+        "platform": "x",
+        "url": "x",
+        "image_url": "x",
+        "image_checked_at": "x",
+        "owner_entity_id": "x",
+        "is_canonical": true,
+        "merged_from_id": "x",
+        "slug": "x",
+        "route": "x",
+        "page": "x",
+        "appearances_page": "x",
+        "mentions_page": "x"
+      }
+    }
+  },
+  "list_channel_videos": {
+    "status": 200,
+    "body": {
+      "channel": {
+        "id": "x",
+        "youtube_channel_id": "x",
+        "name": "x",
+        "page": "x"
+      },
+      "episodes": [
+        {
+          "video_id": "x",
+          "title": "x",
+          "published_at": "x",
+          "duration_seconds": 1,
+          "view_count": 1,
+          "channel_id": "x",
+          "channel_name": "x",
+          "channel_page": "x",
+          "watch_url": "x"
+        }
+      ],
+      "returned": 1,
+      "has_more": true,
+      "indexed_through": "x",
+      "index_age_days": 1,
+      "as_of": "x",
+      "note": "x"
+    }
+  },
+  "get_transcript": {
+    "status": 200,
+    "body": {
+      "video": {
+        "id": "x",
+        "title": "x",
+        "channel_id": "x",
+        "channel_name": "x",
+        "published_at": "x",
+        "duration_seconds": 1,
+        "watch_url": "x"
+      },
+      "quality": "captions",
+      "source": "creator_captions",
+      "language": "x",
+      "languages": [
+        {
+          "code": "x",
+          "name": "x",
+          "generated": true
+        }
+      ],
+      "rows_billed": 1,
+      "as_of": "x",
+      "note": "x"
+    }
+  },
+  "count_mentions": {
+    "status": 200,
+    "body": {
+      "mode": "mentions",
+      "publishedAfter": "x",
+      "publishedBefore": "x",
+      "channelIds": [
+        "x"
+      ],
+      "videoIds": [
+        "x"
+      ],
+      "rows": [
+        {
+          "entity_id": "x",
+          "name": "x",
+          "type": "x",
+          "page": "x",
+          "appearances_page": "x",
+          "mentions_page": "x",
+          "slug": "x",
+          "channel_id": "x",
+          "channel_name": "x",
+          "channel_page": "x",
+          "count": 1,
+          "occurrences": 1,
+          "as_of": "x"
+        }
+      ],
+      "returned": 1,
+      "has_more": true,
+      "shared": [
+        {
+          "entity_id": "x",
+          "name": "x",
+          "type": "x",
+          "page": "x",
+          "appearances_page": "x",
+          "mentions_page": "x",
+          "slug": "x",
+          "channel_count": 1,
+          "by_channel": [
+            {
+              "channel_id": "x",
+              "channel_name": "x",
+              "channel_page": "x",
+              "count": 1,
+              "occurrences": 1,
+              "as_of": "x"
+            }
+          ]
+        }
+      ],
+      "as_of": "x",
+      "note": "x"
+    }
+  },
+  "get_channel_coverage": {
+    "status": 200,
+    "body": {
+      "channel": {
+        "youtube_channel_id": "x",
+        "searchable_videos": 1,
+        "indexed_through": "x",
+        "search_indexed_through": "x",
+        "source_mix": {
+          "arcmira_premium": 1,
+          "creator_captions": 1,
+          "third_party_quick": 1
+        }
+      },
+      "note": "x"
+    }
+  },
+  "submit_transcription": {
+    "status": 200,
+    "body": {
+      "request": {
+        "id": "x",
+        "videoId": "x",
+        "status": "queued",
+        "stage": "queued",
+        "quote": {
+          "quarters": 1,
+          "rows": 1
+        },
+        "createdAt": "x"
+      }
+    }
+  },
+  "get_transcription": {
+    "status": 200,
+    "body": {
+      "id": "x",
+      "videoId": "x",
+      "status": "queued",
+      "stage": "queued",
+      "quote": {
+        "quarters": 1,
+        "rows": 1
+      },
+      "createdAt": "x"
+    }
+  },
+  "create_monitor": {
+    "status": 200,
+    "body": {
+      "monitor": {
+        "id": "x",
+        "name": "x",
+        "isCollapsed": true,
+        "isPaused": true,
+        "sortOrder": 1,
+        "notifyEmails": [
+          "x"
+        ],
+        "notifyWebhook": true,
+        "webhookUrl": "x",
+        "webhookSecretSet": true,
+        "webhookSecretHint": "x",
+        "webhookDisabledAt": "x",
+        "webhookDisabledReason": "x",
+        "notifySlack": true,
+        "slackIntegrationId": "x",
+        "slackChannelId": "x",
+        "createdAt": "x",
+        "updatedAt": "x",
+        "trackerCount": 1
+      },
+      "message": "x"
+    }
+  },
+  "list_person_topics": {
+    "status": 200,
+    "body": {
+      "items": [
+        {
+          "id": 1,
+          "name": "x",
+          "count": 1,
+          "sentiment": "positive"
+        }
+      ],
+      "total": 1,
+      "offset": 1,
+      "limit": 1,
+      "hasMore": true,
+      "has_more": true,
+      "next_cursor": "x",
+      "exportCapabilities": {
+        "highestCount": true,
+        "lowestCount": true,
+        "alternateSort": true,
+        "search": true
+      },
+      "_meta": {
+        "tier": "x",
+        "isAuthenticated": true,
+        "rowsUsed": 1,
+        "rowsRemaining": 1,
+        "monthlyRows": 1,
+        "isOverLimit": true,
+        "onDemandEnabled": true,
+        "spendLimitCents": 1,
+        "currentSpendCents": 1,
+        "canContinue": true,
+        "showingFullData": true,
+        "usageLimitType": "lifetime",
+        "totals": {},
+        "limits": {
+          "freeAppearances": 1,
+          "freeEntitiesPerType": 1,
+          "webhooksEnabled": true,
+          "exportEnabled": true,
+          "apiEnabled": true
+        },
+        "costPerRowCents": 1,
+        "isOverage": true,
+        "freeLimit": {
+          "appearances": 1,
+          "entities": 1
+        },
+        "access": {
+          "v": 1,
+          "view": "full",
+          "cls": "live",
+          "ladder": "anonymous",
+          "rows": {
+            "media": {
+              "served": 1,
+              "visible": 1,
+              "placeholders": 1
+            },
+            "topics": {
+              "served": 1,
+              "visible": 1,
+              "placeholders": 1
+            },
+            "entities": {
+              "served": 1,
+              "visible": 1,
+              "placeholders": 1
+            }
+          },
+          "freshness": {
+            "code": 1,
+            "delayDays": 1
+          },
+          "chart": {
+            "months": 1
+          },
+          "pagination": true,
+          "showCounts": true,
+          "withheld": [
+            {
+              "kind": "media_rows",
+              "what": "media_rows"
+            }
+          ],
+          "unlock": {
+            "tier": "x",
+            "url": "x",
+            "src": "access-envelope",
+            "limitAction": "upgrade_to_pro"
+          }
+        }
+      }
+    }
+  },
+  "error": {
+    "error": {
+      "type": "invalid_request_error",
+      "code": "x",
+      "message": "x",
+      "doc_url": "x",
+      "request_id": "x"
+    }
+  }
+}
