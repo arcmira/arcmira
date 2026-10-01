@@ -42,7 +42,7 @@ export class TranscriptsClient {
     }
 
     /**
-     * Search indexed YouTube and podcast transcripts for short spoken slices. Each result includes spoken text, a watch URL, and a publish date. Scope with channel_ids or entity_ids (a person id filters to that person's appearances). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. A published_after narrower than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per chunk returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+     * Search indexed YouTube and podcast transcripts for short spoken slices. Each result includes spoken text, a watch URL, and a publish date. Scope with channel_ids (or channel) and entity_ids (a person id filters to that person's appearances); narrow to passages about entities with about, to a speaker with by, and to mention, recommendation_sponsored or recommendation_organic passages with kind. Every filter takes ids, never names: resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter. Results carry names beside ids (filters.about, filters.by, chunk about and speakers_by). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. A published_after narrower than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per chunk returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
      *
      * @param {Arcmira.SearchTranscriptsRequest} request
      * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -77,7 +77,11 @@ export class TranscriptsClient {
         const {
             q,
             channel_ids: channelIds,
+            channel,
             entity_ids: entityIds,
+            about,
+            by,
+            kind,
             published_after: publishedAfter,
             published_before: publishedBefore,
             source,
@@ -86,7 +90,11 @@ export class TranscriptsClient {
         const _queryParams: Record<string, unknown> = {
             q,
             channel_ids: channelIds,
+            channel,
             entity_ids: entityIds,
+            about,
+            by,
+            kind,
             published_after: publishedAfter,
             published_before: publishedBefore,
             source: source != null ? source : undefined,

@@ -1,7 +1,7 @@
 {
   "name": "arcmira",
   "version": "0.2.0",
-  "description": "Arcmira SDK and CLI for TypeScript and JavaScript. Search the spoken web, read transcripts, track mentions, sponsors and recommendations.",
+  "description": "Search YouTube and podcast transcripts. Mentions, momentum, sponsors, and organic recommendations. The Arcmira TypeScript SDK and the arcmira CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
   "homepage": "https://arcmira.com/docs",
@@ -27,6 +27,7 @@
   },
   "files": [
     "dist",
+    "skills",
     "reference.md",
     "README.md",
     "LICENSE",
@@ -38,7 +39,8 @@
     "build:esm": "tsc --project ./tsconfig.esm.json && node scripts/rename-to-esm-files.js dist/esm",
     "build:cli": "tsc --project ./tsconfig.cli.json",
     "test": "npm run build && node --test \"tests/*.test.mjs\"",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "sync-skill": "node scripts/sync-skill.mjs"
   },
   "devDependencies": {
     "@types/node": "20.19.43",

@@ -57,8 +57,6 @@ export namespace PersonAppearanceListResponse {
             duration: number | null;
             /** Video view count at index time. Null when never fetched. */
             viewCount: number | null;
-            /** A quote the person spoke in this media, when one is published. On mention rows, a quote about the person. */
-            quote?: Item.Quote | undefined;
             excerpt?: Arcmira.PublishedExcerpt | undefined;
         }
 
@@ -82,50 +80,6 @@ export namespace PersonAppearanceListResponse {
                 Negative: "negative",
             } as const;
             export type Sentiment = (typeof Sentiment)[keyof typeof Sentiment];
-
-            /**
-             * A quote the person spoke in this media, when one is published. On mention rows, a quote about the person.
-             */
-            export interface Quote {
-                /** Published quote id. */
-                id: string;
-                /** The quoted words, verbatim from the transcript. */
-                exactText: string;
-                /** Display form of the quote, when it differs from exactText. */
-                displayText?: string | undefined;
-                /** Transcript text immediately before the quote. */
-                contextBefore?: string | undefined;
-                /** Transcript text immediately after the quote. */
-                contextAfter?: string | undefined;
-                /** Who said it. */
-                speaker: Quote.Speaker;
-                /** Quote start in the video, in seconds. */
-                startSeconds: number;
-                /** Quote end in the video, in seconds. */
-                endSeconds?: number | undefined;
-                /** YouTube video id (11 characters). */
-                videoId: string;
-                /** Transcript source class of the quote. Values: arcmira_premium, arcmira_premium_excerpt, creator_captions, third_party_quick; legacy rows may read aai_excerpt or youtube_caption. */
-                publicSourceClass: string;
-                /** Anchor string for citing this quote. */
-                citationAnchor: string;
-            }
-
-            export namespace Quote {
-                /**
-                 * Who said it.
-                 */
-                export interface Speaker {
-                    /** Speaker name. */
-                    name: string;
-                    /** Raw integer entity id of the speaker, when linked. */
-                    entityId?: number | undefined;
-                    /** Speaker entity slug, when linked. */
-                    slug?: string | undefined;
-                    /** Speaker X handle, when known. */
-                    twitterHandle?: string | undefined;
-                }
-            }
         }
     }
 }

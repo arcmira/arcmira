@@ -14,7 +14,7 @@ export namespace ChannelCoverageResponse {
         searchable_videos: number;
         /** Newest publish date among those videos. Mentions, entity lookups and transcripts read through here. Null when nothing is indexed. */
         indexed_through: string | null;
-        /** Newest publish date transcript search can hit. Equal to indexed_through unless the search index is paused; then the note says why. */
+        /** Newest publish date transcript search can hit. New transcripts are searchable when they are indexed, so it equals indexed_through. */
         search_indexed_through: string | null;
         /** searchable_videos split by transcript source class. */
         source_mix: Channel.SourceMix;

@@ -35,110 +35,6 @@ export class EntitiesClient {
     }
 
     /**
-     * Single-result name resolver: exact, case-insensitive match with curated alias support. Returns at most one entity and does not paginate (single page; there is no cursor). When `type` is passed and the name resolves to an entity of a different type, the response is `{ found: false }`. For fuzzy multi-result discovery use /v1/entities/search instead.
-     *
-     * @param {Arcmira.ResolveEntitiesRequest} request
-     * @param {EntitiesClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.PaymentRequiredError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.entities.resolve({
-     *         q: "q"
-     *     })
-     */
-    public resolve(
-        request: Arcmira.ResolveEntitiesRequest,
-        requestOptions?: EntitiesClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.SearchResolveResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__resolve(request, requestOptions));
-    }
-
-    private async __resolve(
-        request: Arcmira.ResolveEntitiesRequest,
-        requestOptions?: EntitiesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.SearchResolveResponse>> {
-        const { q, type: type_ } = request;
-        const _queryParams: Record<string, unknown> = {
-            q,
-            type: type_ != null ? type_ : undefined,
-        };
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                "v1/search",
-            ),
-            method: "GET",
-            headers: _headers,
-            queryString: core.url
-                .queryBuilder()
-                .addMany(_queryParams)
-                .mergeAdditional(requestOptions?.queryParams)
-                .build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.SearchResolveResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 402:
-                    throw new Arcmira.PaymentRequiredError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/search");
-    }
-
-    /**
      * Substring name search returning up to 25 entities ordered by appearance count, each with a suggested flag: true on an exact match with far more traction than any other row of its type. A q that is a YouTube channel id (UC...), an @handle, or a YouTube URL carrying either resolves to that one channel row, suggested, with its youtube_channel_id. Callers with Recommendations API access (a Pro+ plan) also receive a recommendations_summary per result when a brand profile exists.
      *
      * @param {Arcmira.SearchEntitiesRequest} request
@@ -242,6 +138,106 @@ export class EntitiesClient {
         }
 
         return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/entities/search");
+    }
+
+    /**
+     * Call this before passing an id to about, by, entity_ids, channel_ids or channel; those filters refuse names with id_required. Pass context with the user's own words about the name ("the startup bank", "on My First Million"). The answer is one of three: best (the name means one row: use it and name it), suggested (no row is certain but one stands out, with reason and evidence: use it and tell the user you assumed it), or ask (several rows fit: show ask.options, or check every option id and answer per row). For a show pass type=channel and use the youtube_channel_id; for a brand or a person use the id. Free; bills no rows.
+     *
+     * @param {Arcmira.ResolveEntitiesRequest} request
+     * @param {EntitiesClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link Arcmira.BadRequestError}
+     * @throws {@link Arcmira.UnauthorizedError}
+     * @throws {@link Arcmira.ForbiddenError}
+     * @throws {@link Arcmira.NotFoundError}
+     * @throws {@link Arcmira.TooManyRequestsError}
+     * @throws {@link Arcmira.InternalServerError}
+     * @throws {@link errors.ArcmiraError}
+     * @throws {@link errors.ArcmiraTimeoutError}
+     *
+     * @example
+     *     await client.entities.resolve({
+     *         q: "q"
+     *     })
+     */
+    public resolve(
+        request: Arcmira.ResolveEntitiesRequest,
+        requestOptions?: EntitiesClient.RequestOptions,
+    ): core.HttpResponsePromise<Arcmira.EntityResolveResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__resolve(request, requestOptions));
+    }
+
+    private async __resolve(
+        request: Arcmira.ResolveEntitiesRequest,
+        requestOptions?: EntitiesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Arcmira.EntityResolveResponse>> {
+        const { q, type: type_, limit, context } = request;
+        const _queryParams: Record<string, unknown> = {
+            q,
+            type: type_ != null ? type_ : undefined,
+            limit,
+            context,
+        };
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.ArcmiraEnvironment.Default,
+                "v1/entities/resolve",
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url
+                .queryBuilder()
+                .addMany(_queryParams)
+                .mergeAdditional(requestOptions?.queryParams)
+                .build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as Arcmira.EntityResolveResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 401:
+                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 403:
+                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 404:
+                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 429:
+                    throw new Arcmira.TooManyRequestsError(
+                        _response.error.body as Arcmira.Error_,
+                        _response.rawResponse,
+                    );
+                case 500:
+                    throw new Arcmira.InternalServerError(
+                        _response.error.body as Arcmira.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.ArcmiraError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/entities/resolve");
     }
 
     /**

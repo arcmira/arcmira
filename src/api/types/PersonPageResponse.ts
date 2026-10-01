@@ -350,7 +350,6 @@ export namespace PersonPageResponse {
             timestamp: string;
             /** Earliest start timestamp as stored. Null when none. */
             rawTimestamp: string | null;
-            quote?: Arcmira.PublishedQuote | undefined;
             excerpt?: Arcmira.PublishedExcerpt | undefined;
         }
 
@@ -415,7 +414,6 @@ export namespace PersonPageResponse {
             timestamp: string;
             /** Earliest start timestamp as stored. Null when none. */
             rawTimestamp: string | null;
-            quote?: Arcmira.PublishedQuote | undefined;
             excerpt?: Arcmira.PublishedExcerpt | undefined;
         }
 
