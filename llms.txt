@@ -2,20 +2,28 @@
 
 > Arcmira is an SF-based AI company and the search engine for the spoken web.
 
-This GitHub repo and the `arcmira` npm package reserve the public name. They are not an SDK. The live agent index is on the website. Fetch that, not a copy inside this package.
+This repo and the `arcmira` npm package are the official TypeScript and JavaScript SDK plus the `arcmira` command line. The live agent index is on the website; fetch that first.
 
 ## Canonical
 
 - [Site llms.txt](https://arcmira.com/llms.txt): Fetch this first. Product, API, citation rules.
 - [Docs index](https://arcmira.com/docs/llms.txt): Catalog of every docs page.
+- [API reference](https://arcmira.com/docs/api-reference): Every operation with curl samples.
 - [OpenAPI](https://api.arcmira.com/v1/openapi.json): HTTP JSON contract at https://api.arcmira.com/v1
-- [MCP server](https://github.com/arcmira/mcp): Remote MCP server at https://mcp.arcmira.com/mcp.
+- [SDK reference](https://github.com/arcmira/arcmira/blob/master/reference.md): Every SDK method with its request and response types.
+- [MCP server](https://github.com/arcmira/mcp): Remote MCP server at https://mcp.arcmira.com/mcp. For agents, prefer it over the SDK.
 - [Arcmira MCP](https://arcmira.com/mcp): What the MCP server does.
-- [Connect your AI](https://arcmira.com/agent-setup): Setup for each MCP host.
+- [Python SDK](https://github.com/arcmira/python): `pip install arcmira`.
+- [Developers](https://arcmira.com/developers)
 - [Homepage](https://arcmira.com)
 - [Pricing](https://arcmira.com/pricing)
 - [Contact](mailto:hi@arcmira.com): hi@arcmira.com
 
-There is no SDK in this package. The MCP server ships from https://github.com/arcmira/mcp.
+## Use
 
-Copyright Arcmira. All rights reserved.
+- Install: `npm install arcmira`. Key: `ARCMIRA_API_KEY` or `new ArcmiraClient({ apiKey })`.
+- Client: `client.entities.resolve` (best, suggested or ask; filters take the ids it returns), `client.transcripts.search`, `client.transcripts.get`, `client.mentions.list` (auto-paging), `client.entities.momentum`, `client.channels.sponsors.list`, `client.entities.recommendations.list`, `client.monitors.create` and the rest, all in reference.md.
+- CLI: `npx arcmira setup` connects the MCP server and the Arcmira skills to Claude Code, Codex, Cursor, VS Code and Gemini CLI. `npx arcmira search "agent payments"`, `resolve` (`--context` for the user's words), `mentions`, `momentum`, `sponsors`, `recommendations`, `episodes`, `transcripts get|request|status` (`transcript` is short for `transcripts get`), `occurrences`, `status`, `login`, `logout`, `whoami`, `auth token`; any endpoint with `arcmira api GET /v1/...` (gh api grammar, `--paginate`), its parameters with `arcmira schema <command|operationId>`, docs search with `arcmira docs <query>`, worked tasks with `arcmira examples`; names work where ids are expected; `--json` for the raw response, errors as JSON on stderr; exit 2 on bad input, 1 on API errors.
+- Errors: typed classes under the `Arcmira` namespace with `err.body.error` (`type`, `code`, `gate`, `unlock.url`).
+
+License: Apache-2.0.
