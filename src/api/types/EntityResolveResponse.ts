@@ -10,7 +10,7 @@ export interface EntityResolveResponse {
     /** exact: one row is named q (or the handle, id or alias), and no better-known person carries the name. single_fuzzy: the only row returned, not an exact name. ambiguous: several exact rows, or an exact row next to a better-known person sharing the name (Jordan the brand vs Michael Jordan). fuzzy: only loose matches. none: no row. */
     confidence: EntityResolveResponse.Confidence;
     best: Arcmira.ResolveCandidate | null;
-    suggested: Arcmira.ResolveSuggestion | null;
+    suggested: Arcmira.ResolveSuggestion;
     /** Set when best and suggested are both null and several rows fit: show the options to the user, or check every option id against the data and answer per row. */
     ask: EntityResolveResponse.Ask | null;
     /** Rows considered: exact names first, then initials, whole-word, spelling and substring matches, each by appearance count. */

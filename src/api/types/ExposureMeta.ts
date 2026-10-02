@@ -42,6 +42,8 @@ export interface ExposureMeta {
     limitUpgradeTier?: string | undefined;
     /** Display name of limitUpgradeTier. */
     limitUpgradeTierName?: string | undefined;
+    /** The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access. */
+    credits?: ExposureMeta.Credits | undefined;
     /** True totals behind the returned rows. Each response sets only the keys for its own sections. */
     totals: ExposureMeta.Totals;
     /** Anonymous row limits and the plan's feature flags. */
@@ -79,6 +81,40 @@ export namespace ExposureMeta {
         ContactSales: "contact_sales",
     } as const;
     export type LimitAction = (typeof LimitAction)[keyof typeof LimitAction];
+
+    /**
+     * The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access.
+     */
+    export interface Credits {
+        /** Credits spendable now: plan, granted, purchased, and on-demand up to its cap. Null when nothing limits it. */
+        available: number | null;
+        plan: Credits.Plan;
+        /** Credits left in granted lots that have not expired. */
+        granted: number;
+        /** Credits left in purchased top-ups. */
+        purchased: number;
+        on_demand: Credits.OnDemand;
+    }
+
+    export namespace Credits {
+        export interface Plan {
+            /** Plan credits this month. Null when the plan has no limit. */
+            credits: number | null;
+            /** Plan credits spent this month. */
+            used: number;
+            /** YYYY-MM-DD, the first day of next month (UTC), when plan credits reset. */
+            resets_at: string;
+        }
+
+        export interface OnDemand {
+            /** True when on-demand credits are on. */
+            enabled: boolean;
+            /** The on-demand cap in credits, at $0.002 a credit. Null when uncapped or off. */
+            cap_credits: number | null;
+            /** On-demand credits spent this month. */
+            used: number;
+        }
+    }
 
     /**
      * True totals behind the returned rows. Each response sets only the keys for its own sections.

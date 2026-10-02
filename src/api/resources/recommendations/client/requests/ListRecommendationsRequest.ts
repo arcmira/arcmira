@@ -8,6 +8,7 @@ import type * as Arcmira from "../../../../index.js";
  */
 export interface ListRecommendationsRequest {
     limit?: number;
+    /** Signed continuation from next_cursor. Bound to this route, normalized query, caller and visibility; invalid or old tokens return invalid_cursor. */
     cursor?: string;
     entity_id?: string;
     entity_name?: string;

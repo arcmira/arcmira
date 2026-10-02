@@ -23,7 +23,7 @@ export class AlertsClient {
     }
 
     /**
-     * The newest n alert deliveries for the tracker, as a single page. This endpoint does not paginate: has_more is always false and next_cursor is always null. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
+     * The newest limit alert deliveries for the tracker (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
      *
      * @param {Arcmira.trackers.ListAlertsRequest} request
      * @param {AlertsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -53,9 +53,9 @@ export class AlertsClient {
         request: Arcmira.trackers.ListAlertsRequest,
         requestOptions?: AlertsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.AlertListResponse>> {
-        const { id, n } = request;
+        const { id, limit } = request;
         const _queryParams: Record<string, unknown> = {
-            n,
+            limit,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

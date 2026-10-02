@@ -3,6 +3,7 @@
 /**
  * @example
  *     {
+ *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
  *         video_id: "video_id",
  *         segmentIndex: 1,
  *         originalText: "originalText",
@@ -12,7 +13,7 @@
 export interface SubmitEditsRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
-    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    /** 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
     "Idempotency-Key"?: string;
     segmentIndex: number;
     /** The current segment text you are correcting (guards against applying to a changed segment). */

@@ -3,13 +3,14 @@
 /**
  * @example
  *     {
+ *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
  *         id: "id"
  *     }
  */
 export interface UpdateMonitorsRequest {
     /** Monitor id. */
     id: string;
-    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    /** One key per intent, 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Keys are scoped to the account, credential and resource family. The same key and normalized method, path and body returns the committed response with Idempotency-Replayed: true. A changed intent within the same family returns 409 idempotency_conflict. Monitor and tracker families have independent namespaces. Secret recovery is limited as described by the operation. */
     "Idempotency-Key"?: string;
     /** Display name (1-100 characters). Required on create. */
     name?: string;
@@ -21,7 +22,7 @@ export interface UpdateMonitorsRequest {
     digestDay?: string;
     /** Digest send hour as HH:MM (account timezone). Default "09:00". Applies to daily digests. */
     digestTime?: string;
-    /** Enable HMAC-signed webhook delivery (paid plans). When enabled together with webhookUrl, the response returns the signing secret (monitor.webhookSecret) exactly once. PATCHing true also re-enables an auto-disabled webhook and resets its failure counter. */
+    /** Enable HMAC-signed webhook delivery (paid plans). When enabled together with webhookUrl, the response returns the signing secret (monitor.webhookSecret), recoverable with the original Idempotency-Key during the valid recovery window. PATCHing true also re-enables an auto-disabled webhook and resets its failure counter. */
     notifyWebhook?: boolean;
     /** Destination URL for webhook alert deliveries. */
     webhookUrl?: string;
@@ -37,8 +38,6 @@ export interface UpdateMonitorsRequest {
     isCollapsed?: boolean;
     /** Dashboard sort position. */
     sortOrder?: number;
-    /** Accepts any additional properties */
-    [key: string]: any;
 }
 
 export namespace UpdateMonitorsRequest {
