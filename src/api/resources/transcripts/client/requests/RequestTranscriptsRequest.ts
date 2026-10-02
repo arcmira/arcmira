@@ -3,8 +3,9 @@
 /**
  * @example
  *     {
- *         "Idempotency-Key": "Idempotency-Key",
- *         max_rows: 1
+ *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
+ *         videoId: "dQw4w9WgXcQ",
+ *         max_rows: 300
  *     }
  */
 export interface RequestTranscriptsRequest {

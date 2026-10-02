@@ -73,3 +73,10 @@ test('generated history and episodes follow their actual arrays with opaque curs
     assert.equal(continuation.length, 2);
     for (const call of continuation) { assert.equal(call.url.searchParams.get('cursor'), cursor); assert.equal(call.url.searchParams.get('limit'), '1'); }
 });
+
+test('generated doc examples carry realistic header values, never the header name', () => {
+    for (const path of ['src/api/resources/transcripts/client/Client.ts', 'src/api/resources/transcripts/client/requests/RequestTranscriptsRequest.ts']) {
+        const text = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+        assert.doesNotMatch(text, /"Idempotency-Key": "Idempotency-Key"/, path);
+    }
+});
