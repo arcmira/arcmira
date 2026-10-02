@@ -697,7 +697,7 @@ const COMMANDS: Record<string, Command> = {
         operations: ["list_channel_videos"],
         summary: "The newest indexed videos of a YouTube channel.",
         usage: "episodes <UC...|@handle|name> [--after DATE] [--before DATE] [--limit N]",
-        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes @TBPNLive --after 2026-09-01"],
+        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes @TBPNLive --after 2026-09-01", "arcmira api GET /v1/channels/UC-DRzaGnL_vtBUpCFH5M0tg/videos -F limit=1 --paginate"],
         positionals: "one",
         options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
         run: async ({ client, positionals: [channel], values: v }) =>
@@ -988,7 +988,7 @@ const COMMANDS: Record<string, Command> = {
             field: { type: "string", short: "F", multiple: true, help: "Typed parameter key=value: true, false, null and numbers become JSON, @file reads a file, @- stdin; key[]=value appends." },
             header: { type: "string", short: "H", multiple: true, help: "Extra request header, 'Name: value'." },
             body: { type: "string", help: "Request body from @file, or - for stdin. -f and -F then go to the query string." },
-            paginate: { type: "boolean", help: "GET only: follow next_cursor and print every page's data as one list." },
+            paginate: { type: "boolean", help: "GET only: follow next_cursor and combine the response collection, including requests or episodes." },
             verbose: { type: "boolean", help: "Print the request, its Idempotency-Key, the status and request_id on stderr." },
         },
         run: runApi,
