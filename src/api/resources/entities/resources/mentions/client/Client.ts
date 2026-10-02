@@ -63,7 +63,6 @@ export class MentionsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     details,
-                    src,
                 } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
@@ -76,7 +75,6 @@ export class MentionsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     details: details != null ? details : undefined,
-                    src: src != null ? src : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

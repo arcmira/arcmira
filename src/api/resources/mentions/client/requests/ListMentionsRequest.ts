@@ -21,6 +21,4 @@ export interface ListMentionsRequest {
     date_from?: string;
     date_to?: string;
     details?: Arcmira.ListMentionsRequestDetails;
-    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
-    src?: Arcmira.ListMentionsRequestSrc;
 }

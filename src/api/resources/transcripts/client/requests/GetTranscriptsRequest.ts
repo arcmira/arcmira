@@ -23,6 +23,4 @@ export interface GetTranscriptsRequest {
     end?: number | null;
     /** Captions only; Premium with refresh=true returns invalid_query. Refetch the caption track from YouTube instead of serving the stored copy. Available only for videos outside our index; a pipeline-owned video refuses it with invalid_query. */
     refresh?: boolean;
-    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
-    src?: Arcmira.GetTranscriptsRequestSrc;
 }

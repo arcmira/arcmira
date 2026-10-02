@@ -59,9 +59,15 @@ test('generated preparation sends ceilings and replays the exact saved intent', 
     await assert.rejects(client.transcripts.request({ ...intent, max_rows: 600 }), error => error.statusCode === 409);
 });
 test('generated history and episodes follow their actual arrays with opaque cursors', async () => {
-    const requests = []; for await (const row of await client.transcripts.listRequests({ limit: 1 })) requests.push(row.id);
+    const first = await client.transcripts.listRequests({ limit: 1 }).withRawResponse();
+    assert.equal(first.rawResponse.status, 200);
+    const second = await client.transcripts.listRequests({ limit: 1, cursor: first.data.next_cursor });
+    const requests = [...first.data.requests, ...second.requests].map(row => row.id);
     assert.deepEqual(requests, ['request-1', 'request-2']);
-    const episodes = []; for await (const row of await client.channels.videos.list({ channel_id: 'UC-test', limit: 1 })) episodes.push(row.video_id);
+    const videos = await client.channels.videos.list({ channel_id: 'UC-test', limit: 1 }).withRawResponse();
+    assert.equal(videos.rawResponse.status, 200);
+    const next = await client.channels.videos.list({ channel_id: 'UC-test', limit: 1, cursor: videos.data.next_cursor });
+    const episodes = [...videos.data.episodes, ...next.episodes].map(row => row.video_id);
     assert.deepEqual(episodes, ['video-1', 'video-2']);
     const continuation = calls.filter(call => call.url.searchParams.has('cursor'));
     assert.equal(continuation.length, 2);

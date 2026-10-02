@@ -22,7 +22,10 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(union['discriminator']['propertyName'], 'state')
         self.assertEqual(set(union['discriminator']['mapping']), {'ready','pending'})
         for path, collection in [('/v1/transcriptions','requests'),('/v1/channels/{channel_id}/videos','episodes')]:
-            self.assertEqual(prepared['paths'][path]['get']['x-fern-pagination']['results'], '$response.'+collection)
+            operation = prepared['paths'][path]['get']
+            self.assertNotIn('x-fern-pagination', operation)
+            schema = operation['responses']['200']['content']['application/json']['schema']
+            self.assertEqual(TOOLS['collection'](prepared, schema), collection)
         post = prepared['paths']['/v1/transcriptions']['post']
         self.assertTrue(next(p for p in post['parameters'] if p['name']=='Idempotency-Key')['required'])
         self.assertIn('max_rows', post['requestBody']['content']['application/json']['schema']['required'])

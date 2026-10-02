@@ -62,7 +62,6 @@ export class RecommendationsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     include_disputed: includeDisputed,
-                    src,
                 } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
@@ -77,7 +76,6 @@ export class RecommendationsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     include_disputed: includeDisputed,
-                    src: src != null ? src : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

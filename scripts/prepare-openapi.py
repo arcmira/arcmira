@@ -28,6 +28,26 @@ def collection(document, schema):
 
 def prepare(document, names):
     doc = copy.deepcopy(document)
+    for path in ('/v1/openapi.json', '/v1/signups', '/v1/signups/verify', '/v1/search'):
+        del doc['paths'][path]
+    type_names = {
+        'TranscriptionRequest': 'TranscriptRequest',
+        'TranscriptionSubmitResponse': 'TranscriptRequestSubmitResponse',
+        'TranscriptionListResponse': 'TranscriptRequestListResponse',
+    }
+    schemas = doc['components']['schemas']
+    for source, target in type_names.items():
+        schemas[target] = schemas.pop(source)
+    def rename_refs(value):
+        if isinstance(value, dict):
+            ref = value.get('$ref', '')
+            source = ref.removeprefix('#/components/schemas/')
+            if source in type_names:
+                value['$ref'] = '#/components/schemas/' + type_names[source]
+            for child in value.values(): rename_refs(child)
+        elif isinstance(value, list):
+            for child in value: rename_refs(child)
+    rename_refs(doc)
     # Fern 5.131.1 loses inherited example fields in this object intersection.
     suggestion = doc['components']['schemas']['ResolveSuggestion']
     members = [resolve(doc, part) for part in suggestion.pop('allOf')]
@@ -47,6 +67,7 @@ def prepare(document, names):
         for method, op in methods.items():
             if method not in {'get', 'post', 'put', 'patch', 'delete'}:
                 continue
+            op['parameters'] = [p for p in op.get('parameters', []) if not (p.get('in') == 'query' and p['name'] == 'src')]
             key = method + ' ' + re.sub(r'\{[^}]+\}', '{}', path)
             if op.get('operationId') in special:
                 group, name = special[op['operationId']]
@@ -85,6 +106,8 @@ def prepare(document, names):
                 items = collection(doc, responses[0])
                 if 'next_cursor' not in resolve(doc, responses[0]).get('properties', {}):
                     raise ValueError(f'Cursor operation lacks next_cursor: {path}')
+                if path in {'/v1/transcriptions', '/v1/channels/{channel_id}/videos'}:
+                    continue
                 op['x-fern-pagination'] = {'cursor': '$request.cursor', 'next_cursor': '$response.next_cursor', 'results': '$response.' + items}
     return doc
 

@@ -2,20 +2,20 @@
 
 import type * as Arcmira from "../index.js";
 
-export interface TranscriptionListResponse {
+export interface TranscriptRequestListResponse {
     /** Your requests in descending creation time and id order, up to the requested limit. */
-    requests: TranscriptionListResponse.Requests.Item[];
+    requests: TranscriptRequestListResponse.Requests.Item[];
     /** True when another page exists in this traversal. */
     has_more: boolean;
     /** Signed continuation for the same filter, limit and credential; null on the last page. */
     next_cursor: string | null;
 }
 
-export namespace TranscriptionListResponse {
+export namespace TranscriptRequestListResponse {
     export type Requests = Requests.Item[];
 
     export namespace Requests {
-        export interface Item extends Arcmira.TranscriptionRequest {
+        export interface Item extends Arcmira.TranscriptRequest {
             /** Video title for display. Null when unknown. */
             title: string | null;
         }

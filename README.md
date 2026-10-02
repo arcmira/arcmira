@@ -217,7 +217,7 @@ Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consu
 
 ## Migrate from 0.2
 
-`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. Preparation requires both the saved key and `max_rows`; `max_on_demand_cents` defaults to zero. `channels.videos.list` and `transcripts.listRequests` return pages whose `.response` retains the original body. Async iteration follows opaque cursors without decoding them.
+`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. Preparation requires both the saved key and `max_rows`; `max_on_demand_cents` defaults to zero. `channels.videos.list` and `transcripts.listRequests` retain their original response bodies and `.withRawResponse()`. To continue, pass the returned `next_cursor` unchanged with the same filters. Existing paginated methods retain async iteration.
 
 ```ts
 const { data, rawResponse } = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" }).withRawResponse();

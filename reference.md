@@ -12,12 +12,6 @@ Preparation requires a persisted Idempotency-Key and max_rows. max_on_demand_cen
 
 Health check
 
-## meta.get_openapi_document
-
-`GET /v1/openapi.json`
-
-OpenAPI document
-
 ## me.get
 
 `GET /v1/me`
@@ -34,39 +28,6 @@ Sets the account defaults every key of the account resolves against. Send only t
 |---|---|---|---|
 | `transcripts` | body | yes | object |
 
-## meta.create_signup
-
-`POST /v1/signups`
-
-Starts the signup that ends in an account key, with no key and no login. Sends a 6 digit code to the address, valid for 10 minutes and 5 attempts, and answers 202 with the verify call. Sends are capped at 3 per address per hour, 10 per IP per hour, and 25 per client fingerprint per day; past a cap the response is 429 signup_send_limited with retry_after_seconds and an unlock whose action is this call. An address that already has an account gets a code too; verifying it mints a key on that account. Send { "email": "agent@example.com" }, with an optional "src" naming the surface that sent you.
-
-| Field | Location | Required | Type |
-|---|---|---|---|
-| `email` | body | yes | string |
-| `src` | body | no | string |
-
-## meta.verify_signup
-
-`POST /v1/signups/verify`
-
-Consumes the code POST /v1/signups sent, creates the account when the address has none, and mints an arc_sk_ key on it: the read scope, the free tier's lifetime row pool, no expiry. A wrong, expired, or spent code is 400 signup_code_invalid on param code, naming the attempts left; its unlock action is a new send. Send { "email": "agent@example.com", "code": "482913" }.
-
-| Field | Location | Required | Type |
-|---|---|---|---|
-| `email` | body | yes | string |
-| `code` | body | yes | string |
-
-## search.search
-
-`GET /v1/search`
-
-Single-result name resolver: exact, case-insensitive match with curated alias support. Returns at most one entity and does not paginate (single page; there is no cursor). When `type` is passed and the name resolves to an entity of a different type, the response is `{ found: false }`. For fuzzy multi-result discovery use /v1/entities/search instead.
-
-| Field | Location | Required | Type |
-|---|---|---|---|
-| `q` | query | yes | string |
-| `type` | query | no | string |
-
 ## entities.search
 
 `GET /v1/entities/search`
@@ -79,7 +40,6 @@ Substring name search returning up to 25 entities ordered by appearance count, e
 | `type` | query | no | string |
 | `has_recommendations_data` | query | no | boolean |
 | `limit` | query | no | integer 1..25 |
-| `src` | query | no | string |
 
 ## entities.resolve
 
@@ -93,7 +53,6 @@ Call this before passing an id to about, by, entity_ids, channel_ids or channel;
 | `type` | query | no | string |
 | `limit` | query | no | integer 1..15 |
 | `context` | query | no | string |
-| `src` | query | no | string |
 
 ## entities.lookup
 
@@ -146,7 +105,6 @@ Cursor-paginated mentions for one entity, newest media first. Read timestamps fr
 | `date_from` | query | no | string |
 | `date_to` | query | no | string |
 | `details` | query | no | string |
-| `src` | query | no | string |
 
 ## entities.recommendations.list
 
@@ -166,7 +124,6 @@ Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) 
 | `date_from` | query | no | string |
 | `date_to` | query | no | string |
 | `include_disputed` | query | no | boolean |
-| `src` | query | no | string |
 
 ## mentions.list
 
@@ -189,7 +146,6 @@ Cursor-paginated mentions filtered by entity (entity_id or entity_name is requir
 | `date_from` | query | no | string |
 | `date_to` | query | no | string |
 | `details` | query | no | string |
-| `src` | query | no | string |
 
 ## recommendations.list
 
@@ -211,7 +167,6 @@ Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) 
 | `date_from` | query | no | string |
 | `date_to` | query | no | string |
 | `include_disputed` | query | no | boolean |
-| `src` | query | no | string |
 
 ## feedback.submit
 
@@ -254,7 +209,6 @@ Rollup of recurring sponsors for a YouTube channel, ordered by ad read count. On
 | `min_ad_reads` | query | no | integer 1..100 |
 | `status` | query | no | string |
 | `limit` | query | no | integer 1..200 |
-| `src` | query | no | string |
 
 ## transcripts.search
 
@@ -275,7 +229,6 @@ Search indexed YouTube and podcast transcripts for short spoken slices. Each res
 | `published_before` | query | no | string |
 | `source` | query | no | string |
 | `limit` | query | no | integer 1..20 |
-| `src` | query | no | string |
 
 ## entities.momentum
 
@@ -286,7 +239,6 @@ Mentions in the last 7 and 30 days against the prior 30, an absolute-delta verdi
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
-| `src` | query | no | string |
 
 ## channels.coverage
 
@@ -297,7 +249,6 @@ How many videos of a YouTube channel are searchable, the newest publish date amo
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `channel_id` | path | yes | string |
-| `src` | query | no | string |
 
 ## channels.videos.list
 
@@ -312,7 +263,6 @@ The indexed videos of a YouTube channel, newest first, each with its video_id, t
 | `cursor` | query | no | string |
 | `published_after` | query | no | string |
 | `published_before` | query | no | string |
-| `src` | query | no | string |
 
 ## mentions.count
 
@@ -330,7 +280,6 @@ A small ranked table of entity and channel counts, all-time unless published_aft
 | `published_after` | query | no | string |
 | `published_before` | query | no | string |
 | `limit` | query | no | integer 1..40 |
-| `src` | query | no | string |
 
 ## people.get
 
@@ -1082,7 +1031,6 @@ Caption retrieval costs one row per started 15 minutes. Premium retrieval is fre
 | `start` | query | no | number or null 0.. |
 | `end` | query | no | number or null 0.. |
 | `refresh` | query | no | boolean |
-| `src` | query | no | string |
 
 ## transcripts.quote
 
@@ -1103,7 +1051,6 @@ Free (0 rows), any key. Returns the video metadata and every caption track YouTu
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `video_id` | path | yes | string |
-| `src` | query | no | string |
 
 ## transcripts.request
 
@@ -1130,7 +1077,6 @@ Your transcription requests in descending creation time and id order. limit defa
 | `video_id` | query | no | string |
 | `limit` | query | no | integer 1..100 |
 | `cursor` | query | no | string |
-| `src` | query | no | string |
 
 ## transcripts.status
 
@@ -1141,7 +1087,6 @@ Agent-friendly polling contract: while the request is in flight the response car
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
-| `src` | query | no | string |
 
 ## corrections.submit
 

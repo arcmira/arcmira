@@ -701,7 +701,7 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
         run: async ({ client, positionals: [channel], values: v }) =>
-            (await client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) })).response,
+            client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) }),
         print: (r: Arcmira.ChannelVideosResponse) => {
             if (r.episodes.length === 0) return console.log("Nothing indexed for this channel.");
             for (const e of r.episodes) console.log(`${day(e.published_at)}  ${e.video_id}  ${seconds(e.duration_seconds).padStart(7)}  ${e.title ?? ""}`);
@@ -781,7 +781,7 @@ const COMMANDS: Record<string, Command> = {
                 throw new ArcmiraError({ message: "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key." });
             }
         },
-        print: ({ request: r, existing }: Arcmira.TranscriptionSubmitResponse) => {
+        print: ({ request: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
             console.log(`${r.id}  ${r.videoId}  ${r.state}  ${r.quote.rows} rows${existing ? "  (existing request)" : ""}`);
             if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
             else note(`poll after ${r.nextPollSeconds ?? "-"} s: arcmira transcripts status ${r.id}`);
@@ -796,7 +796,7 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: {},
         run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
-        print: (r: Arcmira.TranscriptionRequest) => {
+        print: (r: Arcmira.TranscriptRequest) => {
             const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
             console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
             if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);

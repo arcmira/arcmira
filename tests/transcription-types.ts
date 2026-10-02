@@ -1,6 +1,11 @@
-import { ArcmiraClient } from '../src/index.js';
+import { ArcmiraClient, type Arcmira } from '../src/index.js';
 const client = new ArcmiraClient({ apiKey: 'compile-only' });
 async function consumer() {
+    const history: Arcmira.TranscriptRequestListResponse = await client.transcripts.listRequests();
+    const submitted: Arcmira.TranscriptRequestSubmitResponse = await client.transcripts.request({ videoId: 'dQw4w9WgXcQ', max_rows: 300, 'Idempotency-Key': 'saved' });
+    const request: Arcmira.TranscriptRequest = submitted.request;
+    history.requests.map(row => row.id);
+    void request;
     const result = await client.transcripts.get({ video_id: 'dQw4w9WgXcQ', quality: 'premium' });
     if (result.state === 'ready') {
         result.lines?.map(line => line.text);

@@ -86,7 +86,6 @@ export class TranscriptsClient {
             published_before: publishedBefore,
             source,
             limit,
-            src,
         } = request;
         const _queryParams: Record<string, unknown> = {
             q,
@@ -100,7 +99,6 @@ export class TranscriptsClient {
             published_before: publishedBefore,
             source: source != null ? source : undefined,
             limit,
-            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -207,7 +205,7 @@ export class TranscriptsClient {
         request: Arcmira.GetTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.TranscriptResult>> {
-        const { video_id: videoId, quality, language, timestamps, start, end, refresh, src } = request;
+        const { video_id: videoId, quality, language, timestamps, start, end, refresh } = request;
         const _queryParams: Record<string, unknown> = {
             quality: quality != null ? quality : undefined,
             language,
@@ -215,7 +213,6 @@ export class TranscriptsClient {
             start,
             end,
             refresh,
-            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -416,10 +413,7 @@ export class TranscriptsClient {
         request: Arcmira.CaptionsTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.VideoCaptionsResponse>> {
-        const { video_id: videoId, src } = request;
-        const _queryParams: Record<string, unknown> = {
-            src: src != null ? src : undefined,
-        };
+        const { video_id: videoId } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -435,11 +429,7 @@ export class TranscriptsClient {
             ),
             method: "GET",
             headers: _headers,
-            queryString: core.url
-                .queryBuilder()
-                .addMany(_queryParams)
-                .mergeAdditional(requestOptions?.queryParams)
-                .build(),
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -510,108 +500,86 @@ export class TranscriptsClient {
      * @example
      *     await client.transcripts.listRequests()
      */
-    public async listRequests(
+    public listRequests(
         request: Arcmira.ListRequestsTranscriptsRequest = {},
         requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.Page<Arcmira.TranscriptionListResponse.Requests.Item, Arcmira.TranscriptionListResponse>> {
-        const list = core.HttpResponsePromise.interceptFunction(
-            async (
-                request: Arcmira.ListRequestsTranscriptsRequest,
-            ): Promise<core.WithRawResponse<Arcmira.TranscriptionListResponse>> => {
-                const { video_id: videoId, limit, cursor, src } = request;
-                const _queryParams: Record<string, unknown> = {
-                    video_id: videoId,
-                    limit,
-                    cursor,
-                    src: src != null ? src : undefined,
-                };
-                const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-                const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-                    _authRequest.headers,
-                    this._options?.headers,
-                    requestOptions?.headers,
-                );
-                const _response = await core.fetcher({
-                    url: core.url.join(
-                        (await core.Supplier.get(this._options.baseUrl)) ??
-                            (await core.Supplier.get(this._options.environment)) ??
-                            environments.ArcmiraEnvironment.Default,
-                        "v1/transcriptions",
-                    ),
-                    method: "GET",
-                    headers: _headers,
-                    queryString: core.url
-                        .queryBuilder()
-                        .addMany(_queryParams)
-                        .mergeAdditional(requestOptions?.queryParams)
-                        .build(),
-                    timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-                    maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-                    abortSignal: requestOptions?.abortSignal,
-                    fetchFn: this._options?.fetch,
-                    logging: this._options.logging,
-                });
-                if (_response.ok) {
-                    return {
-                        data: _response.body as Arcmira.TranscriptionListResponse,
-                        rawResponse: _response.rawResponse,
-                    };
-                }
-                if (_response.error.reason === "status-code") {
-                    switch (_response.error.statusCode) {
-                        case 400:
-                            throw new Arcmira.BadRequestError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        case 401:
-                            throw new Arcmira.UnauthorizedError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        case 403:
-                            throw new Arcmira.ForbiddenError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        case 404:
-                            throw new Arcmira.NotFoundError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        case 429:
-                            throw new Arcmira.TooManyRequestsError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        case 500:
-                            throw new Arcmira.InternalServerError(
-                                _response.error.body as Arcmira.Error_,
-                                _response.rawResponse,
-                            );
-                        default:
-                            throw new errors.ArcmiraError({
-                                statusCode: _response.error.statusCode,
-                                body: _response.error.body,
-                                rawResponse: _response.rawResponse,
-                            });
-                    }
-                }
-                return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/transcriptions");
-            },
+    ): core.HttpResponsePromise<Arcmira.TranscriptRequestListResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__listRequests(request, requestOptions));
+    }
+
+    private async __listRequests(
+        request: Arcmira.ListRequestsTranscriptsRequest = {},
+        requestOptions?: TranscriptsClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Arcmira.TranscriptRequestListResponse>> {
+        const { video_id: videoId, limit, cursor } = request;
+        const _queryParams: Record<string, unknown> = {
+            video_id: videoId,
+            limit,
+            cursor,
+        };
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
         );
-        const dataWithRawResponse = await list(request).withRawResponse();
-        return new core.Page<Arcmira.TranscriptionListResponse.Requests.Item, Arcmira.TranscriptionListResponse>({
-            response: dataWithRawResponse.data,
-            rawResponse: dataWithRawResponse.rawResponse,
-            hasNextPage: (response) =>
-                response?.next_cursor != null &&
-                !(typeof response?.next_cursor === "string" && response?.next_cursor === ""),
-            getItems: (response) => response?.requests ?? [],
-            loadPage: (response) => {
-                return list(core.setObjectProperty(request, "cursor", response?.next_cursor));
-            },
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.ArcmiraEnvironment.Default,
+                "v1/transcriptions",
+            ),
+            method: "GET",
+            headers: _headers,
+            queryString: core.url
+                .queryBuilder()
+                .addMany(_queryParams)
+                .mergeAdditional(requestOptions?.queryParams)
+                .build(),
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
         });
+        if (_response.ok) {
+            return {
+                data: _response.body as Arcmira.TranscriptRequestListResponse,
+                rawResponse: _response.rawResponse,
+            };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 400:
+                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 401:
+                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 403:
+                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 404:
+                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 429:
+                    throw new Arcmira.TooManyRequestsError(
+                        _response.error.body as Arcmira.Error_,
+                        _response.rawResponse,
+                    );
+                case 500:
+                    throw new Arcmira.InternalServerError(
+                        _response.error.body as Arcmira.Error_,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.ArcmiraError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/transcriptions");
     }
 
     /**
@@ -641,14 +609,14 @@ export class TranscriptsClient {
     public request(
         request: Arcmira.RequestTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.TranscriptionSubmitResponse> {
+    ): core.HttpResponsePromise<Arcmira.TranscriptRequestSubmitResponse> {
         return core.HttpResponsePromise.fromPromise(this.__request(request, requestOptions));
     }
 
     private async __request(
         request: Arcmira.RequestTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.TranscriptionSubmitResponse>> {
+    ): Promise<core.WithRawResponse<Arcmira.TranscriptRequestSubmitResponse>> {
         const { "Idempotency-Key": idempotencyKey, ..._body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -677,7 +645,10 @@ export class TranscriptsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as Arcmira.TranscriptionSubmitResponse, rawResponse: _response.rawResponse };
+            return {
+                data: _response.body as Arcmira.TranscriptRequestSubmitResponse,
+                rawResponse: _response.rawResponse,
+            };
         }
 
         if (_response.error.reason === "status-code") {
@@ -747,18 +718,15 @@ export class TranscriptsClient {
     public status(
         request: Arcmira.StatusTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.TranscriptionRequest> {
+    ): core.HttpResponsePromise<Arcmira.TranscriptRequest> {
         return core.HttpResponsePromise.fromPromise(this.__status(request, requestOptions));
     }
 
     private async __status(
         request: Arcmira.StatusTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.TranscriptionRequest>> {
-        const { id, src } = request;
-        const _queryParams: Record<string, unknown> = {
-            src: src != null ? src : undefined,
-        };
+    ): Promise<core.WithRawResponse<Arcmira.TranscriptRequest>> {
+        const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -774,11 +742,7 @@ export class TranscriptsClient {
             ),
             method: "GET",
             headers: _headers,
-            queryString: core.url
-                .queryBuilder()
-                .addMany(_queryParams)
-                .mergeAdditional(requestOptions?.queryParams)
-                .build(),
+            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -786,7 +750,7 @@ export class TranscriptsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as Arcmira.TranscriptionRequest, rawResponse: _response.rawResponse };
+            return { data: _response.body as Arcmira.TranscriptRequest, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {

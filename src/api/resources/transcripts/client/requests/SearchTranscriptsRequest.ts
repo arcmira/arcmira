@@ -31,6 +31,4 @@ export interface SearchTranscriptsRequest {
     source?: Arcmira.SearchTranscriptsRequestSource;
     /** Chunks to return, 1 to 20. Default 5. */
     limit?: number;
-    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
-    src?: Arcmira.SearchTranscriptsRequestSrc;
 }
