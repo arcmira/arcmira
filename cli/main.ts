@@ -8,12 +8,14 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, wr
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Arcmira, ArcmiraClient, ArcmiraError, PreparationFailedError, PreparationTimeoutError, PremiumUnavailableError } from "arcmira";
+import type { Arcmira, ArcmiraClient } from "arcmira";
 import { OPERATIONS, type Operation } from "./operations";
 import { AGENTS, MARKETPLACE, apply, describe, hosts, plan, redact, refreshSkills, skillRoot, writeRecord, type AgentId, type Auth, type Skill } from "./setup";
 import { updateNotice } from "./update-check";
 import { createInterface } from "node:readline/promises";
 
+/** The SDK takes most of startup, so --version and --help never load it. */
+const sdk = (): typeof import("arcmira") => require("arcmira");
 const VERSION: string = require("../../package.json").version;
 /** The SDK sends User-Agent arcmira/<version>; the CLI overrides it so API logs separate the two. */
 const USER_AGENT = `arcmira-cli/${VERSION}`;
@@ -197,14 +199,14 @@ async function send(url: URL, method: string, headers: Record<string, string>, b
         response = await fetch(url, { method, headers: { "user-agent": USER_AGENT, accept: "application/json", ...headers }, body, signal: AbortSignal.timeout(60_000) });
     } catch (error) {
         const cause = (error as { cause?: { code?: string; message?: string } }).cause;
-        throw new ArcmiraError({ message: `fetch failed: ${cause?.code ?? cause?.message ?? (error as Error).message}` });
+        throw new (sdk().ArcmiraError)({ message: `fetch failed: ${cause?.code ?? cause?.message ?? (error as Error).message}` });
     }
     const text = await response.text();
     let parsed: unknown = text;
     try {
         parsed = text ? JSON.parse(text) : "";
     } catch {}
-    if (!response.ok) throw new ArcmiraError({ message: response.statusText, statusCode: response.status, body: parsed, rawResponse: response });
+    if (!response.ok) throw new (sdk().ArcmiraError)({ message: response.statusText, statusCode: response.status, body: parsed, rawResponse: response });
     return { status: response.status, headers: response.headers, body: parsed };
 }
 
@@ -799,8 +801,8 @@ const COMMANDS: Record<string, Command> = {
                     ...(key ? { "Idempotency-Key": key } : {}),
                 });
             } catch (error) {
-                if (error instanceof ArcmiraError && error.statusCode !== undefined) throw error;
-                throw new ArcmiraError({
+                if (error instanceof sdk().ArcmiraError && error.statusCode !== undefined) throw error;
+                throw new (sdk().ArcmiraError)({
                     message: key
                         ? "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key."
                         : "Preparation outcome is unknown. Run the same command again: a keyless request joins the open job for this video.",
@@ -1180,31 +1182,31 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         else console.error(error.oneLine ? error.message : `error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
         return 2;
     }
-    if (error instanceof PreparationTimeoutError) {
+    if (error instanceof sdk().PreparationTimeoutError) {
         const message = `Premium job ${error.job.id} for ${error.job.video_id} is still ${error.job.status}; it keeps running`;
         if (json) console.error(JSON.stringify({ error: { type: "pending", code: "preparation_pending", message, job: error.job } }));
         else console.error(`${message}\nrun: ${waitCommand(error.job.video_id)}`);
         return EXIT_PENDING;
     }
-    if (error instanceof PreparationFailedError) {
+    if (error instanceof sdk().PreparationFailedError) {
         const message = `Premium job ${error.job.id} for ${error.job.video_id} ended ${error.job.state}: ${error.job.error ?? error.job.status}`;
         if (json) console.error(JSON.stringify({ error: { type: "preparation_failed", code: `job_${error.job.state}`, message, job: error.job } }));
         else console.error(`error: ${message}`);
         return 1;
     }
-    if (error instanceof PremiumUnavailableError) {
+    if (error instanceof sdk().PremiumUnavailableError) {
         const message = `Premium is not available on this plan; the read returned ${error.transcript.quality}`;
         if (json) console.error(JSON.stringify({ error: { type: "permission_error", code: "premium_unavailable", message } }));
         else console.error(`error: ${message}\nplans: https://arcmira.com/pricing`);
         return 1;
     }
-    if (error instanceof ArcmiraError && error.statusCode === undefined) {
+    if (error instanceof sdk().ArcmiraError && error.statusCode === undefined) {
         const message = `could not reach ${baseUrl}: ${error.message.replace(/^.*?:\s*/, "")}`;
         if (json) console.error(JSON.stringify({ error: { type: "network_error", code: "request_failed", message } }));
         else console.error(`error: ${message}\ncheck the network, or --base-url / ARCMIRA_BASE_URL`);
         return 1;
     }
-    if (error instanceof ArcmiraError) {
+    if (error instanceof sdk().ArcmiraError) {
         const body = error.body as Arcmira.Error_ | undefined;
         const detail = body && typeof body.error === "object" && body.error ? body.error : null;
         const requestId = detail?.request_id || error.requestId;
@@ -1301,7 +1303,7 @@ async function runCommand(name: string, command: Command, values: Values, positi
         if (!apiKey && command.needsKey !== false) {
             throw new UsageError("no API key. Get one with `arcmira login you@example.com` (emails a code), or set ARCMIRA_API_KEY", "missing_key");
         }
-        const client = new ArcmiraClient({ apiKey: apiKey ?? "", baseUrl, maxRetries: 1, headers: { "User-Agent": USER_AGENT } });
+        const client = new (sdk().ArcmiraClient)({ apiKey: apiKey ?? "", baseUrl, maxRetries: 1, headers: { "User-Agent": USER_AGENT } });
         const ctx: Context = { client, values, positionals, baseUrl, apiKey };
         const result = await command.run(ctx);
         if (values.json) console.log(JSON.stringify(result, null, 2));
