@@ -12,11 +12,11 @@ export interface TranscriptJob {
     state: TranscriptJob.State;
     /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (rejected intent or legacy purchase requiring accounting review), refund_pending (refund transaction must still complete), refunded (terminal failure; the charged rows were returned and the unlock this submission bought was revoked). */
     status: TranscriptJob.Status;
-    /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses. */
+    /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses and refund_pending. */
     stage: TranscriptJob.Stage | null;
     /** What the purchase charged. Present on durable purchases; absent only on legacy requests. */
     charge?: TranscriptJob.Charge | undefined;
-    /** Estimated seconds until completion, re-derived from live pipeline telemetry on every poll. Only present while the request is in flight. */
+    /** Estimated seconds until completion, re-derived from live pipeline telemetry on every poll. Only present while the request is in flight; absent on refund_pending, which has no completion ETA. */
     eta_seconds?: number | undefined;
     /** Seconds to sleep before the next poll (also sent as the Retry-After header). Only present while the request is in flight. */
     next_poll_seconds?: number | undefined;
@@ -53,7 +53,7 @@ export namespace TranscriptJob {
         Refunded: "refunded",
     } as const;
     export type Status = (typeof Status)[keyof typeof Status];
-    /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses. */
+    /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses and refund_pending. */
     export const Stage = {
         Queued: "queued",
         Transcribing: "transcribing",

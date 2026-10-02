@@ -29,6 +29,7 @@ export * from "./EntitySearchResponse.js";
 export * from "./EntitySearchResult.js";
 export * from "./EntityTopicListResponse.js";
 export * from "./Error_.js";
+export * from "./ErrorResource.js";
 export * from "./ExposureMeta.js";
 export * from "./FeedbackCorrectionResult.js";
 export * from "./FeedbackReadbackCorrection.js";

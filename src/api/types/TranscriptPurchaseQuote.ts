@@ -15,7 +15,6 @@ export interface TranscriptPurchaseQuote {
     credits_per_row: number;
     max_on_demand_cents: number;
     on_demand_cents_per_unit: number;
-    prepare_url: string;
     refund_policy: string;
 }
 

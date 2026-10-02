@@ -48,6 +48,7 @@ export namespace ChannelSponsorsResponse {
         param?: string | undefined;
         /** Which boundary refused. Present on every gate error; switch on it without parsing the message. */
         gate?: Access.Gate | undefined;
+        resource?: Arcmira.ErrorResource | undefined;
         /** How to lift the gate. Present when the gate has an unlock. */
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
