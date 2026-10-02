@@ -5,7 +5,7 @@ description: "Finds exact spoken quotes and clip-ready moments on podcasts and Y
 
 # Find quotes and clip moments
 
-`search` finds the passage; `transcript` with `start` and `end` returns the exact lines around it with second offsets, which give the verbatim quote and the clip boundaries. Only that window is billed.
+`search` finds the passage; `transcript` with `start` and `end` returns the exact lines around it with second offsets, which give the verbatim quote and the clip boundaries. Caption reads bill returned lines. Premium preparation always prices the whole video; start/end only select the returned window.
 
 Use it through the arcmira MCP server (`describe`, then `execute` with a program) or the arcmira CLI, whose commands have the same names. The `arcmira` skill and `describe` carry the full method reference.
 
@@ -79,4 +79,6 @@ return { speaker: { id, name: e?.name ?? null, assumed, why }, as_of: hits.as_of
 - Keep transcript windows short (`start`, `end`): a whole episode bills every line.
 - Some videos have no readable caption track yet (`transcript_unavailable`, `transcript_fetching`); quote the search chunk `text` for those and say the words come from the search passage.
 
-Plan gates throw with `.unlock.url`: relay the link. Never fill a gap from memory or the web. Docs: https://arcmira.com/docs/mcp-server
+When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work may use included credits without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
+
+Never fill an index gap from memory or the web. Docs: https://arcmira.com/docs/mcp-server

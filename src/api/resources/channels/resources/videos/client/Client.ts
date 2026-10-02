@@ -23,7 +23,7 @@ export class VideosClient {
     }
 
     /**
-     * The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; channel backfill is not available yet. Bills one row per video returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+     * The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Pass next_cursor as cursor to continue. The signed token binds the route, filters, caller and visibility; invalid or old tokens return invalid_cursor. A first-page media ID fence excludes later insertions, including old-date backfills; edits and deletions to existing rows remain live. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; channel backfill is not available yet. Bills one row per video returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
      *
      * @param {Arcmira.channels.ListVideosRequest} request
      * @param {VideosClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -43,97 +43,123 @@ export class VideosClient {
      *         channel_id: "channel_id"
      *     })
      */
-    public list(
+    public async list(
         request: Arcmira.channels.ListVideosRequest,
         requestOptions?: VideosClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.ChannelVideosResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__list(request, requestOptions));
-    }
-
-    private async __list(
-        request: Arcmira.channels.ListVideosRequest,
-        requestOptions?: VideosClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.ChannelVideosResponse>> {
-        const {
-            channel_id: channelId,
-            limit,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
-        } = request;
-        const _queryParams: Record<string, unknown> = {
-            limit,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
-        };
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                `v1/channels/${core.url.encodePathParam(channelId)}/videos`,
-            ),
-            method: "GET",
-            headers: _headers,
-            queryString: core.url
-                .queryBuilder()
-                .addMany(_queryParams)
-                .mergeAdditional(requestOptions?.queryParams)
-                .build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.ChannelVideosResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 402:
-                    throw new Arcmira.PaymentRequiredError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
+    ): Promise<core.Page<Arcmira.ChannelVideosResponse.Episodes.Item, Arcmira.ChannelVideosResponse>> {
+        const list = core.HttpResponsePromise.interceptFunction(
+            async (
+                request: Arcmira.channels.ListVideosRequest,
+            ): Promise<core.WithRawResponse<Arcmira.ChannelVideosResponse>> => {
+                const {
+                    channel_id: channelId,
+                    limit,
+                    cursor,
+                    published_after: publishedAfter,
+                    published_before: publishedBefore,
+                } = request;
+                const _queryParams: Record<string, unknown> = {
+                    limit,
+                    cursor,
+                    published_after: publishedAfter,
+                    published_before: publishedBefore,
+                };
+                const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+                const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+                    _authRequest.headers,
+                    this._options?.headers,
+                    requestOptions?.headers,
+                );
+                const _response = await core.fetcher({
+                    url: core.url.join(
+                        (await core.Supplier.get(this._options.baseUrl)) ??
+                            (await core.Supplier.get(this._options.environment)) ??
+                            environments.ArcmiraEnvironment.Default,
+                        `v1/channels/${core.url.encodePathParam(channelId)}/videos`,
+                    ),
+                    method: "GET",
+                    headers: _headers,
+                    queryString: core.url
+                        .queryBuilder()
+                        .addMany(_queryParams)
+                        .mergeAdditional(requestOptions?.queryParams)
+                        .build(),
+                    timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
+                    maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+                    abortSignal: requestOptions?.abortSignal,
+                    fetchFn: this._options?.fetch,
+                    logging: this._options.logging,
+                });
+                if (_response.ok) {
+                    return {
+                        data: _response.body as Arcmira.ChannelVideosResponse,
                         rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/channels/{channel_id}/videos",
+                    };
+                }
+                if (_response.error.reason === "status-code") {
+                    switch (_response.error.statusCode) {
+                        case 400:
+                            throw new Arcmira.BadRequestError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 401:
+                            throw new Arcmira.UnauthorizedError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 402:
+                            throw new Arcmira.PaymentRequiredError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 403:
+                            throw new Arcmira.ForbiddenError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 404:
+                            throw new Arcmira.NotFoundError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 429:
+                            throw new Arcmira.TooManyRequestsError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        case 500:
+                            throw new Arcmira.InternalServerError(
+                                _response.error.body as Arcmira.Error_,
+                                _response.rawResponse,
+                            );
+                        default:
+                            throw new errors.ArcmiraError({
+                                statusCode: _response.error.statusCode,
+                                body: _response.error.body,
+                                rawResponse: _response.rawResponse,
+                            });
+                    }
+                }
+                return handleNonStatusCodeError(
+                    _response.error,
+                    _response.rawResponse,
+                    "GET",
+                    "/v1/channels/{channel_id}/videos",
+                );
+            },
         );
+        const dataWithRawResponse = await list(request).withRawResponse();
+        return new core.Page<Arcmira.ChannelVideosResponse.Episodes.Item, Arcmira.ChannelVideosResponse>({
+            response: dataWithRawResponse.data,
+            rawResponse: dataWithRawResponse.rawResponse,
+            hasNextPage: (response) =>
+                response?.next_cursor != null &&
+                !(typeof response?.next_cursor === "string" && response?.next_cursor === ""),
+            getItems: (response) => response?.episodes ?? [],
+            loadPage: (response) => {
+                return list(core.setObjectProperty(request, "cursor", response?.next_cursor));
+            },
+        });
     }
 }

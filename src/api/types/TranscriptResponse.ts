@@ -4,7 +4,7 @@ import type * as Arcmira from "../index.js";
 
 export interface TranscriptResponse {
     video: Arcmira.TranscriptVideo;
-    /** The lane that answered. premium only when your plan carries Premium transcripts; otherwise captions answered and access names the gate. */
+    /** The requested quality. Premium is served only with an owned unlock; it never falls back to captions. */
     quality: TranscriptResponse.Quality;
     /** Public source class. creator_captions were written or approved by the channel, third_party_quick are YouTube automatic captions, arcmira_premium is our own diarized transcript. */
     source: TranscriptResponse.Source;
@@ -20,14 +20,13 @@ export interface TranscriptResponse {
     speakers?: TranscriptResponse.Speakers.Item[] | undefined;
     /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. Echo it on every correction; a 409 means it changed underneath you, so read again. */
     revision?: string | undefined;
-    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; on Premium the whole-video unlock is. */
+    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free. */
     range?: TranscriptResponse.Range | undefined;
-    /** Rows this call charged. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window, and 0 on a Premium read you already unlocked. */
+    /** Rows this call charged. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window, and always 0 on Premium retrieval. */
     rows_billed: number;
     /** When the transcript was produced. */
     as_of: string | null;
-    /** Present when you asked for Premium on a video we have not transcribed yet. The captions text is in this same response; poll the job for the Premium one. */
-    premium_job?: TranscriptResponse.PremiumJob | undefined;
+    premium_job?: Arcmira.TranscriptJob | undefined;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptResponse.Access | undefined;
     /** One steering sentence for the agent reading this. On Premium it is the diarization disclosure verbatim. */
@@ -35,7 +34,7 @@ export interface TranscriptResponse {
 }
 
 export namespace TranscriptResponse {
-    /** The lane that answered. premium only when your plan carries Premium transcripts; otherwise captions answered and access names the gate. */
+    /** The requested quality. Premium is served only with an owned unlock; it never falls back to captions. */
     export const Quality = {
         Captions: "captions",
         Premium: "premium",
@@ -91,25 +90,11 @@ export namespace TranscriptResponse {
     }
 
     /**
-     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; on Premium the whole-video unlock is.
+     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free.
      */
     export interface Range {
         start: number;
         end: number;
-    }
-
-    /**
-     * Present when you asked for Premium on a video we have not transcribed yet. The captions text is in this same response; poll the job for the Premium one.
-     */
-    export interface PremiumJob {
-        /** Transcription request id. Poll it with GET /v1/transcriptions/{id}. */
-        job_id: string | null;
-        /** Pipeline status at submit time. */
-        status: string;
-        /** Seconds to wait before polling again. */
-        next_poll_seconds: number | null;
-        /** Estimated seconds until the Premium transcript is ready. */
-        eta_seconds: number | null;
     }
 
     /**
@@ -128,10 +113,15 @@ export namespace TranscriptResponse {
         param?: string | undefined;
         /** Which boundary refused. Present on every gate error; switch on it without parsing the message. */
         gate?: Access.Gate | undefined;
+        resource?: Arcmira.ErrorResource | undefined;
         /** How to lift the gate. Present when the gate has an unlock. */
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
+        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
+        current_revision?: string | undefined;
+        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
+        expected_seq?: number | undefined;
         doc_url: string;
         request_id: string;
     }

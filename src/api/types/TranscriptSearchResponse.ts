@@ -30,6 +30,8 @@ export namespace TranscriptSearchResponse {
     export interface Filters {
         /** Channel ids the search was scoped to, after entity_ids were expanded. */
         channelIds: string[];
+        /** Exact explicit entity_ids accepted for this search. Every id was resolved; an unknown id is refused. */
+        entityIds: string[];
         publishedAfter: string | null;
         publishedBefore: string | null;
         /** The about ids, each with its name and type. */
@@ -76,10 +78,15 @@ export namespace TranscriptSearchResponse {
         param?: string | undefined;
         /** Which boundary refused. Present on every gate error; switch on it without parsing the message. */
         gate?: Access.Gate | undefined;
+        resource?: Arcmira.ErrorResource | undefined;
         /** How to lift the gate. Present when the gate has an unlock. */
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
+        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
+        current_revision?: string | undefined;
+        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
+        expected_seq?: number | undefined;
         doc_url: string;
         request_id: string;
     }

@@ -24,7 +24,7 @@ export class CorrectionsClient {
     }
 
     /**
-     * Unified corrections ingestion for all kinds: line_edit, speaker_reassign, speaker_identify, add_person, entity_tag, segment_rewrite. Corrections are free (0 rows) and land as pending-review rows attributed to your API key; speaker_identify/add_person also create a community-flagged appearance immediately. segment_rewrite is the structural primitive: it replaces an inclusive segment range with new segments (an empty replacements array deletes the range); timestamps can be pinned per replacement with optional start/end seconds, and unpinned times are repaired by char-proportional interpolation between pins. Anchored kinds (line_edit, speaker_reassign, entity_tag, segment_rewrite) must echo the `revision` from a Premium transcript read and an `anchor` ({ segmentIndex, contentHash: djb2 of the covered segment text }); `anchor.segmentIndex` is the line's `index` in that read. Error semantics for outbox-style clients: 409 = revision/anchor mismatch, the transcript changed underneath the correction (body { reason, currentRevision }); drop or re-anchor the event and continue, the sequence number is consumed. 412 = seq mismatch (body { expectedSeq }); refetch the transcript, rebase local counters, and resend.
+     * Unified corrections ingestion for all kinds: line_edit, speaker_reassign, speaker_identify, add_person, entity_tag, segment_rewrite. Corrections are free (0 rows) and land as pending-review rows attributed to your API key; speaker_identify/add_person also create a community-flagged appearance immediately. segment_rewrite is the structural primitive: it replaces an inclusive segment range with new segments (an empty replacements array deletes the range); timestamps can be pinned per replacement with optional start/end seconds, and unpinned times are repaired by char-proportional interpolation between pins. Anchored kinds (line_edit, speaker_reassign, entity_tag, segment_rewrite) must echo the `revision` from a Premium transcript read and an `anchor` ({ segmentIndex, contentHash: djb2 of the covered segment text }); `anchor.segmentIndex` is the line's `index` in that read. Every refusal uses the shared error envelope. Error semantics for outbox-style clients: a 409 revision_mismatch or anchor_mismatch means the transcript changed, and error.current_revision is the revision to re-read; create a new event and key after re-anchoring, because the original refusal consumed its sequence and is replayable. A 409 idempotency_conflict means a finalized key was reused for changed intent; recover the original request instead of rebasing that key. A 412 sequence_mismatch stores no receipt or effect; error.expected_seq is the next seq, so synchronize local counters and resend under the same key.
      *
      * @param {Arcmira.SubmitCorrectionsRequest} request
      * @param {CorrectionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -42,6 +42,7 @@ export class CorrectionsClient {
      *
      * @example
      *     await client.corrections.submit({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         video_id: "video_id",
      *         kind: "line_edit",
      *         payload: {
@@ -105,7 +106,7 @@ export class CorrectionsClient {
                     throw new Arcmira.ConflictError(_response.error.body as Arcmira.Error_, _response.rawResponse);
                 case 412:
                     throw new Arcmira.PreconditionFailedError(
-                        _response.error.body as Arcmira.CorrectionSeqMismatchResponse,
+                        _response.error.body as Arcmira.Error_,
                         _response.rawResponse,
                     );
                 case 429:

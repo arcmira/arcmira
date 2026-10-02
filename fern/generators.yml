@@ -1,0 +1,16 @@
+api:
+  specs:
+    - openapi: ./openapi.sdk.json
+groups:
+  typescript:
+    generators:
+      - name: fernapi/fern-typescript-sdk
+        version: 3.96.0
+        output:
+          location: local-file-system
+          path: ../.generated/typescript
+        config:
+          namespaceExport: Arcmira
+          retainOriginalCasing: true
+          packageJson:
+            name: arcmira

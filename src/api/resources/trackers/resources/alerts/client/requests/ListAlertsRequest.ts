@@ -9,5 +9,6 @@
 export interface ListAlertsRequest {
     /** Tracker id, trk_ form. */
     id: string;
-    n?: number;
+    /** Alerts to return, newest first, 1 to 100. Default 25. */
+    limit?: number;
 }

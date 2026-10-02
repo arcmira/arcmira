@@ -45,5 +45,57 @@ export namespace MeResponse {
         monthly_rows: number;
         /** On-demand overage spend so far this period, in US cents. */
         current_spend_cents: number;
+        /** The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access. */
+        credits?: Usage.Credits | undefined;
+        /** Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access. */
+        hits?: Usage.Hits | undefined;
+    }
+
+    export namespace Usage {
+        /**
+         * The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access.
+         */
+        export interface Credits {
+            /** Credits spendable now: plan, granted, purchased, and on-demand up to its cap. Null when nothing limits it. */
+            available: number | null;
+            plan: Credits.Plan;
+            /** Credits left in granted lots that have not expired. */
+            granted: number;
+            /** Credits left in purchased top-ups. */
+            purchased: number;
+            on_demand: Credits.OnDemand;
+        }
+
+        export namespace Credits {
+            export interface Plan {
+                /** Plan credits this month. Null when the plan has no limit. */
+                credits: number | null;
+                /** Plan credits spent this month. */
+                used: number;
+                /** YYYY-MM-DD, the first day of next month (UTC), when plan credits reset. */
+                resets_at: string;
+            }
+
+            export interface OnDemand {
+                /** True when on-demand credits are on. */
+                enabled: boolean;
+                /** The on-demand cap in credits, at $0.002 a credit. Null when uncapped or off. */
+                cap_credits: number | null;
+                /** On-demand credits spent this month. */
+                used: number;
+            }
+        }
+
+        /**
+         * Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access.
+         */
+        export interface Hits {
+            /** Monitor alerts delivered this month. */
+            used: number;
+            /** Monitor alerts the plan delivers a month. Null when the plan has no limit. */
+            allowance: number | null;
+            /** YYYY-MM-DD, the first day of next month (UTC), when the count resets. */
+            resets_at: string;
+        }
     }
 }

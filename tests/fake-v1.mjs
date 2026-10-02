@@ -6,6 +6,23 @@ import { readFileSync } from "node:fs";
 
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures/v1.json", import.meta.url), "utf8"));
 const body = (id) => JSON.parse(JSON.stringify(fixtures[id].body));
+const premium = JSON.parse(readFileSync(new URL("./fixtures/transcription-responses.json", import.meta.url), "utf8"));
+const premiumBody = (id, videoId) => {
+    const b = JSON.parse(JSON.stringify(premium[id].body));
+    const job = b.job ?? (b.status_url ? b : null);
+    if ("video_id" in b) b.video_id = videoId;
+    if (b.action) b.action.body.video_id = videoId;
+    if (b.video) b.video.id = videoId;
+    if (job) Object.assign(job, { video_id: videoId, id: JOBS[videoId], status_url: `https://api.arcmira.com/v1/transcriptions/${JOBS[videoId]}` });
+    return b;
+};
+/** Premium videos: premiumVid* needs preparation until a POST buys it (then its job is ready); pendingVid* stays pending. */
+const PREMIUM_VIDEO = /^premiumVid/;
+const PENDING_VIDEO = /^pendingVid/;
+const JOBS = {};
+const jobFor = (videoId) => (JOBS[videoId] ??= `00000000-0000-4000-8000-${String(Object.keys(JOBS).length + 1).padStart(12, "0")}`);
+const videoOfJob = (id) => Object.keys(JOBS).find((videoId) => JOBS[videoId] === id);
+const purchased = new Set();
 
 export function gateBody() {
     const e = JSON.parse(JSON.stringify(fixtures.error));
@@ -76,20 +93,35 @@ const ROUTES = [
     ["GET", /^\/v1\/channels\/([^/]+)\/sponsors$/, () => [200, body("list_channel_sponsors")]],
     ["GET", /^\/v1\/channels\/([^/]+)\/videos$/, () => [200, body("list_channel_videos")]],
     ["GET", /^\/v1\/channels\/([^/]+)\/coverage$/, () => [200, body("get_channel_coverage")]],
-    ["GET", /^\/v1\/transcripts\/([^/]+)$/, (m) => {
+    ["GET", /^\/v1\/transcripts\/([^/]+)\/quote$/, () => [200, body("quote_transcription")]],
+    ["GET", /^\/v1\/transcripts\/([^/]+)$/, (m, url) => {
         if (m[1] === "missingvid0") return [404, notFoundBody("transcript_unavailable", "No transcript for this video.")];
+        if (url.searchParams.get("quality") === "premium" && (PREMIUM_VIDEO.test(m[1]) || PENDING_VIDEO.test(m[1]))) {
+            jobFor(m[1]);
+            if (PENDING_VIDEO.test(m[1])) return [202, premiumBody("pending_premium", m[1]), { "retry-after": "1" }];
+            return [200, premiumBody(purchased.has(m[1]) ? "premium_ready" : "preparation_required", m[1])];
+        }
         const b = body("get_transcript");
         b.lines = [{ start: 0, end: 4, text: "Welcome back to the show." }, { start: 4, end: 9, text: "Today we talk about agent payments." }];
         return [200, b];
     }],
     ["POST", /^\/v1\/transcriptions$/, (_m, _url, json) => {
+        if (PREMIUM_VIDEO.test(json?.video_id ?? "")) {
+            jobFor(json.video_id);
+            purchased.add(json.video_id);
+            return [202, premiumBody("submit_pending", json.video_id), { "retry-after": "0" }];
+        }
         const b = body("submit_transcription");
-        Object.assign(b.request, { id: "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", videoId: json?.videoId ?? "", etaSeconds: 540, nextPollSeconds: 30 });
+        const id = "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60";
+        Object.assign(b.job, { id, video_id: json?.video_id ?? "", eta_seconds: 540, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${id}` });
         return [fixtures.submit_transcription.status, b];
     }],
     ["GET", /^\/v1\/transcriptions\/([^/]+)$/, (m) => {
+        const videoId = videoOfJob(m[1]);
+        if (videoId && PENDING_VIDEO.test(videoId)) return [200, premiumBody("get_transcription", videoId), { "retry-after": "1" }];
+        if (videoId) return [200, premiumBody("job_ready", videoId)];
         const b = body("get_transcription");
-        Object.assign(b, { id: m[1], videoId: "dQw4w9WgXcQ", status: "transcribing", stage: "transcribing", etaSeconds: 300, nextPollSeconds: 30 });
+        Object.assign(b, { id: m[1], status: "transcribing", stage: "transcribing", eta_seconds: 300, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${m[1]}` });
         return [200, b];
     }],
     ["POST", /^\/v1\/monitors$/, (_m, _url, json) => {
@@ -110,8 +142,8 @@ export async function startFake() {
             const json = raw ? JSON.parse(raw) : null;
             requests.push({ method: req.method, path: url.pathname, query: Object.fromEntries(url.searchParams), headers: req.headers, body: json });
             const route = ROUTES.find(([method, pattern]) => method === req.method && pattern.test(url.pathname));
-            const [status, payload] = route ? route[2](url.pathname.match(route[1]), url, json) : [404, notFoundBody("route_not_found", `no fake for ${req.method} ${url.pathname}`)];
-            res.writeHead(status, { "content-type": "application/json", "x-request-id": "req_fake" });
+            const [status, payload, headers] = route ? route[2](url.pathname.match(route[1]), url, json) : [404, notFoundBody("route_not_found", `no fake for ${req.method} ${url.pathname}`)];
+            res.writeHead(status, { "content-type": "application/json", "x-request-id": "req_fake", ...headers });
             res.end(JSON.stringify(payload));
         });
     });

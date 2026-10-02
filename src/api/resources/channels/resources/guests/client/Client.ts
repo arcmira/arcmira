@@ -23,7 +23,7 @@ export class GuestsClient {
     }
 
     /**
-     * People who appeared as guests on the channel, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * People who appeared as guests on the channel, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.channels.ListGuestsRequest} request
      * @param {GuestsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -51,7 +51,7 @@ export class GuestsClient {
             async (
                 request: Arcmira.channels.ListGuestsRequest,
             ): Promise<core.WithRawResponse<Arcmira.ChannelGuestListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -59,6 +59,8 @@ export class GuestsClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

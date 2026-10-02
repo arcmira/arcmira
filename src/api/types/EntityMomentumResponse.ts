@@ -80,10 +80,15 @@ export namespace EntityMomentumResponse {
         param?: string | undefined;
         /** Which boundary refused. Present on every gate error; switch on it without parsing the message. */
         gate?: Access.Gate | undefined;
+        resource?: Arcmira.ErrorResource | undefined;
         /** How to lift the gate. Present when the gate has an unlock. */
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
+        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
+        current_revision?: string | undefined;
+        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
+        expected_seq?: number | undefined;
         doc_url: string;
         request_id: string;
     }

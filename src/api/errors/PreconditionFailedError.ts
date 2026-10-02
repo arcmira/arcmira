@@ -5,9 +5,9 @@ import * as errors from "../../errors/index.js";
 import type * as Arcmira from "../index.js";
 
 export class PreconditionFailedError extends errors.ArcmiraError {
-    public declare readonly body: Arcmira.CorrectionSeqMismatchResponse;
+    public declare readonly body: Arcmira.Error_;
 
-    constructor(body: Arcmira.CorrectionSeqMismatchResponse, rawResponse?: core.RawResponse) {
+    constructor(body: Arcmira.Error_, rawResponse?: core.RawResponse) {
         super({
             message: "PreconditionFailedError",
             statusCode: 412,

@@ -29,7 +29,7 @@ export class TeamClient {
     }
 
     /**
-     * Active members of the team the key is scoped to, with role and seat type, earliest join first. Single page, no pagination. Requires a team-scoped API key. Personal keys receive 403 (team_key_required).
+     * Active members of the team the key is scoped to, with role and seat type, earliest join first. Single page, no pagination. Requires a team-scoped API key whose owner is still an active team admin. Personal keys and keys whose owner lost team authority receive 403 (team_key_required).
      *
      * @param {TeamClient.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -111,7 +111,7 @@ export class TeamClient {
     }
 
     /**
-     * Rows consumed and on-demand overage spend for every active member in the current period. Single page, no pagination. Requires a team-scoped API key. Personal keys receive 403 (team_key_required).
+     * Account-wide rows consumed and on-demand overage spend for every active member in the current period. Totals include personal-key use and activity before joining; they are not a team-attributed invoice. Single page, no pagination. Requires a team-scoped API key whose owner is still an active team admin. Personal keys and keys whose owner lost team authority receive 403 (team_key_required).
      *
      * @param {TeamClient.RequestOptions} requestOptions - Request-specific configuration.
      *

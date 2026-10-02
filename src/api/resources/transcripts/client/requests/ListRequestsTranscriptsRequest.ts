@@ -7,4 +7,8 @@
 export interface ListRequestsTranscriptsRequest {
     /** Filter to your requests for one video. */
     video_id?: string;
+    /** Requests per page, from 1 to 100. Default 20. */
+    limit?: number;
+    /** Signed continuation from next_cursor. Keep the same filter, limit and credential. */
+    cursor?: string;
 }

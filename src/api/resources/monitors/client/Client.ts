@@ -118,7 +118,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Creating with notifyWebhook: true and a webhookUrl enables HMAC-signed webhook delivery and returns the signing secret (monitor.webhookSecret) in this response. Returned only once. Store it securely; it cannot be retrieved later. To recover from a lost secret, rotate. All subsequent reads expose only webhookSecretSet and webhookSecretHint.
+     * Creating with notifyWebhook: true and a webhookUrl enables HMAC-signed webhook delivery and returns the signing secret (monitor.webhookSecret) in this response. Store it securely. A retry with the original Idempotency-Key recovers the same secret for up to 24 hours while it remains the current secret or the valid previous secret. An expired or displaced secret returns 409 idempotency_result_expired without rotating again. Reads do not expose the secret. All subsequent reads expose only webhookSecretSet and webhookSecretHint.
      *
      * @param {Arcmira.CreateMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -135,6 +135,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.create({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         name: "name"
      *     })
      */
@@ -215,7 +216,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Deletes the monitor AND every tracker inside it (trackersDeleted reports how many). Cannot be undone.
+     * Deletes the monitor AND every tracker inside it (trackersDeleted reports how many). Cannot be undone. Retrying with the original Idempotency-Key returns the original deleted count without deleting again.
      *
      * @param {Arcmira.DeleteMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -224,6 +225,7 @@ export class MonitorsClient {
      * @throws {@link Arcmira.UnauthorizedError}
      * @throws {@link Arcmira.ForbiddenError}
      * @throws {@link Arcmira.NotFoundError}
+     * @throws {@link Arcmira.ConflictError}
      * @throws {@link Arcmira.TooManyRequestsError}
      * @throws {@link Arcmira.InternalServerError}
      * @throws {@link errors.ArcmiraError}
@@ -231,6 +233,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.delete({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */
@@ -245,11 +248,12 @@ export class MonitorsClient {
         request: Arcmira.DeleteMonitorsRequest,
         requestOptions?: MonitorsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.MonitorDeleteResponse>> {
-        const { id } = request;
+        const { id, "Idempotency-Key": idempotencyKey } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
             this._options?.headers,
+            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
             requestOptions?.headers,
         );
         const _response = await core.fetcher({
@@ -282,6 +286,8 @@ export class MonitorsClient {
                     throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
                 case 404:
                     throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 409:
+                    throw new Arcmira.ConflictError(_response.error.body as Arcmira.Error_, _response.rawResponse);
                 case 429:
                     throw new Arcmira.TooManyRequestsError(
                         _response.error.body as Arcmira.Error_,
@@ -305,7 +311,7 @@ export class MonitorsClient {
     }
 
     /**
-     * A PATCH that newly enables webhook signing (turns notifyWebhook on, or sets a webhookUrl where no secret existed before) returns the signing secret (monitor.webhookSecret) in this response. Returned only once. Store it securely; it cannot be retrieved later. To recover from a lost secret, rotate. Unrelated PATCHes expose only webhookSecretSet and webhookSecretHint. PATCHing notifyWebhook: true also re-enables a webhook that was auto-disabled after repeated failures and resets its failure counter.
+     * A PATCH that newly enables webhook signing (turns notifyWebhook on, or sets a webhookUrl where no secret existed before) returns the signing secret (monitor.webhookSecret) in this response. Store it securely. A retry with the original Idempotency-Key recovers the same secret for up to 24 hours while it remains the current secret or the valid previous secret. An expired or displaced secret returns 409 idempotency_result_expired without rotating again. Reads do not expose the secret. Unrelated PATCHes expose only webhookSecretSet and webhookSecretHint. PATCHing notifyWebhook: true also re-enables a webhook that was auto-disabled after repeated failures and resets its failure counter.
      *
      * @param {Arcmira.UpdateMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -322,6 +328,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.update({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */
@@ -402,7 +409,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Generates a new signing secret and returns it in this response. Returned only once. Store it securely; it cannot be retrieved later. To recover from a lost secret, rotate. Zero-downtime overlap: the previous secret remains valid until previousSecretExpiresAt (24 hours); during the window every delivery carries an additional X-Arcmira-Signature-Previous header computed with the old secret over the same {timestamp}.{payload} string, so you can verify with either secret while you roll. After the window the old secret is dropped and the extra header disappears. Rotating again during the window replaces the previous secret and resets the window. Requires a configured webhook (webhookUrl set); otherwise 409 with code webhook_not_configured. Auto-disable interplay: rotation resets webhook_failures but never re-enables a webhook that was auto-disabled after repeated failures; to resume delivery, also PATCH the monitor with notifyWebhook: true. Requires the monitors:write scope.
+     * Generates a new signing secret and returns it in this response. Store it securely. A retry with the original Idempotency-Key recovers the same secret for up to 24 hours while it remains the current secret or the valid previous secret. An expired or displaced secret returns 409 idempotency_result_expired without rotating again. Reads do not expose the secret. Zero-downtime overlap: the previous secret remains valid until previousSecretExpiresAt (24 hours); during the window every delivery carries an additional X-Arcmira-Signature-Previous header computed with the old secret over the same {timestamp}.{payload} string, so you can verify with either secret while you roll. After the window the old secret is dropped and the extra header disappears. Rotating again during the window replaces the previous secret and resets the window. Requires a configured webhook (webhookUrl set); otherwise 409 with code webhook_not_configured. Auto-disable interplay: rotation resets webhook_failures but never re-enables a webhook that was auto-disabled after repeated failures; to resume delivery, also PATCH the monitor with notifyWebhook: true. Requires the monitors:write scope.
      *
      * @param {Arcmira.RotateWebhookSecretMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -419,6 +426,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.rotateWebhookSecret({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */

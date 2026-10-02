@@ -41,6 +41,7 @@ export class SpeakersClient {
      *
      * @example
      *     await client.transcripts.speakers.identify({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         video_id: "video_id",
      *         speakerId: 1
      *     })

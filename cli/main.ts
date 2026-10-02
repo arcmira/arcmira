@@ -8,12 +8,14 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, wr
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Arcmira, ArcmiraClient, ArcmiraError } from "arcmira";
+import type { Arcmira, ArcmiraClient } from "arcmira";
 import { OPERATIONS, type Operation } from "./operations";
 import { AGENTS, MARKETPLACE, apply, describe, hosts, plan, redact, refreshSkills, skillRoot, writeRecord, type AgentId, type Auth, type Skill } from "./setup";
 import { updateNotice } from "./update-check";
 import { createInterface } from "node:readline/promises";
 
+/** The SDK takes most of startup, so --version and --help never load it. */
+const sdk = (): typeof import("arcmira") => require("arcmira");
 const VERSION: string = require("../../package.json").version;
 /** The SDK sends User-Agent arcmira/<version>; the CLI overrides it so API logs separate the two. */
 const USER_AGENT = `arcmira-cli/${VERSION}`;
@@ -52,7 +54,14 @@ type Command = {
     needsKey?: false;
     run: (ctx: Context) => Promise<unknown>;
     print: (result: any, ctx: Context) => void;
+    /** The exit code for a result that arrived but is not the data asked for; it may note why on stderr. Default 0. */
+    exitCode?: (result: any, ctx: Context) => number;
 };
+
+/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. */
+const EXIT_PREPARATION_REQUIRED = 3;
+const EXIT_PENDING = 4;
+const waitCommand = (videoId: string) => `arcmira transcripts get ${videoId} --quality premium --wait`;
 
 const GLOBAL: Record<string, OptionSpec> = {
     json: { type: "boolean", help: "Print the API response as JSON on stdout; errors as JSON on stderr." },
@@ -70,7 +79,7 @@ const GLOBAL: Record<string, OptionSpec> = {
 /** Groups: `arcmira auth <sub>` runs the command named here. */
 const GROUPS: Record<string, Record<string, string>> = {
     auth: { login: "login", logout: "logout", status: "whoami", token: "auth token" },
-    transcripts: { get: "transcripts get", request: "transcripts request", status: "transcripts status" },
+    transcripts: { get: "transcripts get", quote: "transcripts quote", request: "transcripts request", status: "transcripts status" },
 };
 
 /** Short names for commands that live in a group; help lists them as aliases, not commands. */
@@ -190,14 +199,14 @@ async function send(url: URL, method: string, headers: Record<string, string>, b
         response = await fetch(url, { method, headers: { "user-agent": USER_AGENT, accept: "application/json", ...headers }, body, signal: AbortSignal.timeout(60_000) });
     } catch (error) {
         const cause = (error as { cause?: { code?: string; message?: string } }).cause;
-        throw new ArcmiraError({ message: `fetch failed: ${cause?.code ?? cause?.message ?? (error as Error).message}` });
+        throw new (sdk().ArcmiraError)({ message: `fetch failed: ${cause?.code ?? cause?.message ?? (error as Error).message}` });
     }
     const text = await response.text();
     let parsed: unknown = text;
     try {
         parsed = text ? JSON.parse(text) : "";
     } catch {}
-    if (!response.ok) throw new ArcmiraError({ message: response.statusText, statusCode: response.status, body: parsed, rawResponse: response });
+    if (!response.ok) throw new (sdk().ArcmiraError)({ message: response.statusText, statusCode: response.status, body: parsed, rawResponse: response });
     return { status: response.status, headers: response.headers, body: parsed };
 }
 
@@ -256,7 +265,18 @@ function apiRequest(positionals: string[], v: Values) {
     return { method, path: rawPath.replace(/^\/+/, "").replace(/^(?!v1(\/|$|\?))/, "v1/"), query, headers, body };
 }
 
-type Page = { data?: unknown; has_more?: boolean; next_cursor?: string | null };
+function collectionPage(value: unknown): { body: Record<string, unknown>; key: string; rows: unknown[]; cursor: string | null } {
+    if (typeof value !== "object" || value === null) throw new UsageError("Pagination requires a JSON object", "invalid_page");
+    const entries = Object.entries(value);
+    const arrays = entries.filter(([, field]) => Array.isArray(field));
+    if (arrays.length !== 1 || !["data", "requests", "episodes", "items"].includes(arrays[0][0]))
+        throw new UsageError("Unknown or ambiguous pagination collection", "invalid_page");
+    const [key, rows] = arrays[0];
+    const body = Object.fromEntries(entries);
+    const cursor = body.next_cursor;
+    if (cursor !== null && typeof cursor !== "string") throw new UsageError("Pagination requires next_cursor", "invalid_page");
+    return { body, key, rows, cursor };
+}
 
 async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Promise<unknown> {
     const request = apiRequest(positionals, v);
@@ -267,6 +287,8 @@ async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Pro
         ...(request.body !== undefined ? { "content-type": "application/json" } : {}),
         ...request.headers,
     };
+    if (request.method === "POST" && url.pathname === "/v1/transcriptions" && !headers["idempotency-key"])
+        throw new UsageError("Preparation requires a persisted Idempotency-Key header", "missing_idempotency_key");
     if (request.method === "POST" && !headers["idempotency-key"]) headers["idempotency-key"] = randomUUID();
     const call = async (target: URL) => {
         if (v.verbose) {
@@ -280,21 +302,19 @@ async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Pro
     };
     const first = await call(url);
     if (!v.paginate) return first;
-    const page = first as Page;
-    if (!Array.isArray(page?.data)) {
-        note("--paginate: the response has no data list; printed as is");
-        return first;
-    }
-    const rows = [...page.data];
+    const page = collectionPage(first);
+    const rows = [...page.rows];
     const seen = new Set<string>();
     let next = page;
-    while (next.has_more && next.next_cursor && !seen.has(next.next_cursor)) {
-        seen.add(next.next_cursor);
-        url.searchParams.set("cursor", next.next_cursor);
-        next = (await call(url)) as Page;
-        if (Array.isArray(next.data)) rows.push(...next.data);
+    while (next.cursor !== null) {
+        if (seen.has(next.cursor)) throw new UsageError("Pagination repeated a cursor", "invalid_page");
+        seen.add(next.cursor);
+        url.searchParams.set("cursor", next.cursor);
+        next = collectionPage(await call(url));
+        if (next.key !== page.key) throw new UsageError("Pagination changed its collection", "invalid_page");
+        rows.push(...next.rows);
     }
-    return { ...page, data: rows, has_more: false, next_cursor: null };
+    return { ...page.body, [page.key]: rows, has_more: false, next_cursor: null };
 }
 
 const mask = (key: string) => (key.length < 16 ? "****" : `${/^[a-z]+_[a-z]+_/i.exec(key)?.[0] ?? ""}...${key.slice(-4)}`);
@@ -686,11 +706,11 @@ const COMMANDS: Record<string, Command> = {
         operations: ["list_channel_videos"],
         summary: "The newest indexed videos of a YouTube channel.",
         usage: "episodes <UC...|@handle|name> [--after DATE] [--before DATE] [--limit N]",
-        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes @TBPNLive --after 2026-09-01"],
+        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes @TBPNLive --after 2026-09-01", "arcmira api GET /v1/channels/UC-DRzaGnL_vtBUpCFH5M0tg/videos -F limit=1 --paginate"],
         positionals: "one",
         options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
         run: async ({ client, positionals: [channel], values: v }) =>
-            client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) }),
+            (await client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) })).response,
         print: (r: Arcmira.ChannelVideosResponse) => {
             if (r.episodes.length === 0) return console.log("Nothing indexed for this channel.");
             for (const e of r.episodes) console.log(`${day(e.published_at)}  ${e.video_id}  ${seconds(e.duration_seconds).padStart(7)}  ${e.title ?? ""}`);
@@ -701,8 +721,12 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["get_transcript"],
         summary: "Full transcript of one YouTube video from its URL or id.",
-        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--language de,en] [--paragraphs] [--start S --end S]",
-        examples: ["arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120", "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'"],
+        usage: "transcripts get <video-url-or-id> [--quality captions|premium [--wait [--timeout S]]] [--language de,en] [--paragraphs] [--start S --end S]",
+        examples: [
+            "arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120",
+            "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'",
+            "arcmira transcripts get CusJwCsDHHM --quality premium --wait --json | jq -r '.lines[].text'",
+        ],
         positionals: "one",
         options: {
             quality: { type: "string", oneOf: ["captions", "premium"], help: "captions (default) or premium (Arcmira's diarized transcript, paid plans)." },
@@ -710,17 +734,29 @@ const COMMANDS: Record<string, Command> = {
             paragraphs: { type: "boolean", help: "Paragraphs for reading instead of timestamped lines." },
             start: { type: "string", number: true, help: "Window start in seconds." },
             end: { type: "string", number: true, help: "Window end in seconds." },
+            wait: { type: "boolean", help: "With --quality premium: prepare from included credits if needed (no money moves) and wait until ready." },
+            timeout: { type: "string", number: true, help: "Seconds --wait waits before exiting 4 with the job still running. Default 300." },
         },
-        run: ({ client, positionals: [video], values: v }) =>
-            client.transcripts.get({
-                video_id: videoIdOf(video),
-                quality: str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined,
-                language: str(v.language),
-                timestamps: v.paragraphs ? false : undefined,
-                start: num(v.start),
-                end: num(v.end),
-            }),
-        print: (r: Arcmira.TranscriptResponse) => {
+        run: async ({ client, positionals: [video], values: v }) => {
+            const video_id = videoIdOf(video);
+            const window = { language: str(v.language), timestamps: v.paragraphs ? false : undefined, start: num(v.start), end: num(v.end) };
+            const quality = str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined;
+            if (!v.wait) return client.transcripts.get({ video_id, quality, ...window });
+            const ready = await client.transcripts.prepareAndWait({ video_id, timeoutSeconds: num(v.timeout) });
+            return Object.values(window).some((value) => value !== undefined) ? client.transcripts.get({ video_id, quality, ...window }) : ready;
+        },
+        exitCode: (r: Arcmira.TranscriptResult) => {
+            if (r.state === "ready") return 0;
+            if (r.state === "preparation_required") {
+                const charge = r.quote ? `: ${r.quote.charge.amount} credits from ${r.quote.charge.from}` : "";
+                note(`Premium is not prepared for ${r.video_id}${charge}. This read bought nothing.\nrun: ${waitCommand(r.video_id)}`);
+                return EXIT_PREPARATION_REQUIRED;
+            }
+            note(`Premium for ${r.video_id} is still ${r.job.status}; next poll in ${r.job.next_poll_seconds ?? "-"} s.\nrun: ${waitCommand(r.video_id)}`);
+            return EXIT_PENDING;
+        },
+        print: (r: Arcmira.TranscriptResult) => {
+            if (r.state !== "ready") return;
             const names = new Map((r.speakers ?? []).map((s) => [s.id, s.name]));
             const who = (id: number | undefined) => (id == null ? "" : `${names.get(id) ?? `Speaker ${id}`}: `);
             for (const line of r.lines ?? []) console.log(`[${seconds(line.start)}] ${who(line.speaker)}${line.text}`);
@@ -728,25 +764,55 @@ const COMMANDS: Record<string, Command> = {
             note(`${r.video.title || r.video.id}  ${r.quality}  ${r.language}  rows billed ${r.rows_billed}`);
         },
     },
+    "transcripts quote": {
+        section: "data",
+        operations: ["quote_transcription"],
+        summary: "Free whole-video Premium purchase quote.",
+        usage: "transcripts quote <video-url-or-id>",
+        examples: ["arcmira transcripts quote CusJwCsDHHM", "arcmira transcripts quote CusJwCsDHHM --json"],
+        positionals: "one",
+        options: {},
+        run: ({ client, positionals: [video] }) => client.transcripts.quote({ video_id: videoIdOf(video) }),
+        print: (quote: Arcmira.TranscriptPurchaseQuote) => console.log(JSON.stringify(quote, null, 2)),
+    },
     "transcripts request": {
         section: "data",
         operations: ["submit_transcription"],
-        summary: "Order a Premium transcript of one video. Paid plans; rows are charged up front and refunded on failure.",
-        usage: "transcripts request <video-url-or-id> [--idempotency-key KEY]",
-        examples: ["arcmira transcripts request https://www.youtube.com/watch?v=CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --idempotency-key order-CusJwCsDHHM-1 --json"],
+        summary: "Prepare a whole Premium video from included credits; spending money needs a cents ceiling and a saved key.",
+        usage: "transcripts request <video-url-or-id> [--max-on-demand-cents N --max-rows N --idempotency-key KEY]",
+        examples: ["arcmira transcripts request CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --max-on-demand-cents 25 --max-rows 300 --idempotency-key saved-order-1 --json"],
         positionals: "one",
-        options: { "idempotency-key": { type: "string", help: "Key that makes a retry return the first answer instead of ordering again. Default: a new UUID, printed on stderr (not with --json; scripts pass their own)." } },
-        run: async ({ client, positionals: [video], values: v }) => {
-            const videoId = videoIdOf(video);
-            const key = str(v["idempotency-key"]) ?? randomUUID();
-            if (!v.json) note(`idempotency-key ${key}  (retry with --idempotency-key ${key} to avoid a second charge)`);
-            return client.transcripts.request({ "Idempotency-Key": key, videoId });
+        options: {
+            "max-on-demand-cents": { type: "string", int: [0, 1_000_000], help: "On-demand money you approve, in cents. Default 0: included credits only." },
+            "max-rows": { type: "string", int: [0, 3600], help: "Row ceiling. Required with --max-on-demand-cents above 0." },
+            "idempotency-key": { type: "string", help: "Persist before sending; retry an unknown outcome with it. Required with --max-on-demand-cents above 0." },
         },
-        print: ({ request: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
-            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left` : "";
-            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}  ${r.quote.rows} rows (${r.quote.quarters} x 15 min)${existing ? "  (already requested)" : ""}`);
-            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
-            else if (r.id) note(`poll: arcmira transcripts status ${r.id}`);
+        run: async ({ client, positionals: [video], values: v }) => {
+            const key = str(v["idempotency-key"]);
+            const maxRows = num(v["max-rows"]);
+            const cents = num(v["max-on-demand-cents"]) ?? 0;
+            const video_id = videoIdOf(video);
+            if (cents > 0 && (!key || maxRows === undefined)) throw new UsageError("--max-on-demand-cents above 0 needs --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
+            try {
+                return await client.transcripts.request({
+                    video_id,
+                    ...(maxRows !== undefined ? { max_rows: maxRows } : {}),
+                    ...(cents > 0 ? { max_on_demand_cents: cents } : {}),
+                    ...(key ? { "Idempotency-Key": key } : {}),
+                });
+            } catch (error) {
+                if (error instanceof sdk().ArcmiraError && error.statusCode !== undefined) throw error;
+                throw new (sdk().ArcmiraError)({
+                    message: key
+                        ? "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key."
+                        : "Preparation outcome is unknown. Run the same command again: a keyless request joins the open job for this video.",
+                });
+            }
+        },
+        print: ({ job: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
+            console.log(`${r.id}  ${r.video_id}  ${r.state}${r.charge ? `  ${r.charge.amount} credits` : ""}${existing ? "  (existing request)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
+            else if (r.state === "pending") note(`poll after ${r.next_poll_seconds ?? "-"} s: arcmira transcripts status ${r.id}`);
         },
     },
     "transcripts status": {
@@ -758,10 +824,10 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: {},
         run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
-        print: (r: Arcmira.TranscriptRequest) => {
-            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
-            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
-            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
+        print: (r: Arcmira.TranscriptJob) => {
+            const eta = r.eta_seconds != null ? `, about ${seconds(r.eta_seconds)} left, next poll in ${r.next_poll_seconds ?? "-"} s` : "";
+            console.log(`${r.id}  ${r.video_id}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (credits refunded)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
         },
     },
     occurrences: {
@@ -950,7 +1016,7 @@ const COMMANDS: Record<string, Command> = {
             field: { type: "string", short: "F", multiple: true, help: "Typed parameter key=value: true, false, null and numbers become JSON, @file reads a file, @- stdin; key[]=value appends." },
             header: { type: "string", short: "H", multiple: true, help: "Extra request header, 'Name: value'." },
             body: { type: "string", help: "Request body from @file, or - for stdin. -f and -F then go to the query string." },
-            paginate: { type: "boolean", help: "GET only: follow next_cursor and print every page's data as one list." },
+            paginate: { type: "boolean", help: "GET only: follow next_cursor and combine the response collection, including requests or episodes." },
             verbose: { type: "boolean", help: "Print the request, its Idempotency-Key, the status and request_id on stderr." },
         },
         run: runApi,
@@ -1057,7 +1123,8 @@ function help(name?: string): string {
         "Key: --key, then ARCMIRA_API_KEY, then the key saved by `arcmira login`.",
         "Output: data on stdout, messages on stderr; --json prints the API response, and errors as JSON on stderr.",
         "Errors: every API error line carries the request_id to quote to support.",
-        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name).",
+        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name),",
+        "  3 Premium needs preparing (run the printed --wait command), 4 Premium still pending (the job keeps running).",
         "Telemetry: none. The CLI sends only the API requests you ask for.",
         "Docs: https://arcmira.com/docs   Worked examples: arcmira examples   Each command: arcmira <command> --help",
     );
@@ -1088,6 +1155,7 @@ function validate(name: string, command: Command, values: Values, positionals: s
     if (name === "status" && positionals[0] && UUID.test(positionals[0])) {
         throw new UsageError(`transcript requests moved: arcmira transcripts status ${positionals[0]}`, "command_moved", undefined, true);
     }
+    if (name === "transcripts get" && values.wait && values.quality !== "premium") throw new UsageError("--wait prepares Premium; add --quality premium", "invalid_option");
     if (name === "transcripts status" && !UUID.test(positionals[0])) throw new UsageError(`"${positionals[0]}" is not a request id (the UUID transcripts request printed)`, "invalid_request_id");
     if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0])) checkIdShape(positionals[0], "channel");
 }
@@ -1114,13 +1182,31 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         else console.error(error.oneLine ? error.message : `error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
         return 2;
     }
-    if (error instanceof ArcmiraError && error.statusCode === undefined) {
+    if (error instanceof sdk().PreparationTimeoutError) {
+        const message = `Premium job ${error.job.id} for ${error.job.video_id} is still ${error.job.status}; it keeps running`;
+        if (json) console.error(JSON.stringify({ error: { type: "pending", code: "preparation_pending", message, job: error.job } }));
+        else console.error(`${message}\nrun: ${waitCommand(error.job.video_id)}`);
+        return EXIT_PENDING;
+    }
+    if (error instanceof sdk().PreparationFailedError) {
+        const message = `Premium job ${error.job.id} for ${error.job.video_id} ended ${error.job.state}: ${error.job.error ?? error.job.status}`;
+        if (json) console.error(JSON.stringify({ error: { type: "preparation_failed", code: `job_${error.job.state}`, message, job: error.job } }));
+        else console.error(`error: ${message}`);
+        return 1;
+    }
+    if (error instanceof sdk().PremiumUnavailableError) {
+        const message = `Premium is not available on this plan; the read returned ${error.transcript.quality}`;
+        if (json) console.error(JSON.stringify({ error: { type: "permission_error", code: "premium_unavailable", message } }));
+        else console.error(`error: ${message}\nplans: https://arcmira.com/pricing`);
+        return 1;
+    }
+    if (error instanceof sdk().ArcmiraError && error.statusCode === undefined) {
         const message = `could not reach ${baseUrl}: ${error.message.replace(/^.*?:\s*/, "")}`;
         if (json) console.error(JSON.stringify({ error: { type: "network_error", code: "request_failed", message } }));
         else console.error(`error: ${message}\ncheck the network, or --base-url / ARCMIRA_BASE_URL`);
         return 1;
     }
-    if (error instanceof ArcmiraError) {
+    if (error instanceof sdk().ArcmiraError) {
         const body = error.body as Arcmira.Error_ | undefined;
         const detail = body && typeof body.error === "object" && body.error ? body.error : null;
         const requestId = detail?.request_id || error.requestId;
@@ -1217,12 +1303,12 @@ async function runCommand(name: string, command: Command, values: Values, positi
         if (!apiKey && command.needsKey !== false) {
             throw new UsageError("no API key. Get one with `arcmira login you@example.com` (emails a code), or set ARCMIRA_API_KEY", "missing_key");
         }
-        const client = new ArcmiraClient({ apiKey: apiKey ?? "", baseUrl, maxRetries: 1, headers: { "User-Agent": USER_AGENT } });
+        const client = new (sdk().ArcmiraClient)({ apiKey: apiKey ?? "", baseUrl, maxRetries: 1, headers: { "User-Agent": USER_AGENT } });
         const ctx: Context = { client, values, positionals, baseUrl, apiKey };
         const result = await command.run(ctx);
         if (values.json) console.log(JSON.stringify(result, null, 2));
         else command.print(result, ctx);
-        return 0;
+        return command.exitCode?.(result, ctx) ?? 0;
     } catch (error) {
         return fail(error, Boolean(values.json), name, baseUrl);
     }

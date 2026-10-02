@@ -7,8 +7,6 @@ export interface PersonAppearanceListResponse {
     items: PersonAppearanceListResponse.Items.Item[];
     /** Rows matching the filter across all pages. */
     total: number;
-    /** Row offset of this page, as the cursor encoded it. 0 on the first page. */
-    offset: number;
     /** Page size applied, after the plan clamp. */
     limit: number;
     /** True when more rows exist past this page. */

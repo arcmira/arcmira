@@ -13,5 +13,5 @@
         "isolatedDeclarations": true
     },
     "include": ["src"],
-    "exclude": []
+    "exclude": ["**/* ?.ts"]
 }

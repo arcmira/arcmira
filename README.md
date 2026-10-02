@@ -22,6 +22,26 @@ npx arcmira setup             # apply, then sign in once per agent
 
 Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authentication) and set `ARCMIRA_API_KEY`, or pass `apiKey` to the client.
 
+## Premium quickstart
+
+```ts
+import { ArcmiraClient } from "arcmira";
+const arcmira = new ArcmiraClient();
+const transcript = await arcmira.transcripts.prepareAndWait({ video_id: "dQw4w9WgXcQ" });
+for (const line of transcript.lines ?? []) console.log(line.speaker, line.text);
+```
+
+`prepareAndWait({ video_id, maxOnDemandCents = 0, timeoutSeconds = 300 })` reads the Premium transcript and returns it. When your account does not own it yet, the call posts `{ video_id }` to `/v1/transcriptions` once, polls the job at the pace the API sets with `Retry-After` and `next_poll_seconds`, and reads the finished transcript. The default spends included credits only and sends no `Idempotency-Key`. Preparation buys the whole video, even if you later read a window.
+
+Errors you can handle:
+
+- `PreparationTimeoutError` when the job outlasts `timeoutSeconds`. It carries `job`, and the job keeps running.
+- `PreparationFailedError` when the job fails or is refunded. It carries `job`.
+- `PremiumUnavailableError` when the plan has no Premium. The read returned captions, which are never returned as Premium.
+- `ArcmiraError` subclasses for any API refusal, such as `quota_exceeded`, with the API's error object in `body`.
+
+To spend money, pass a cents ceiling you have approved: `prepareAndWait({ video_id, maxOnDemandCents: 25 })`. The call then sends the quoted `max_rows` and one generated `Idempotency-Key`, which the SDK's retries reuse.
+
 ## Quickstart
 
 ```ts
@@ -62,12 +82,15 @@ try {
 }
 ```
 
-Order a Premium transcript and poll it (paid plans; pass your own idempotency key so a retry cannot order twice):
+To prepare Premium without waiting, read it, post the purchase, and poll the job yourself. GET never buys, and each state is typed. Every purchase answers one `TranscriptJob`. Without an `Idempotency-Key`, a purchase already open or owned for the video comes back with `existing: true`. A positive `max_on_demand_cents` requires both `Idempotency-Key` and `max_rows`.
 
 ```ts
-const order = await client.transcripts.request({ videoId: "dQw4w9WgXcQ", "Idempotency-Key": "order-dQw4w9WgXcQ-1" });
-const state = await client.transcripts.status({ id: order.request.id! });
-console.log(state.status, state.nextPollSeconds);
+const read = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" });
+if (read.state === "preparation_required") {
+    const { job } = await client.transcripts.request({ video_id: read.video_id });
+    console.log(job.state, job.next_poll_seconds, job.status_url);
+}
+for await (const job of await client.transcripts.listRequests({ limit: 10 })) console.log(job.id, job.state);
 ```
 
 Every method is listed with its request and response types in [reference.md](./reference.md). The same operations, with `curl` samples, are in the [API reference](https://arcmira.com/docs/api-reference).
@@ -138,7 +161,8 @@ Data commands (they mirror the MCP tools)
   arcmira recommendations <id|name>   who recommends an entity on air, paid or organic
   arcmira episodes <channel>          newest indexed videos of a channel
   arcmira transcripts get <video>     full transcript of one YouTube video
-  arcmira transcripts request <video> order a Premium transcript (paid plans; sends an Idempotency-Key)
+  arcmira transcripts quote <video>   free whole-video quote
+  arcmira transcripts request <video> --max-rows N --idempotency-key KEY [--max-on-demand-cents N]
   arcmira transcripts status <id>     state of a transcript request, with the next poll time
   arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
   arcmira status [channel]            your plan, or a channel's coverage
@@ -170,15 +194,17 @@ Also: arcmira help [command], --help, --version
 
 Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call to `GET /v1/entities/resolve`) and says what it picked on stderr. A suggested pick is used and stated as an assumption with its reason. An ambiguous name exits 2 and lists the options with their ids.
 
-`arcmira transcripts request` sends a new `Idempotency-Key` (a UUID) with each order and prints it on stderr; with `--json` stderr stays reserved for the error, so scripts pass their own key. To retry an order whose answer you did not see, pass the same key with `--idempotency-key`; the API returns the first answer and charges nothing more. A request for a video already in flight returns that request.
+`arcmira transcripts get <video> --quality premium --wait` reads Premium, prepares it from included credits when your account does not own it yet (one keyless `POST /v1/transcriptions`, no money moves), waits for the job, and prints the transcript. `--timeout S` bounds the wait (default 300). Without `--wait`, a read never buys: when Premium needs preparing, the CLI exits 3 and prints the `--wait` command to run on stderr, and a job still running exits 4. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
 
-`arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. Every POST carries an automatic `Idempotency-Key` (a UUID, shown with `--verbose`; pass `-H 'Idempotency-Key: ...'` to set your own), so a retried write does not run twice. The path may drop the `/v1` prefix.
+`arcmira transcripts request` posts the same keyless purchase without waiting and prints the job. To spend on-demand money, pass the cents you approve with `--max-on-demand-cents`, plus `--max-rows` and a previously saved `--idempotency-key`; retry an unknown response with the same key and identical input. Whole-video pricing applies even when you later read a small window.
+
+`arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. For `POST /v1/transcriptions`, pass your saved key with `-H 'Idempotency-Key: ...'`. Other POST requests generate a key when none is supplied; `--verbose` shows it. Reuse the same key and input to retry a write. The path may drop the `/v1` prefix.
 
 - Key: `--key`, then `ARCMIRA_API_KEY`, then the key `arcmira login` saved in `~/.config/arcmira/config.json` (mode 0600; `XDG_CONFIG_HOME` is honored). `arcmira login --key arc_sk_...` saves a key you already have; `arcmira logout` deletes it.
 - Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message","request_id",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
 - Errors: every API error names its `request_id` (quote it to support). A 401 adds `try: arcmira login`.
 - Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`. `arcmira api --paginate` follows every page.
-- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet). Input is checked before any request.
+- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet), 3 Premium needs preparing (stderr names the `--wait` command), 4 Premium is still pending (the job keeps running; run the same command again). Input is checked before any request.
 - Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version outside `arcmira setup`; their names are held for write commands to come.
 - Requests carry `User-Agent: arcmira-cli/<version>`. The SDK used on its own sends `arcmira/<version>`.
 - Telemetry: none. The CLI sends only the API requests you ask for, plus a docs search when you run `arcmira docs <query>`.
@@ -197,8 +223,27 @@ Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI r
 
 ## Development
 
-`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. `cli/`, `tests/` and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`).
+`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. The one exception is `src/wrapper/`, which holds `transcripts.prepareAndWait`; the installer keeps it and points `src/index.ts` at its `ArcmiraClient`. `cli/`, `tests/` and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`).
 
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).
+
+## Regenerate the SDK
+
+Run `npm run generate -- <path to arcmira-v1.json>` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It vendors the spec into `fern/openapi.json` (omit the path to reuse the vendored copy), pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and regenerates `src/`, `reference.md` and `cli/operations.ts`.
+
+The overlay combines success schemas into a `state` union, preserves existing method names, and discovers cursor collections from their schemas. Unknown or ambiguous collections fail generation. An exact checked patch keeps request timer cleanup in `finally` until the pinned generator includes the fix. Generated source is never edited by hand.
+
+Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consumer type contract. Tests use local HTTP fixtures and do not purchase transcripts.
+
+## Migrate from 0.2
+
+`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. `transcripts.request` takes `video_id` and answers `{ job, existing }`. `channels.videos.list` and `transcripts.listRequests` return pages: iterate them with `for await`, or read `page.response` for the list body. See [CHANGELOG.md](./CHANGELOG.md).
+
+```ts
+const { data, rawResponse } = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" }).withRawResponse();
+if (data.state === "ready") console.log(data.lines);
+else if (data.state === "pending") console.log(data.job.status_url, data.job.next_poll_seconds, rawResponse.status);
+else console.log(data.quote, data.action);
+```

@@ -10,5 +10,6 @@
     "rootDir": "cli",
     "types": ["node"]
   },
-  "include": ["cli"]
+  "include": ["cli"],
+  "exclude": ["**/* ?.ts"]
 }

@@ -1,6 +1,6 @@
 {
   "name": "arcmira",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Search YouTube and podcast transcripts. Mentions, momentum, sponsors, and organic recommendations. The Arcmira TypeScript SDK and the arcmira CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
@@ -40,7 +40,10 @@
     "build:cli": "tsc --project ./tsconfig.cli.json",
     "test": "npm run build && node --test \"tests/*.test.mjs\"",
     "prepack": "npm run build",
-    "sync-skill": "node scripts/sync-skill.mjs"
+    "sync-skill": "node scripts/sync-skill.mjs",
+    "generate": "bash scripts/generate.sh",
+    "test:types": "tsc --noEmit --strict --skipLibCheck --target es2022 --module nodenext --moduleResolution nodenext tests/transcription-types.ts",
+    "test:generation": "python3 -m unittest discover -s tests -p test_generation.py"
   },
   "devDependencies": {
     "@types/node": "20.19.43",

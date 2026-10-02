@@ -7,6 +7,8 @@ export interface ChannelVideosResponse {
     returned: number;
     /** True when more indexed videos exist past limit in the window. */
     has_more: boolean;
+    /** Signed continuation for the next page. Null on the last page. */
+    next_cursor: string | null;
     /** Newest publish date among every indexed video of the channel, whatever window was asked for. Null when nothing is indexed. */
     indexed_through: string | null;
     /** Whole days between indexed_through and now. Past 30 the note says the index may be behind the channel. Null when nothing is indexed. */

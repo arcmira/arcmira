@@ -12,6 +12,7 @@ export interface ListMentionsRequest {
     /** Entity id, ent_{n} or the numeric id. Merged ids follow their redirect. */
     id: string;
     limit?: number;
+    /** Signed continuation from next_cursor. Bound to this route, normalized query, caller and visibility; invalid or old tokens return invalid_cursor. */
     cursor?: string;
     channel_id?: string;
     channel_name?: string;

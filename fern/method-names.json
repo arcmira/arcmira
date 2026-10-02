@@ -1,0 +1,549 @@
+{
+  "get /v1/channels/{}/coverage": {
+    "group": [
+      "channels"
+    ],
+    "method": "coverage"
+  },
+  "get /v1/channels/{}": {
+    "group": [
+      "channels"
+    ],
+    "method": "get"
+  },
+  "get /v1/channels/{}/guests": {
+    "group": [
+      "channels",
+      "guests"
+    ],
+    "method": "list"
+  },
+  "get /v1/channels/{}/topics": {
+    "group": [
+      "channels",
+      "related"
+    ],
+    "method": "topics"
+  },
+  "get /v1/channels/{}/people": {
+    "group": [
+      "channels",
+      "related"
+    ],
+    "method": "people"
+  },
+  "get /v1/channels/{}/organizations": {
+    "group": [
+      "channels",
+      "related"
+    ],
+    "method": "organizations"
+  },
+  "get /v1/channels/{}/products": {
+    "group": [
+      "channels",
+      "related"
+    ],
+    "method": "products"
+  },
+  "get /v1/channels/{}/channels": {
+    "group": [
+      "channels",
+      "related"
+    ],
+    "method": "channels"
+  },
+  "get /v1/channels/{}/sponsors": {
+    "group": [
+      "channels",
+      "sponsors"
+    ],
+    "method": "list"
+  },
+  "get /v1/channels/{}/videos": {
+    "group": [
+      "channels",
+      "videos"
+    ],
+    "method": "list"
+  },
+  "post /v1/videos/{}/corrections": {
+    "group": [
+      "corrections"
+    ],
+    "method": "submit"
+  },
+  "delete /v1/corrections/speaker-edits/{}": {
+    "group": [
+      "corrections"
+    ],
+    "method": "withdrawSpeakerEdit"
+  },
+  "delete /v1/corrections/entity-tags/{}": {
+    "group": [
+      "corrections"
+    ],
+    "method": "withdrawEntityTag"
+  },
+  "delete /v1/corrections/segment-rewrites/{}": {
+    "group": [
+      "corrections"
+    ],
+    "method": "withdrawSegmentRewrite"
+  },
+  "get /v1/entities/search": {
+    "group": [
+      "entities"
+    ],
+    "method": "search"
+  },
+  "get /v1/entities/resolve": {
+    "group": [
+      "entities"
+    ],
+    "method": "resolve"
+  },
+  "get /v1/entities/lookup": {
+    "group": [
+      "entities"
+    ],
+    "method": "lookup"
+  },
+  "get /v1/entities/cards": {
+    "group": [
+      "entities"
+    ],
+    "method": "cards"
+  },
+  "get /v1/entities/{}": {
+    "group": [
+      "entities"
+    ],
+    "method": "get"
+  },
+  "get /v1/entities/{}/momentum": {
+    "group": [
+      "entities"
+    ],
+    "method": "momentum"
+  },
+  "get /v1/entities/{}/mentions": {
+    "group": [
+      "entities",
+      "mentions"
+    ],
+    "method": "list"
+  },
+  "get /v1/entities/{}/recommendations": {
+    "group": [
+      "entities",
+      "recommendations"
+    ],
+    "method": "list"
+  },
+  "post /v1/feedback": {
+    "group": [
+      "feedback"
+    ],
+    "method": "submit"
+  },
+  "get /v1/feedback/{}": {
+    "group": [
+      "feedback"
+    ],
+    "method": "get"
+  },
+  "get /v1/health": {
+    "group": [
+      "health"
+    ],
+    "method": "check"
+  },
+  "get /v1/me": {
+    "group": [
+      "me"
+    ],
+    "method": "get"
+  },
+  "patch /v1/me/settings": {
+    "group": [
+      "me"
+    ],
+    "method": "updateSettings"
+  },
+  "get /v1/mentions": {
+    "group": [
+      "mentions"
+    ],
+    "method": "list"
+  },
+  "get /v1/mentions/counts": {
+    "group": [
+      "mentions"
+    ],
+    "method": "count"
+  },
+  "get /v1/monitors": {
+    "group": [
+      "monitors"
+    ],
+    "method": "list"
+  },
+  "post /v1/monitors": {
+    "group": [
+      "monitors"
+    ],
+    "method": "create"
+  },
+  "delete /v1/monitors/{}": {
+    "group": [
+      "monitors"
+    ],
+    "method": "delete"
+  },
+  "patch /v1/monitors/{}": {
+    "group": [
+      "monitors"
+    ],
+    "method": "update"
+  },
+  "post /v1/monitors/{}/webhook-secret/rotate": {
+    "group": [
+      "monitors"
+    ],
+    "method": "rotateWebhookSecret"
+  },
+  "get /v1/monitors/{}/alerts": {
+    "group": [
+      "monitors",
+      "alerts"
+    ],
+    "method": "list"
+  },
+  "get /v1/monitors/{}/trackers": {
+    "group": [
+      "monitors",
+      "trackers"
+    ],
+    "method": "list"
+  },
+  "post /v1/monitors/{}/trackers": {
+    "group": [
+      "monitors",
+      "trackers"
+    ],
+    "method": "add"
+  },
+  "get /v1/organizations/{}": {
+    "group": [
+      "organizations"
+    ],
+    "method": "get"
+  },
+  "get /v1/organizations/{}/topics": {
+    "group": [
+      "organizations",
+      "related"
+    ],
+    "method": "topics"
+  },
+  "get /v1/organizations/{}/people": {
+    "group": [
+      "organizations",
+      "related"
+    ],
+    "method": "people"
+  },
+  "get /v1/organizations/{}/organizations": {
+    "group": [
+      "organizations",
+      "related"
+    ],
+    "method": "organizations"
+  },
+  "get /v1/organizations/{}/products": {
+    "group": [
+      "organizations",
+      "related"
+    ],
+    "method": "products"
+  },
+  "get /v1/organizations/{}/channels": {
+    "group": [
+      "organizations",
+      "related"
+    ],
+    "method": "channels"
+  },
+  "get /v1/people/{}": {
+    "group": [
+      "people"
+    ],
+    "method": "get"
+  },
+  "get /v1/people/{}/appearances": {
+    "group": [
+      "people",
+      "appearances"
+    ],
+    "method": "list"
+  },
+  "get /v1/people/{}/topics": {
+    "group": [
+      "people",
+      "related"
+    ],
+    "method": "topics"
+  },
+  "get /v1/people/{}/people": {
+    "group": [
+      "people",
+      "related"
+    ],
+    "method": "people"
+  },
+  "get /v1/people/{}/organizations": {
+    "group": [
+      "people",
+      "related"
+    ],
+    "method": "organizations"
+  },
+  "get /v1/people/{}/products": {
+    "group": [
+      "people",
+      "related"
+    ],
+    "method": "products"
+  },
+  "get /v1/people/{}/channels": {
+    "group": [
+      "people",
+      "related"
+    ],
+    "method": "channels"
+  },
+  "get /v1/products/{}": {
+    "group": [
+      "products"
+    ],
+    "method": "get"
+  },
+  "get /v1/products/{}/topics": {
+    "group": [
+      "products",
+      "related"
+    ],
+    "method": "topics"
+  },
+  "get /v1/products/{}/people": {
+    "group": [
+      "products",
+      "related"
+    ],
+    "method": "people"
+  },
+  "get /v1/products/{}/organizations": {
+    "group": [
+      "products",
+      "related"
+    ],
+    "method": "organizations"
+  },
+  "get /v1/products/{}/products": {
+    "group": [
+      "products",
+      "related"
+    ],
+    "method": "products"
+  },
+  "get /v1/products/{}/channels": {
+    "group": [
+      "products",
+      "related"
+    ],
+    "method": "channels"
+  },
+  "get /v1/recommendations": {
+    "group": [
+      "recommendations"
+    ],
+    "method": "list"
+  },
+  "get /v1/team/members": {
+    "group": [
+      "team"
+    ],
+    "method": "members"
+  },
+  "get /v1/team/spend": {
+    "group": [
+      "team"
+    ],
+    "method": "spend"
+  },
+  "get /v1/team/usage-events": {
+    "group": [
+      "team",
+      "usageEvents"
+    ],
+    "method": "list"
+  },
+  "get /v1/topics/{}": {
+    "group": [
+      "topics"
+    ],
+    "method": "get"
+  },
+  "get /v1/topics/{}/topics": {
+    "group": [
+      "topics",
+      "related"
+    ],
+    "method": "topics"
+  },
+  "get /v1/topics/{}/people": {
+    "group": [
+      "topics",
+      "related"
+    ],
+    "method": "people"
+  },
+  "get /v1/topics/{}/organizations": {
+    "group": [
+      "topics",
+      "related"
+    ],
+    "method": "organizations"
+  },
+  "get /v1/topics/{}/products": {
+    "group": [
+      "topics",
+      "related"
+    ],
+    "method": "products"
+  },
+  "get /v1/topics/{}/channels": {
+    "group": [
+      "topics",
+      "related"
+    ],
+    "method": "channels"
+  },
+  "get /v1/trackers": {
+    "group": [
+      "trackers"
+    ],
+    "method": "list"
+  },
+  "post /v1/trackers": {
+    "group": [
+      "trackers"
+    ],
+    "method": "create"
+  },
+  "delete /v1/trackers/{}": {
+    "group": [
+      "trackers"
+    ],
+    "method": "delete"
+  },
+  "patch /v1/trackers/{}": {
+    "group": [
+      "trackers"
+    ],
+    "method": "update"
+  },
+  "get /v1/trackers/{}/alerts": {
+    "group": [
+      "trackers",
+      "alerts"
+    ],
+    "method": "list"
+  },
+  "get /v1/transcripts/search": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "search"
+  },
+  "get /v1/transcripts/{}": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "get"
+  },
+  "get /v1/videos/{}/captions": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "captions"
+  },
+  "get /v1/transcriptions": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "listRequests"
+  },
+  "post /v1/transcriptions": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "request"
+  },
+  "get /v1/transcriptions/{}": {
+    "group": [
+      "transcripts"
+    ],
+    "method": "status"
+  },
+  "post /v1/transcripts/{}/edits": {
+    "group": [
+      "transcripts",
+      "edits"
+    ],
+    "method": "submit"
+  },
+  "delete /v1/transcripts/{}/edits/{}": {
+    "group": [
+      "transcripts",
+      "edits"
+    ],
+    "method": "withdraw"
+  },
+  "get /v1/transcripts/{}/merges": {
+    "group": [
+      "transcripts",
+      "merges"
+    ],
+    "method": "list"
+  },
+  "post /v1/transcripts/{}/merges": {
+    "group": [
+      "transcripts",
+      "merges"
+    ],
+    "method": "submit"
+  },
+  "delete /v1/transcripts/{}/merges/{}": {
+    "group": [
+      "transcripts",
+      "merges"
+    ],
+    "method": "withdraw"
+  },
+  "post /v1/transcripts/{}/speakers": {
+    "group": [
+      "transcripts",
+      "speakers"
+    ],
+    "method": "identify"
+  },
+  "delete /v1/transcripts/{}/speakers/{}": {
+    "group": [
+      "transcripts",
+      "speakers"
+    ],
+    "method": "withdraw"
+  }
+}

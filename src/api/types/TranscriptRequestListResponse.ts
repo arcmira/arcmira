@@ -3,15 +3,19 @@
 import type * as Arcmira from "../index.js";
 
 export interface TranscriptRequestListResponse {
-    /** Your most recent requests, newest first: 20 without a filter, 5 when filtered to one video. */
+    /** Your requests in descending creation time and id order, up to the requested limit. */
     requests: TranscriptRequestListResponse.Requests.Item[];
+    /** True when another page exists in this traversal. */
+    has_more: boolean;
+    /** Signed continuation for the same filter, limit and credential; null on the last page. */
+    next_cursor: string | null;
 }
 
 export namespace TranscriptRequestListResponse {
     export type Requests = Requests.Item[];
 
     export namespace Requests {
-        export interface Item extends Arcmira.TranscriptRequest {
+        export interface Item extends Arcmira.TranscriptJob {
             /** Video title for display. Null when unknown. */
             title: string | null;
         }

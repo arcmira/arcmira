@@ -25,7 +25,7 @@ export interface Monitor {
     notifyWebhook: boolean;
     /** Webhook destination URL. Null when no webhook is configured. */
     webhookUrl: string | null;
-    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; it is returned exactly once at enablement or rotation. */
+    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; enablement and rotation responses support recovery with the original Idempotency-Key during the valid recovery window. */
     webhookSecretSet: boolean;
     /** Last 4 characters of the current signing secret, for identifying which secret you hold. Null until a secret exists. */
     webhookSecretHint: string | null;

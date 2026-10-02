@@ -23,7 +23,7 @@ export class UsageEventsClient {
     }
 
     /**
-     * Cursor-paginated usage log across all team members, newest first, bounded to a 90-day look-back. The aggregated analytics chart data is not exposed on this API (Enterprise). Requires a team-scoped API key. Personal keys receive 403 (team_key_required).
+     * Account usage log across every active team member, including personal-key use and activity before joining. Ordered by created_at and id descending, bounded to a 90-day look-back. Continuation preserves the first page's time window and excludes subsequently inserted events, including backfills. Removed members and deleted events disappear during traversal; this is not a historical membership snapshot. Cursors expire after 24 hours and bind the team, caller, days and limit; invalid or changed-query cursors return invalid_cursor rather than restarting. The aggregated analytics chart data is not exposed on this API (Enterprise). Requires a team-scoped API key whose owner is still an active team admin. Personal keys and keys whose owner lost team authority receive 403 (team_key_required).
      *
      * @param {Arcmira.team.ListUsageEventsRequest} request
      * @param {UsageEventsClient.RequestOptions} requestOptions - Request-specific configuration.
