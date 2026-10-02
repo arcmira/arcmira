@@ -29,7 +29,7 @@ const COMMANDS = {
     episodes: ["episodes", "UC-DRzaGnL_vtBUpCFH5M0tg", "-n", "2"],
     "transcripts get": ["transcripts", "get", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
     "transcripts quote": ["transcripts", "quote", "dQw4w9WgXcQ"],
-    "transcripts request": ["transcripts", "request", "dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-cli-intent"],
+    "transcripts request": ["transcripts", "request", "dQw4w9WgXcQ"],
     "transcripts status": ["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"],
     occurrences: ["occurrences", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "topic"],
     status: ["status", "UC-DRzaGnL_vtBUpCFH5M0tg"],
@@ -67,17 +67,70 @@ test("transcript is an alias of transcripts get, listed as an alias", async () =
     assert.match(top.stdout, /^Aliases: transcript is transcripts get\.$/m);
 });
 
-test("transcripts request requires a saved key and ceiling before making a call", async () => {
+test("transcripts request is one keyless POST at zero dollars; spending needs a saved key and a row ceiling", async () => {
+    const free = await arcmira(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ"]);
+    assert.equal(free.code, 0, free.stderr);
+    assert.deepEqual(fake.requests.at(-1).body, { video_id: "dQw4w9WgXcQ" });
+    assert.equal(fake.requests.at(-1).headers["idempotency-key"], undefined);
+    assert.match(free.stderr, /transcripts status 2f2b4a3e/);
     const before = fake.requests.length;
-    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ"])).code, 2);
+    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25"])).code, 2);
+    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25", "--max-rows", "300"])).code, 2);
     assert.equal(fake.requests.length, before);
-    const out = await arcmira(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "order-1"]);
+    const paid = await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25", "--max-rows", "300", "--idempotency-key", "order-1"]);
+    assert.equal(paid.code, 0, paid.stderr);
+    assert.deepEqual(fake.requests.at(-1).body, { video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 25 });
+    assert.equal(fake.requests.at(-1).headers["idempotency-key"], "order-1");
+});
+
+test("plain get on preparation_required exits 3 and prints the --wait command on stderr", async () => {
+    const human = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
+    assert.equal(human.code, 3);
+    assert.equal(human.stdout, "");
+    assert.match(human.stderr, /^run: arcmira transcripts get premiumVid1 --quality premium --wait$/m);
+    const json = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium", "--json"]);
+    assert.equal(json.code, 3);
+    assert.equal(JSON.parse(json.stdout).state, "preparation_required");
+    assert.match(json.stderr, /arcmira transcripts get premiumVid1 --quality premium --wait/);
+    assert.equal(fake.requests.filter((r) => r.method === "POST" && r.body?.video_id === "premiumVid1").length, 0, "a read never buys");
+});
+
+test("get --wait prepares with one keyless POST, polls, and prints the Premium transcript", async () => {
+    const out = await arcmira(["transcripts", "get", "premiumVid2", "--quality", "premium", "--wait", "--json"]);
     assert.equal(out.code, 0, out.stderr);
-    const sent = fake.requests.at(-1);
-    assert.equal(sent.path, "/v1/transcriptions");
-    assert.deepEqual(sent.body, { video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0 });
-    assert.equal(sent.headers["idempotency-key"], "order-1");
-    assert.match(out.stderr, /transcripts status 2f2b4a3e/);
+    const transcript = JSON.parse(out.stdout);
+    assert.deepEqual([transcript.state, transcript.quality], ["ready", "premium"]);
+    const posts = fake.requests.filter((r) => r.method === "POST" && r.path === "/v1/transcriptions" && r.body?.video_id === "premiumVid2");
+    assert.equal(posts.length, 1);
+    assert.deepEqual(posts[0].body, { video_id: "premiumVid2" });
+    assert.equal(posts[0].headers["idempotency-key"], undefined);
+    const human = await arcmira(["transcripts", "get", "premiumVid2", "--quality", "premium", "--wait"]);
+    assert.equal(human.code, 0, human.stderr);
+    assert.match(human.stdout, /John Coogan: Ramp has been on the show/);
+});
+
+test("a result still pending exits 4 with nothing on stdout, with or without --wait", async () => {
+    const waited = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--wait", "--timeout", "0.2"]);
+    assert.equal(waited.code, 4);
+    assert.equal(waited.stdout, "");
+    assert.match(waited.stderr, /still queued/);
+    assert.match(waited.stderr, /arcmira transcripts get pendingVid1 --quality premium --wait/);
+    const waitedJson = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--wait", "--timeout", "0.2", "--json"]);
+    assert.equal(waitedJson.code, 4);
+    assert.equal(waitedJson.stdout, "");
+    assert.equal(JSON.parse(waitedJson.stderr).error.job.state, "pending");
+    const plain = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium"]);
+    assert.equal(plain.code, 4);
+    assert.equal(plain.stdout, "");
+    assert.match(plain.stderr, /arcmira transcripts get pendingVid1 --quality premium --wait/);
+});
+
+test("--wait needs --quality premium", async () => {
+    const before = fake.requests.length;
+    const out = await arcmira(["transcripts", "get", "premiumVid3", "--wait"]);
+    assert.equal(out.code, 2);
+    assert.match(out.stderr, /--quality premium/);
+    assert.equal(fake.requests.length, before);
 });
 
 test("status with a request id points at transcripts status, exit 2, no call", async () => {

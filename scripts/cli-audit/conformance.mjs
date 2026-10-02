@@ -75,7 +75,7 @@ const front = createServer((req, res) => {
         }
         if (url.pathname === `/v1/transcripts/${BIG_VIDEO}`) {
             const lines = Array.from({ length: 20000 }, (_, i) => ({ start: i, end: i + 1, text: `line ${i} of a long transcript that fills the pipe buffer many times over` }));
-            return send(200, { video: { id: BIG_VIDEO, title: "Big", channel_id: TBPN, channel_name: "TBPN", published_at: "2026-09-01", duration_seconds: 20000, watch_url: "x" }, quality: "captions", source: "creator_captions", language: "en", languages: [], rows_billed: 23, as_of: "x", note: "x", lines });
+            return send(200, { state: "ready", video: { id: BIG_VIDEO, title: "Big", channel_id: TBPN, channel_name: "TBPN", published_at: "2026-09-01", duration_seconds: 20000, watch_url: "x" }, quality: "captions", source: "creator_captions", language: "en", languages: [], rows_billed: 23, as_of: "x", note: "x", lines });
         }
         const upstream = httpRequest(fake.baseUrl + req.url, { method: req.method, headers: req.headers }, (up) => {
             res.writeHead(up.statusCode, up.headers);

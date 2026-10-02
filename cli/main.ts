@@ -8,7 +8,7 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, wr
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Arcmira, ArcmiraClient, ArcmiraError } from "arcmira";
+import { Arcmira, ArcmiraClient, ArcmiraError, PreparationFailedError, PreparationTimeoutError, PremiumUnavailableError } from "arcmira";
 import { OPERATIONS, type Operation } from "./operations";
 import { AGENTS, MARKETPLACE, apply, describe, hosts, plan, redact, refreshSkills, skillRoot, writeRecord, type AgentId, type Auth, type Skill } from "./setup";
 import { updateNotice } from "./update-check";
@@ -52,7 +52,14 @@ type Command = {
     needsKey?: false;
     run: (ctx: Context) => Promise<unknown>;
     print: (result: any, ctx: Context) => void;
+    /** The exit code for a result that arrived but is not the data asked for; it may note why on stderr. Default 0. */
+    exitCode?: (result: any, ctx: Context) => number;
 };
+
+/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. */
+const EXIT_PREPARATION_REQUIRED = 3;
+const EXIT_PENDING = 4;
+const waitCommand = (videoId: string) => `arcmira transcripts get ${videoId} --quality premium --wait`;
 
 const GLOBAL: Record<string, OptionSpec> = {
     json: { type: "boolean", help: "Print the API response as JSON on stdout; errors as JSON on stderr." },
@@ -712,8 +719,12 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["get_transcript"],
         summary: "Full transcript of one YouTube video from its URL or id.",
-        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--language de,en] [--paragraphs] [--start S --end S]",
-        examples: ["arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120", "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'"],
+        usage: "transcripts get <video-url-or-id> [--quality captions|premium [--wait [--timeout S]]] [--language de,en] [--paragraphs] [--start S --end S]",
+        examples: [
+            "arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120",
+            "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'",
+            "arcmira transcripts get CusJwCsDHHM --quality premium --wait --json | jq -r '.lines[].text'",
+        ],
         positionals: "one",
         options: {
             quality: { type: "string", oneOf: ["captions", "premium"], help: "captions (default) or premium (Arcmira's diarized transcript, paid plans)." },
@@ -721,26 +732,29 @@ const COMMANDS: Record<string, Command> = {
             paragraphs: { type: "boolean", help: "Paragraphs for reading instead of timestamped lines." },
             start: { type: "string", number: true, help: "Window start in seconds." },
             end: { type: "string", number: true, help: "Window end in seconds." },
+            wait: { type: "boolean", help: "With --quality premium: prepare from included credits if needed (no money moves) and wait until ready." },
+            timeout: { type: "string", number: true, help: "Seconds --wait waits before exiting 4 with the job still running. Default 300." },
         },
-        run: ({ client, positionals: [video], values: v }) =>
-            client.transcripts.get({
-                video_id: videoIdOf(video),
-                quality: str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined,
-                language: str(v.language),
-                timestamps: v.paragraphs ? false : undefined,
-                start: num(v.start),
-                end: num(v.end),
-            }),
-        print: (r: Arcmira.TranscriptResult) => {
-            if (r.state === "pending") {
-                console.log(`pending  ${r.job.status_url}`);
-                note(`poll after ${r.job.next_poll_seconds ?? "-"} s; no purchase was made by this read`);
-                return;
-            }
+        run: async ({ client, positionals: [video], values: v }) => {
+            const video_id = videoIdOf(video);
+            const window = { language: str(v.language), timestamps: v.paragraphs ? false : undefined, start: num(v.start), end: num(v.end) };
+            const quality = str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined;
+            if (!v.wait) return client.transcripts.get({ video_id, quality, ...window });
+            const ready = await client.transcripts.prepareAndWait({ video_id, timeoutSeconds: num(v.timeout) });
+            return Object.values(window).some((value) => value !== undefined) ? client.transcripts.get({ video_id, quality, ...window }) : ready;
+        },
+        exitCode: (r: Arcmira.TranscriptResult) => {
+            if (r.state === "ready") return 0;
             if (r.state === "preparation_required") {
-                console.log(`preparation_required  ${r.video_id}`);
-                return;
+                const charge = r.quote ? `: ${r.quote.charge.amount} credits from ${r.quote.charge.from}` : "";
+                note(`Premium is not prepared for ${r.video_id}${charge}. This read bought nothing.\nrun: ${waitCommand(r.video_id)}`);
+                return EXIT_PREPARATION_REQUIRED;
             }
+            note(`Premium for ${r.video_id} is still ${r.job.status}; next poll in ${r.job.next_poll_seconds ?? "-"} s.\nrun: ${waitCommand(r.video_id)}`);
+            return EXIT_PENDING;
+        },
+        print: (r: Arcmira.TranscriptResult) => {
+            if (r.state !== "ready") return;
             const names = new Map((r.speakers ?? []).map((s) => [s.id, s.name]));
             const who = (id: number | undefined) => (id == null ? "" : `${names.get(id) ?? `Speaker ${id}`}: `);
             for (const line of r.lines ?? []) console.log(`[${seconds(line.start)}] ${who(line.speaker)}${line.text}`);
@@ -762,27 +776,35 @@ const COMMANDS: Record<string, Command> = {
     "transcripts request": {
         section: "data",
         operations: ["submit_transcription"],
-        summary: "Buy and prepare a whole Premium video with explicit cost ceilings and a persisted intent key.",
-        usage: "transcripts request <video-url-or-id> --max-rows N --idempotency-key KEY [--max-on-demand-cents N]",
-        examples: ["arcmira transcripts request CusJwCsDHHM --max-rows 300 --idempotency-key saved-order-1", "arcmira transcripts request CusJwCsDHHM --max-rows 300 --max-on-demand-cents 0 --idempotency-key saved-order-1 --json"],
+        summary: "Prepare a whole Premium video from included credits; spending money needs a cents ceiling and a saved key.",
+        usage: "transcripts request <video-url-or-id> [--max-on-demand-cents N --max-rows N --idempotency-key KEY]",
+        examples: ["arcmira transcripts request CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --max-on-demand-cents 25 --max-rows 300 --idempotency-key saved-order-1 --json"],
         positionals: "one",
         options: {
-            "idempotency-key": { type: "string", help: "Required. Persist before sending. Retry an unknown outcome with this same key and identical input." },
-            "max-rows": { type: "string", int: [0, 3600], help: "Required. Maximum whole-video row price authorized." },
-            "max-on-demand-cents": { type: "string", number: true, help: "Maximum new on-demand charge in cents. Defaults to zero." },
+            "max-on-demand-cents": { type: "string", int: [0, 1_000_000], help: "On-demand money you approve, in cents. Default 0: included credits only." },
+            "max-rows": { type: "string", int: [0, 3600], help: "Row ceiling. Required with --max-on-demand-cents above 0." },
+            "idempotency-key": { type: "string", help: "Persist before sending; retry an unknown outcome with it. Required with --max-on-demand-cents above 0." },
         },
         run: async ({ client, positionals: [video], values: v }) => {
-            const videoId = videoIdOf(video);
             const key = str(v["idempotency-key"]);
             const maxRows = num(v["max-rows"]);
             const cents = num(v["max-on-demand-cents"]) ?? 0;
-            if (!key || maxRows === undefined) throw new UsageError("Preparation requires --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
-            if (cents < 0) throw new UsageError("--max-on-demand-cents must be nonnegative", "invalid_option");
+            const video_id = videoIdOf(video);
+            if (cents > 0 && (!key || maxRows === undefined)) throw new UsageError("--max-on-demand-cents above 0 needs --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
             try {
-                return await client.transcripts.request({ "Idempotency-Key": key, video_id: videoId, max_rows: maxRows, max_on_demand_cents: cents });
+                return await client.transcripts.request({
+                    video_id,
+                    ...(maxRows !== undefined ? { max_rows: maxRows } : {}),
+                    ...(cents > 0 ? { max_on_demand_cents: cents } : {}),
+                    ...(key ? { "Idempotency-Key": key } : {}),
+                });
             } catch (error) {
                 if (error instanceof ArcmiraError && error.statusCode !== undefined) throw error;
-                throw new ArcmiraError({ message: "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key." });
+                throw new ArcmiraError({
+                    message: key
+                        ? "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key."
+                        : "Preparation outcome is unknown. Run the same command again: a keyless request joins the open job for this video.",
+                });
             }
         },
         print: ({ job: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
@@ -1099,7 +1121,8 @@ function help(name?: string): string {
         "Key: --key, then ARCMIRA_API_KEY, then the key saved by `arcmira login`.",
         "Output: data on stdout, messages on stderr; --json prints the API response, and errors as JSON on stderr.",
         "Errors: every API error line carries the request_id to quote to support.",
-        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name).",
+        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name),",
+        "  3 Premium needs preparing (run the printed --wait command), 4 Premium still pending (the job keeps running).",
         "Telemetry: none. The CLI sends only the API requests you ask for.",
         "Docs: https://arcmira.com/docs   Worked examples: arcmira examples   Each command: arcmira <command> --help",
     );
@@ -1130,6 +1153,7 @@ function validate(name: string, command: Command, values: Values, positionals: s
     if (name === "status" && positionals[0] && UUID.test(positionals[0])) {
         throw new UsageError(`transcript requests moved: arcmira transcripts status ${positionals[0]}`, "command_moved", undefined, true);
     }
+    if (name === "transcripts get" && values.wait && values.quality !== "premium") throw new UsageError("--wait prepares Premium; add --quality premium", "invalid_option");
     if (name === "transcripts status" && !UUID.test(positionals[0])) throw new UsageError(`"${positionals[0]}" is not a request id (the UUID transcripts request printed)`, "invalid_request_id");
     if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0])) checkIdShape(positionals[0], "channel");
 }
@@ -1155,6 +1179,24 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         if (json) console.error(JSON.stringify({ error: { type: "usage_error", code: error.code, message: error.message, ...(error.oneLine ? {} : { hint: hint ?? more }) } }));
         else console.error(error.oneLine ? error.message : `error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
         return 2;
+    }
+    if (error instanceof PreparationTimeoutError) {
+        const message = `Premium job ${error.job.id} for ${error.job.video_id} is still ${error.job.status}; it keeps running`;
+        if (json) console.error(JSON.stringify({ error: { type: "pending", code: "preparation_pending", message, job: error.job } }));
+        else console.error(`${message}\nrun: ${waitCommand(error.job.video_id)}`);
+        return EXIT_PENDING;
+    }
+    if (error instanceof PreparationFailedError) {
+        const message = `Premium job ${error.job.id} for ${error.job.video_id} ended ${error.job.state}: ${error.job.error ?? error.job.status}`;
+        if (json) console.error(JSON.stringify({ error: { type: "preparation_failed", code: `job_${error.job.state}`, message, job: error.job } }));
+        else console.error(`error: ${message}`);
+        return 1;
+    }
+    if (error instanceof PremiumUnavailableError) {
+        const message = `Premium is not available on this plan; the read returned ${error.transcript.quality}`;
+        if (json) console.error(JSON.stringify({ error: { type: "permission_error", code: "premium_unavailable", message } }));
+        else console.error(`error: ${message}\nplans: https://arcmira.com/pricing`);
+        return 1;
     }
     if (error instanceof ArcmiraError && error.statusCode === undefined) {
         const message = `could not reach ${baseUrl}: ${error.message.replace(/^.*?:\s*/, "")}`;
@@ -1264,7 +1306,7 @@ async function runCommand(name: string, command: Command, values: Values, positi
         const result = await command.run(ctx);
         if (values.json) console.log(JSON.stringify(result, null, 2));
         else command.print(result, ctx);
-        return 0;
+        return command.exitCode?.(result, ctx) ?? 0;
     } catch (error) {
         return fail(error, Boolean(values.json), name, baseUrl);
     }

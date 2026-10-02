@@ -194,7 +194,9 @@ Also: arcmira help [command], --help, --version
 
 Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call to `GET /v1/entities/resolve`) and says what it picked on stderr. A suggested pick is used and stated as an assumption with its reason. An ambiguous name exits 2 and lists the options with their ids.
 
-`arcmira transcripts request` requires `--max-rows` and a previously saved `--idempotency-key`. The monetary ceiling defaults to zero. Retry an unknown response with the same key and identical input. Whole-video pricing applies even when you later read a small window. GET never buys Premium. A pending read returns `state: "pending"`, its status URL, and the next poll delay. A refused read retains the quote and preparation URL.
+`arcmira transcripts get <video> --quality premium --wait` reads Premium, prepares it from included credits when your account does not own it yet (one keyless `POST /v1/transcriptions`, no money moves), waits for the job, and prints the transcript. `--timeout S` bounds the wait (default 300). Without `--wait`, a read never buys: when Premium needs preparing, the CLI exits 3 and prints the `--wait` command to run on stderr, and a job still running exits 4. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
+
+`arcmira transcripts request` posts the same keyless purchase without waiting and prints the job. To spend on-demand money, pass the cents you approve with `--max-on-demand-cents`, plus `--max-rows` and a previously saved `--idempotency-key`; retry an unknown response with the same key and identical input. Whole-video pricing applies even when you later read a small window.
 
 `arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. For `POST /v1/transcriptions`, pass your saved key with `-H 'Idempotency-Key: ...'`. Other POST requests generate a key when none is supplied; `--verbose` shows it. Reuse the same key and input to retry a write. The path may drop the `/v1` prefix.
 
@@ -202,7 +204,7 @@ Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI r
 - Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message","request_id",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
 - Errors: every API error names its `request_id` (quote it to support). A 401 adds `try: arcmira login`.
 - Paging: `mentions` and `recommendations` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`. `arcmira api --paginate` follows every page.
-- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet). Input is checked before any request.
+- Exit codes: 0 ok, 1 an API or network error (the message names the code and any unlock link), 2 a usage error (bad input, no key, an unresolved name, a command or flag not available yet), 3 Premium needs preparing (stderr names the `--wait` command), 4 Premium is still pending (the job keeps running; run the same command again). Input is checked before any request.
 - Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version outside `arcmira setup`; their names are held for write commands to come.
 - Requests carry `User-Agent: arcmira-cli/<version>`. The SDK used on its own sends `arcmira/<version>`.
 - Telemetry: none. The CLI sends only the API requests you ask for, plus a docs search when you run `arcmira docs <query>`.
