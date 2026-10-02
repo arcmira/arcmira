@@ -1,4 +1,4 @@
-import { ArcmiraClient, type Arcmira } from '../src/index.js';
+import { ArcmiraClient, PreparationTimeoutError, type Arcmira } from '../src/index.js';
 const client = new ArcmiraClient({ apiKey: 'compile-only' });
 async function consumer() {
     for await (const job of await client.transcripts.listRequests()) {
@@ -26,6 +26,14 @@ async function consumer() {
         void state;
     }
     await client.transcripts.request({ video_id: 'dQw4w9WgXcQ', max_rows: 300, max_on_demand_cents: 50, 'Idempotency-Key': 'saved' });
+    try {
+        const premium: Arcmira.TranscriptResult.Ready = await client.transcripts.prepareAndWait({ video_id: 'dQw4w9WgXcQ', maxOnDemandCents: 25, timeoutSeconds: 60 });
+        premium.lines?.map(line => line.speaker);
+    } catch (error) {
+        if (error instanceof PreparationTimeoutError) error.job.status_url.toUpperCase();
+    }
+    // @ts-expect-error prepareAndWait needs the video id
+    await client.transcripts.prepareAndWait({});
     // @ts-expect-error the deprecated videoId alias is not SDK input
     await client.transcripts.request({ videoId: 'dQw4w9WgXcQ' });
 }

@@ -22,6 +22,26 @@ npx arcmira setup             # apply, then sign in once per agent
 
 Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authentication) and set `ARCMIRA_API_KEY`, or pass `apiKey` to the client.
 
+## Premium quickstart
+
+```ts
+import { ArcmiraClient } from "arcmira";
+const arcmira = new ArcmiraClient();
+const transcript = await arcmira.transcripts.prepareAndWait({ video_id: "dQw4w9WgXcQ" });
+for (const line of transcript.lines ?? []) console.log(line.speaker, line.text);
+```
+
+`prepareAndWait({ video_id, maxOnDemandCents = 0, timeoutSeconds = 300 })` reads the Premium transcript and returns it. When your account does not own it yet, the call posts `{ video_id }` to `/v1/transcriptions` once, polls the job at the pace the API sets with `Retry-After` and `next_poll_seconds`, and reads the finished transcript. The default spends included credits only and sends no `Idempotency-Key`. Preparation buys the whole video, even if you later read a window.
+
+Errors you can handle:
+
+- `PreparationTimeoutError` when the job outlasts `timeoutSeconds`. It carries `job`, and the job keeps running.
+- `PreparationFailedError` when the job fails or is refunded. It carries `job`.
+- `PremiumUnavailableError` when the plan has no Premium. The read returned captions, which are never returned as Premium.
+- `ArcmiraError` subclasses for any API refusal, such as `quota_exceeded`, with the API's error object in `body`.
+
+To spend money, pass a cents ceiling you have approved: `prepareAndWait({ video_id, maxOnDemandCents: 25 })`. The call then sends the quoted `max_rows` and one generated `Idempotency-Key`, which the SDK's retries reuse.
+
 ## Quickstart
 
 ```ts
@@ -62,15 +82,15 @@ try {
 }
 ```
 
-Order a Premium transcript and poll it (paid plans; pass your own idempotency key so a retry cannot order twice):
+To prepare Premium without waiting, read it, post the purchase, and poll the job yourself. GET never buys, and each state is typed. Every purchase answers one `TranscriptJob`. Without an `Idempotency-Key`, a purchase already open or owned for the video comes back with `existing: true`. A positive `max_on_demand_cents` requires both `Idempotency-Key` and `max_rows`.
 
 ```ts
-const quote = await client.transcripts.quote({ video_id: "dQw4w9WgXcQ" });
-// Persist this intent before sending it. Choose ceilings after reviewing the quote.
-const intent = { videoId: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0, "Idempotency-Key": "order-dQw4w9WgXcQ-1" };
-const order = await client.transcripts.request(intent);
-const state = await client.transcripts.status({ id: order.request.id! });
-console.log(state.status, state.nextPollSeconds);
+const read = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" });
+if (read.state === "preparation_required") {
+    const { job } = await client.transcripts.request({ video_id: read.video_id });
+    console.log(job.state, job.next_poll_seconds, job.status_url);
+}
+for await (const job of await client.transcripts.listRequests({ limit: 10 })) console.log(job.id, job.state);
 ```
 
 Every method is listed with its request and response types in [reference.md](./reference.md). The same operations, with `curl` samples, are in the [API reference](https://arcmira.com/docs/api-reference).
@@ -201,7 +221,7 @@ Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI r
 
 ## Development
 
-`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. `cli/`, `tests/` and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`).
+`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. The one exception is `src/wrapper/`, which holds `transcripts.prepareAndWait`; the installer keeps it and points `src/index.ts` at its `ArcmiraClient`. `cli/`, `tests/` and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`).
 
 ## License
 
@@ -209,7 +229,7 @@ Apache-2.0. See [LICENSE](./LICENSE).
 
 ## Regenerate the SDK
 
-Run `bash scripts/generate.sh` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and reads the public contract in `fern/openapi.json`.
+Run `npm run generate -- <path to arcmira-v1.json>` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It vendors the spec into `fern/openapi.json` (omit the path to reuse the vendored copy), pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and regenerates `src/`, `reference.md` and `cli/operations.ts`.
 
 The overlay combines success schemas into a `state` union, preserves existing method names, and discovers cursor collections from their schemas. Unknown or ambiguous collections fail generation. An exact checked patch keeps request timer cleanup in `finally` until the pinned generator includes the fix. Generated source is never edited by hand.
 
@@ -217,10 +237,11 @@ Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consu
 
 ## Migrate from 0.2
 
-`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. Preparation requires both the saved key and `max_rows`; `max_on_demand_cents` defaults to zero. `channels.videos.list` and `transcripts.listRequests` retain their original response bodies and `.withRawResponse()`. To continue, pass the returned `next_cursor` unchanged with the same filters. Existing paginated methods retain async iteration.
+`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. `transcripts.request` takes `video_id` and answers `{ job, existing }`. `channels.videos.list` and `transcripts.listRequests` return pages: iterate them with `for await`, or read `page.response` for the list body. See [CHANGELOG.md](./CHANGELOG.md).
 
 ```ts
 const { data, rawResponse } = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" }).withRawResponse();
 if (data.state === "ready") console.log(data.lines);
-else console.log(data.status_url, data.next_poll_seconds, rawResponse.status);
+else if (data.state === "pending") console.log(data.job.status_url, data.job.next_poll_seconds, rawResponse.status);
+else console.log(data.quote, data.action);
 ```
