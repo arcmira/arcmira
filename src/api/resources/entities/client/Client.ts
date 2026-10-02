@@ -66,12 +66,13 @@ export class EntitiesClient {
         request: Arcmira.SearchEntitiesRequest,
         requestOptions?: EntitiesClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.EntitySearchResponse>> {
-        const { q, type: type_, has_recommendations_data: hasRecommendationsData, limit } = request;
+        const { q, type: type_, has_recommendations_data: hasRecommendationsData, limit, src } = request;
         const _queryParams: Record<string, unknown> = {
             q,
             type: type_ != null ? type_ : undefined,
             has_recommendations_data: hasRecommendationsData,
             limit,
+            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -171,12 +172,13 @@ export class EntitiesClient {
         request: Arcmira.ResolveEntitiesRequest,
         requestOptions?: EntitiesClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.EntityResolveResponse>> {
-        const { q, type: type_, limit, context } = request;
+        const { q, type: type_, limit, context, src } = request;
         const _queryParams: Record<string, unknown> = {
             q,
             type: type_ != null ? type_ : undefined,
             limit,
             context,
+            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -568,7 +570,10 @@ export class EntitiesClient {
         request: Arcmira.MomentumEntitiesRequest,
         requestOptions?: EntitiesClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.EntityMomentumResponse>> {
-        const { id } = request;
+        const { id, src } = request;
+        const _queryParams: Record<string, unknown> = {
+            src: src != null ? src : undefined,
+        };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -584,7 +589,11 @@ export class EntitiesClient {
             ),
             method: "GET",
             headers: _headers,
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            queryString: core.url
+                .queryBuilder()
+                .addMany(_queryParams)
+                .mergeAdditional(requestOptions?.queryParams)
+                .build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,

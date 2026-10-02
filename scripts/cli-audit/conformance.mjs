@@ -159,8 +159,13 @@ const COMMANDS = {
         bad: [["transcripts", "get"], ["transcripts", "get", "not a video"], ["transcripts", "get", "dQw4w9WgXcQ", "--quality", "best"], ["transcripts", "get", "dQw4w9WgXcQ", "--start", "ten"]],
         typo: [["transcripts", "get", "dQw4w9WgXcQ", "--qualty", "premium"], "--quality"],
     },
+    "transcripts quote": {
+        ok: ["transcripts", "quote", "dQw4w9WgXcQ"],
+        bad: [["transcripts", "quote"], ["transcripts", "quote", "invalid"]],
+        typo: [["transcripts", "quote", "dQw4w9WgXcQ", "--jsn"], "--json"],
+    },
     "transcripts request": {
-        ok: ["transcripts", "request", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+        ok: ["transcripts", "request", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-audit-intent"],
         bad: [["transcripts", "request"], ["transcripts", "request", "not a video"], ["transcripts", "request", "dQw4w9WgXcQ", "extra"]],
         typo: [["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-kye", "k"], "--idempotency-key"],
     },
@@ -392,15 +397,15 @@ g.transcripts_group = {
         groupBare.code === 0 && /transcripts request/.test(groupBare.stdout) && !/transcriptions/.test(top.stdout),
     rule: "transcripts get|request|status; transcript is an alias of transcripts get, listed under Aliases, not as a command",
 };
-const order = await run(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ"]);
+const order = await run(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-audit-intent"]);
 const orderKey = order.requests[0]?.headers["idempotency-key"] ?? "";
-const orderOwn = await run(["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-key", "order-1", "--json"]);
+const orderOwn = await run(["transcripts", "request", "dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "order-1", "--json"]);
 g.transcripts_request = {
     pass:
         order.code === 0 && order.requests.length === 1 && order.requests[0].method === "POST" && order.requests[0].path === "/v1/transcriptions" && parses(order.requests[0].body)?.videoId === "dQw4w9WgXcQ" &&
-        /^[0-9a-f-]{36}$/.test(orderKey) && order.stderr.includes(`idempotency-key ${orderKey}`) && new RegExp(`transcripts status ${JOB}`).test(order.stderr) &&
+        orderKey === "saved-audit-intent" && parses(order.requests[0].body)?.max_rows === 300 && new RegExp(`transcripts status ${JOB}`).test(order.stderr) &&
         orderOwn.code === 0 && orderOwn.requests[0]?.headers["idempotency-key"] === "order-1" && parses(orderOwn.stdout)?.request?.id === JOB,
-    rule: "transcripts request POSTs /v1/transcriptions with videoId and an Idempotency-Key (printed; --idempotency-key sets it), then names the poll command",
+    rule: "transcripts request POSTs /v1/transcriptions with videoId, cost ceilings and the supplied persisted Idempotency-Key, then names the poll command",
 };
 const moved = await run(["status", JOB]);
 const movedJson = await run(["status", JOB, "--json"]);

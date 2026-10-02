@@ -1,5 +1,6 @@
 export * from "./channels/client/requests/index.js";
 export * as channels from "./channels/index.js";
+export * from "./channels/types/index.js";
 export * from "./corrections/client/requests/index.js";
 export * as corrections from "./corrections/index.js";
 export * from "./entities/client/requests/index.js";
@@ -13,6 +14,8 @@ export * as me from "./me/index.js";
 export * from "./mentions/client/requests/index.js";
 export * as mentions from "./mentions/index.js";
 export * from "./mentions/types/index.js";
+export * from "./meta/client/requests/index.js";
+export * as meta from "./meta/index.js";
 export * from "./monitors/client/requests/index.js";
 export * as monitors from "./monitors/index.js";
 export * from "./organizations/client/requests/index.js";

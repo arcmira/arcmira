@@ -2,8 +2,8 @@
 
 import type * as Arcmira from "../index.js";
 
-export interface TranscriptRequestSubmitResponse {
-    request: Arcmira.TranscriptRequest;
+export interface TranscriptionSubmitResponse {
+    request: Arcmira.TranscriptionRequest;
     /** True when an in-flight (or already-satisfied) request for the same video was returned instead of creating a new one. */
     existing?: boolean | undefined;
     /** Only present (true) when this purchase consumed the rest of the included row allocation. */

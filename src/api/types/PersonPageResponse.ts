@@ -59,6 +59,10 @@ export namespace PersonPageResponse {
         youtube_handle: string | null;
         /** 1 when the entity is flagged priority, 0 or null otherwise. */
         is_priority: number | null;
+        /** Same value as image_url. */
+        imageUrl: string | null;
+        /** Same value as image_checked_at. */
+        imageCheckedAt: string | null;
         /** Up to 10 channels this entity owns, most videos first. Null when it owns none. */
         ownedChannels: Entity.OwnedChannels.Item[] | null;
         /** Up to 10 products this entity owns, most mentions first. Null when it owns none. */

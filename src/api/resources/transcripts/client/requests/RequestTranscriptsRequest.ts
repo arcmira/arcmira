@@ -2,11 +2,18 @@
 
 /**
  * @example
- *     {}
+ *     {
+ *         "Idempotency-Key": "Idempotency-Key",
+ *         max_rows: 1
+ *     }
  */
 export interface RequestTranscriptsRequest {
-    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
-    "Idempotency-Key"?: string;
+    /** Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
+    "Idempotency-Key": string;
+    /** Maximum new monetary on-demand charge in cents. Omit to authorize none. */
+    max_on_demand_cents?: number;
+    /** Maximum whole-video rows authorized. Credit mode charges four credits per row. Required even when submitting without a quote. */
+    max_rows: number;
     /** YouTube video id (11 characters). Either videoId or url is required. */
     videoId?: string;
     /** A YouTube watch/short/live URL. Either videoId or url is required. */

@@ -40,17 +40,22 @@ export class FeedbackClient {
      * @throws {@link errors.ArcmiraTimeoutError}
      *
      * @example
-     *     await client.feedback.submit()
+     *     await client.feedback.submit({
+     *         type: "recommendations",
+     *         query: {
+     *             "key": "value"
+     *         }
+     *     })
      */
     public submit(
-        request: Arcmira.SubmitFeedbackRequest = {},
+        request: Arcmira.SubmitFeedbackRequest,
         requestOptions?: FeedbackClient.RequestOptions,
     ): core.HttpResponsePromise<Arcmira.FeedbackResponse> {
         return core.HttpResponsePromise.fromPromise(this.__submit(request, requestOptions));
     }
 
     private async __submit(
-        request: Arcmira.SubmitFeedbackRequest = {},
+        request: Arcmira.SubmitFeedbackRequest,
         requestOptions?: FeedbackClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.FeedbackResponse>> {
         const { "Idempotency-Key": idempotencyKey, ..._body } = request;

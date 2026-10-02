@@ -9,4 +9,6 @@
 export interface DeleteMonitorsRequest {
     /** Monitor id. */
     id: string;
+    /** Use 8 to 128 letters, numbers, underscores or hyphens per intent. Keys are scoped to the account, credential and resource family. The same key and normalized method, path and body returns the committed response with Idempotency-Replayed: true. A changed intent within the same family returns 409 idempotency_conflict. Monitor and tracker families have independent namespaces. Secret recovery is limited as described by the operation. */
+    "Idempotency-Key"?: string;
 }

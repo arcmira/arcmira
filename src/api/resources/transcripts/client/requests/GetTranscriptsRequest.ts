@@ -11,16 +11,18 @@ import type * as Arcmira from "../../../../index.js";
 export interface GetTranscriptsRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
-    /** captions returns the video's own caption track, creator-written when one exists and YouTube's automatic captions otherwise, at 1 row per started 15 minutes. premium returns Arcmira's own diarized transcript at 75 rows per started 15 minutes of the whole video, the permanent unlock it buys, and needs a plan carrying Premium transcripts; without that plan the captions text is returned and access names the gate. Default captions. */
+    /** captions reads creator or automatic captions at 1 row per started 15 minutes. premium is read-only: an owned transcript returns 200 at zero rows, an active purchase returns 202 with status_url and next_poll_seconds, and an unowned transcript returns 403 purchase_required with quote_url and prepare_url. It never purchases or substitutes captions. Quote and explicitly purchase the whole video before reading Premium. Default captions unless changed in account settings. */
     quality?: Arcmira.GetTranscriptsRequestQuality;
     /** Comma-separated caption language priority list, at most 5, tried in order (e.g. "de,en"). Use asr for the first automatic track and asr-<code> for a specific one. Default en. languages[] in the response lists every track the video offers. */
     language?: string;
     /** false returns paragraphs[] of { start, text, speaker? } instead of lines[], for reading rather than citing. Default true. */
     timestamps?: boolean;
-    /** Window start in seconds from the beginning of the video. Send start and end together. On captions the window bills only its own started 15-minute blocks; on Premium it trims the answer and the whole-video unlock is what you pay for. */
+    /** Window start in seconds from the beginning of the video. Send start and end together. On captions the window bills only its own started 15-minute blocks; on Premium it trims an already purchased transcript; this GET does not charge. */
     start?: number | null;
     /** Window end in seconds, greater than start and no greater than the video duration. Send start and end together. */
     end?: number | null;
-    /** Refetch the caption track from YouTube instead of serving the stored copy. Available only for videos outside our index; a pipeline-owned video refuses it with invalid_query. */
+    /** Captions only; Premium with refresh=true returns invalid_query. Refetch the caption track from YouTube instead of serving the stored copy. Available only for videos outside our index; a pipeline-owned video refuses it with invalid_query. */
     refresh?: boolean;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.GetTranscriptsRequestSrc;
 }

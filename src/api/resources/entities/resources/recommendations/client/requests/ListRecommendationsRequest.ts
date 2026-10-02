@@ -12,6 +12,7 @@ export interface ListRecommendationsRequest {
     /** Entity id, ent_{n} or the numeric id. Merged ids follow their redirect. */
     id: string;
     limit?: number;
+    /** Signed continuation from next_cursor. Bound to this route, normalized query, caller and visibility; invalid or old tokens return invalid_cursor. */
     cursor?: string;
     channel_id?: string;
     channel_name?: string;
@@ -20,4 +21,6 @@ export interface ListRecommendationsRequest {
     date_from?: string;
     date_to?: string;
     include_disputed?: boolean;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.entities.ListRecommendationsRequestSrc;
 }

@@ -23,7 +23,7 @@ export class RelatedClient {
     }
 
     /**
-     * The topics that co-occur with this product in indexed media, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * The topics that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
      *
      * @param {Arcmira.products.TopicsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -51,7 +51,7 @@ export class RelatedClient {
             async (
                 request: Arcmira.products.TopicsRelatedRequest,
             ): Promise<core.WithRawResponse<Arcmira.EntityTopicListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -59,6 +59,8 @@ export class RelatedClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -160,7 +162,7 @@ export class RelatedClient {
     }
 
     /**
-     * The people that co-occur with this product in indexed media, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * The people that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
      *
      * @param {Arcmira.products.PeopleRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -188,7 +190,7 @@ export class RelatedClient {
             async (
                 request: Arcmira.products.PeopleRelatedRequest,
             ): Promise<core.WithRawResponse<Arcmira.EntityPeopleListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -196,6 +198,8 @@ export class RelatedClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -297,7 +301,7 @@ export class RelatedClient {
     }
 
     /**
-     * The organizations that co-occur with this product in indexed media, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * The organizations that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
      *
      * @param {Arcmira.products.OrganizationsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -325,7 +329,7 @@ export class RelatedClient {
             async (
                 request: Arcmira.products.OrganizationsRelatedRequest,
             ): Promise<core.WithRawResponse<Arcmira.EntityOrganizationListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -333,6 +337,8 @@ export class RelatedClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -436,7 +442,7 @@ export class RelatedClient {
     }
 
     /**
-     * The products that co-occur with this product in indexed media, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * The products that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
      *
      * @param {Arcmira.products.ProductsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -464,7 +470,7 @@ export class RelatedClient {
             async (
                 request: Arcmira.products.ProductsRelatedRequest,
             ): Promise<core.WithRawResponse<Arcmira.EntityProductListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -472,6 +478,8 @@ export class RelatedClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -573,7 +581,7 @@ export class RelatedClient {
     }
 
     /**
-     * The channels that co-occur with this product in indexed media, with q/field/sort/order filtering. Cursor-paginated: rows are in items, and next_cursor (null on the last page) feeds the cursor parameter for the next page. total, offset, limit and hasMore mirror the web shape.
+     * The channels that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
      *
      * @param {Arcmira.products.ChannelsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -601,7 +609,7 @@ export class RelatedClient {
             async (
                 request: Arcmira.products.ChannelsRelatedRequest,
             ): Promise<core.WithRawResponse<Arcmira.EntityChannelListResponse>> => {
-                const { slug, limit, cursor, q, field, sort, order } = request;
+                const { slug, limit, cursor, q, field, sort, order, mode, is_appearance: isAppearance } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
@@ -609,6 +617,8 @@ export class RelatedClient {
                     field,
                     sort,
                     order: order != null ? order : undefined,
+                    mode: mode != null ? mode : undefined,
+                    is_appearance: isAppearance != null ? isAppearance : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

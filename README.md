@@ -65,7 +65,10 @@ try {
 Order a Premium transcript and poll it (paid plans; pass your own idempotency key so a retry cannot order twice):
 
 ```ts
-const order = await client.transcripts.request({ videoId: "dQw4w9WgXcQ", "Idempotency-Key": "order-dQw4w9WgXcQ-1" });
+const quote = await client.transcripts.quote({ video_id: "dQw4w9WgXcQ" });
+// Persist this intent before sending it. Choose ceilings after reviewing the quote.
+const intent = { videoId: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0, "Idempotency-Key": "order-dQw4w9WgXcQ-1" };
+const order = await client.transcripts.request(intent);
 const state = await client.transcripts.status({ id: order.request.id! });
 console.log(state.status, state.nextPollSeconds);
 ```
@@ -138,7 +141,8 @@ Data commands (they mirror the MCP tools)
   arcmira recommendations <id|name>   who recommends an entity on air, paid or organic
   arcmira episodes <channel>          newest indexed videos of a channel
   arcmira transcripts get <video>     full transcript of one YouTube video
-  arcmira transcripts request <video> order a Premium transcript (paid plans; sends an Idempotency-Key)
+  arcmira transcripts quote <video>   free whole-video quote
+  arcmira transcripts request <video> --max-rows N --idempotency-key KEY [--max-on-demand-cents N]
   arcmira transcripts status <id>     state of a transcript request, with the next poll time
   arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
   arcmira status [channel]            your plan, or a channel's coverage
@@ -170,9 +174,9 @@ Also: arcmira help [command], --help, --version
 
 Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI resolves it first (one extra call to `GET /v1/entities/resolve`) and says what it picked on stderr. A suggested pick is used and stated as an assumption with its reason. An ambiguous name exits 2 and lists the options with their ids.
 
-`arcmira transcripts request` sends a new `Idempotency-Key` (a UUID) with each order and prints it on stderr; with `--json` stderr stays reserved for the error, so scripts pass their own key. To retry an order whose answer you did not see, pass the same key with `--idempotency-key`; the API returns the first answer and charges nothing more. A request for a video already in flight returns that request.
+`arcmira transcripts request` requires `--max-rows` and a previously saved `--idempotency-key`. The monetary ceiling defaults to zero. Retry an unknown response with the same key and identical input. Whole-video pricing applies even when you later read a small window. GET never buys Premium. A pending read returns `state: "pending"`, its status URL, and the next poll delay. A refused read retains the quote and preparation URL.
 
-`arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. Every POST carries an automatic `Idempotency-Key` (a UUID, shown with `--verbose`; pass `-H 'Idempotency-Key: ...'` to set your own), so a retried write does not run twice. The path may drop the `/v1` prefix.
+`arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. For `POST /v1/transcriptions`, pass your saved key with `-H 'Idempotency-Key: ...'`. Other POST requests generate a key when none is supplied; `--verbose` shows it. Reuse the same key and input to retry a write. The path may drop the `/v1` prefix.
 
 - Key: `--key`, then `ARCMIRA_API_KEY`, then the key `arcmira login` saved in `~/.config/arcmira/config.json` (mode 0600; `XDG_CONFIG_HOME` is honored). `arcmira login --key arc_sk_...` saves a key you already have; `arcmira logout` deletes it.
 - Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message","request_id",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
@@ -202,3 +206,21 @@ Commands that take an `ent_` or `UC` id also take a name or `@handle`; the CLI r
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).
+
+## Regenerate the SDK
+
+Run `bash scripts/generate.sh` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and reads the public contract in `fern/openapi.json`.
+
+The overlay combines success schemas into a `state` union, preserves existing method names, and discovers cursor collections from their schemas. Unknown or ambiguous collections fail generation. An exact checked patch keeps request timer cleanup in `finally` until the pinned generator includes the fix. Generated source is never edited by hand.
+
+Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consumer type contract. Tests use local HTTP fixtures and do not purchase transcripts.
+
+## Migrate from 0.2
+
+`transcripts.get` returns `TranscriptResult`. Narrow on `state` before accessing transcript lines. Use `.withRawResponse()` for HTTP status and headers. Preparation requires both the saved key and `max_rows`; `max_on_demand_cents` defaults to zero. `channels.videos.list` and `transcripts.listRequests` return pages whose `.response` retains the original body. Async iteration follows opaque cursors without decoding them.
+
+```ts
+const { data, rawResponse } = await client.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" }).withRawResponse();
+if (data.state === "ready") console.log(data.lines);
+else console.log(data.status_url, data.next_poll_seconds, rawResponse.status);
+```

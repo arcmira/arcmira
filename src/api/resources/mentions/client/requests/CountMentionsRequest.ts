@@ -23,4 +23,6 @@ export interface CountMentionsRequest {
     published_before?: string;
     /** Rows in the ranked table, 1 to 40. Default 20. */
     limit?: number;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.CountMentionsRequestSrc;
 }

@@ -11,6 +11,8 @@ export interface EntityChannelListResponse {
     offset: number;
     /** Page size applied, after the plan clamp. */
     limit: number;
+    /** Same value as has_more, kept for readers of the web shape. */
+    hasMore: boolean;
     /** True when more rows exist past this page. */
     has_more: boolean;
     /** Opaque cursor for the next page. Null on the last page. */

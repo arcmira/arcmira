@@ -30,6 +30,8 @@ export namespace TranscriptSearchResponse {
     export interface Filters {
         /** Channel ids the search was scoped to, after entity_ids were expanded. */
         channelIds: string[];
+        /** Exact explicit entity_ids accepted for this search. Every id was resolved; an unknown id is refused. */
+        entityIds: string[];
         publishedAfter: string | null;
         publishedBefore: string | null;
         /** The about ids, each with its name and type. */

@@ -4,7 +4,7 @@ import type * as Arcmira from "../index.js";
 
 export interface TranscriptResponse {
     video: Arcmira.TranscriptVideo;
-    /** The lane that answered. premium only when your plan carries Premium transcripts; otherwise captions answered and access names the gate. */
+    /** The requested quality. Premium is served only with an owned unlock; it never falls back to captions. */
     quality: TranscriptResponse.Quality;
     /** Public source class. creator_captions were written or approved by the channel, third_party_quick are YouTube automatic captions, arcmira_premium is our own diarized transcript. */
     source: TranscriptResponse.Source;
@@ -20,13 +20,13 @@ export interface TranscriptResponse {
     speakers?: TranscriptResponse.Speakers.Item[] | undefined;
     /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. Echo it on every correction; a 409 means it changed underneath you, so read again. */
     revision?: string | undefined;
-    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; on Premium the whole-video unlock is. */
+    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free. */
     range?: TranscriptResponse.Range | undefined;
-    /** Rows this call charged. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window, and 0 on a Premium read you already unlocked. */
+    /** Rows this call charged. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window, and always 0 on Premium retrieval. */
     rows_billed: number;
     /** When the transcript was produced. */
     as_of: string | null;
-    /** Present when you asked for Premium on a video we have not transcribed yet. The captions text is in this same response; poll the job for the Premium one. */
+    /** Reserved for job metadata. Pending Premium retrieval uses its separate 202 response. */
     premium_job?: TranscriptResponse.PremiumJob | undefined;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptResponse.Access | undefined;
@@ -35,7 +35,7 @@ export interface TranscriptResponse {
 }
 
 export namespace TranscriptResponse {
-    /** The lane that answered. premium only when your plan carries Premium transcripts; otherwise captions answered and access names the gate. */
+    /** The requested quality. Premium is served only with an owned unlock; it never falls back to captions. */
     export const Quality = {
         Captions: "captions",
         Premium: "premium",
@@ -91,7 +91,7 @@ export namespace TranscriptResponse {
     }
 
     /**
-     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; on Premium the whole-video unlock is.
+     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free.
      */
     export interface Range {
         start: number;
@@ -99,7 +99,7 @@ export namespace TranscriptResponse {
     }
 
     /**
-     * Present when you asked for Premium on a video we have not transcribed yet. The captions text is in this same response; poll the job for the Premium one.
+     * Reserved for job metadata. Pending Premium retrieval uses its separate 202 response.
      */
     export interface PremiumJob {
         /** Transcription request id. Poll it with GET /v1/transcriptions/{id}. */

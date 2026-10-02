@@ -17,4 +17,6 @@ export interface ListSponsorsRequest {
     status?: Arcmira.channels.ListSponsorsRequestStatus;
     /** Sponsors to return. Default 100. Pro+ only; other plans receive the free slice. */
     limit?: number;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.channels.ListSponsorsRequestSrc;
 }

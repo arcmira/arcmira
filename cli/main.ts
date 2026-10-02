@@ -70,7 +70,7 @@ const GLOBAL: Record<string, OptionSpec> = {
 /** Groups: `arcmira auth <sub>` runs the command named here. */
 const GROUPS: Record<string, Record<string, string>> = {
     auth: { login: "login", logout: "logout", status: "whoami", token: "auth token" },
-    transcripts: { get: "transcripts get", request: "transcripts request", status: "transcripts status" },
+    transcripts: { get: "transcripts get", quote: "transcripts quote", request: "transcripts request", status: "transcripts status" },
 };
 
 /** Short names for commands that live in a group; help lists them as aliases, not commands. */
@@ -256,7 +256,18 @@ function apiRequest(positionals: string[], v: Values) {
     return { method, path: rawPath.replace(/^\/+/, "").replace(/^(?!v1(\/|$|\?))/, "v1/"), query, headers, body };
 }
 
-type Page = { data?: unknown; has_more?: boolean; next_cursor?: string | null };
+function collectionPage(value: unknown): { body: Record<string, unknown>; key: string; rows: unknown[]; cursor: string | null } {
+    if (typeof value !== "object" || value === null) throw new UsageError("Pagination requires a JSON object", "invalid_page");
+    const entries = Object.entries(value);
+    const arrays = entries.filter(([, field]) => Array.isArray(field));
+    if (arrays.length !== 1 || !["data", "requests", "episodes", "items"].includes(arrays[0][0]))
+        throw new UsageError("Unknown or ambiguous pagination collection", "invalid_page");
+    const [key, rows] = arrays[0];
+    const body = Object.fromEntries(entries);
+    const cursor = body.next_cursor;
+    if (cursor !== null && typeof cursor !== "string") throw new UsageError("Pagination requires next_cursor", "invalid_page");
+    return { body, key, rows, cursor };
+}
 
 async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Promise<unknown> {
     const request = apiRequest(positionals, v);
@@ -267,6 +278,8 @@ async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Pro
         ...(request.body !== undefined ? { "content-type": "application/json" } : {}),
         ...request.headers,
     };
+    if (request.method === "POST" && url.pathname === "/v1/transcriptions" && !headers["idempotency-key"])
+        throw new UsageError("Preparation requires a persisted Idempotency-Key header", "missing_idempotency_key");
     if (request.method === "POST" && !headers["idempotency-key"]) headers["idempotency-key"] = randomUUID();
     const call = async (target: URL) => {
         if (v.verbose) {
@@ -280,21 +293,19 @@ async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Pro
     };
     const first = await call(url);
     if (!v.paginate) return first;
-    const page = first as Page;
-    if (!Array.isArray(page?.data)) {
-        note("--paginate: the response has no data list; printed as is");
-        return first;
-    }
-    const rows = [...page.data];
+    const page = collectionPage(first);
+    const rows = [...page.rows];
     const seen = new Set<string>();
     let next = page;
-    while (next.has_more && next.next_cursor && !seen.has(next.next_cursor)) {
-        seen.add(next.next_cursor);
-        url.searchParams.set("cursor", next.next_cursor);
-        next = (await call(url)) as Page;
-        if (Array.isArray(next.data)) rows.push(...next.data);
+    while (next.cursor !== null) {
+        if (seen.has(next.cursor)) throw new UsageError("Pagination repeated a cursor", "invalid_page");
+        seen.add(next.cursor);
+        url.searchParams.set("cursor", next.cursor);
+        next = collectionPage(await call(url));
+        if (next.key !== page.key) throw new UsageError("Pagination changed its collection", "invalid_page");
+        rows.push(...next.rows);
     }
-    return { ...page, data: rows, has_more: false, next_cursor: null };
+    return { ...page.body, [page.key]: rows, has_more: false, next_cursor: null };
 }
 
 const mask = (key: string) => (key.length < 16 ? "****" : `${/^[a-z]+_[a-z]+_/i.exec(key)?.[0] ?? ""}...${key.slice(-4)}`);
@@ -690,7 +701,7 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
         run: async ({ client, positionals: [channel], values: v }) =>
-            client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) }),
+            (await client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) })).response,
         print: (r: Arcmira.ChannelVideosResponse) => {
             if (r.episodes.length === 0) return console.log("Nothing indexed for this channel.");
             for (const e of r.episodes) console.log(`${day(e.published_at)}  ${e.video_id}  ${seconds(e.duration_seconds).padStart(7)}  ${e.title ?? ""}`);
@@ -720,7 +731,12 @@ const COMMANDS: Record<string, Command> = {
                 start: num(v.start),
                 end: num(v.end),
             }),
-        print: (r: Arcmira.TranscriptResponse) => {
+        print: (r: Arcmira.TranscriptResult) => {
+            if (r.state === "pending") {
+                console.log(`pending  ${r.status_url}`);
+                note(`poll after ${r.next_poll_seconds} s; no purchase was made by this read`);
+                return;
+            }
             const names = new Map((r.speakers ?? []).map((s) => [s.id, s.name]));
             const who = (id: number | undefined) => (id == null ? "" : `${names.get(id) ?? `Speaker ${id}`}: `);
             for (const line of r.lines ?? []) console.log(`[${seconds(line.start)}] ${who(line.speaker)}${line.text}`);
@@ -728,25 +744,47 @@ const COMMANDS: Record<string, Command> = {
             note(`${r.video.title || r.video.id}  ${r.quality}  ${r.language}  rows billed ${r.rows_billed}`);
         },
     },
+    "transcripts quote": {
+        section: "data",
+        operations: ["quote_transcription"],
+        summary: "Free whole-video Premium purchase quote.",
+        usage: "transcripts quote <video-url-or-id>",
+        examples: ["arcmira transcripts quote CusJwCsDHHM", "arcmira transcripts quote CusJwCsDHHM --json"],
+        positionals: "one",
+        options: {},
+        run: ({ client, positionals: [video] }) => client.transcripts.quote({ video_id: videoIdOf(video) }),
+        print: (quote: Arcmira.TranscriptPurchaseQuote) => console.log(JSON.stringify(quote, null, 2)),
+    },
     "transcripts request": {
         section: "data",
         operations: ["submit_transcription"],
-        summary: "Order a Premium transcript of one video. Paid plans; rows are charged up front and refunded on failure.",
-        usage: "transcripts request <video-url-or-id> [--idempotency-key KEY]",
-        examples: ["arcmira transcripts request https://www.youtube.com/watch?v=CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --idempotency-key order-CusJwCsDHHM-1 --json"],
+        summary: "Buy and prepare a whole Premium video with explicit cost ceilings and a persisted intent key.",
+        usage: "transcripts request <video-url-or-id> --max-rows N --idempotency-key KEY [--max-on-demand-cents N]",
+        examples: ["arcmira transcripts request CusJwCsDHHM --max-rows 300 --idempotency-key saved-order-1", "arcmira transcripts request CusJwCsDHHM --max-rows 300 --max-on-demand-cents 0 --idempotency-key saved-order-1 --json"],
         positionals: "one",
-        options: { "idempotency-key": { type: "string", help: "Key that makes a retry return the first answer instead of ordering again. Default: a new UUID, printed on stderr (not with --json; scripts pass their own)." } },
+        options: {
+            "idempotency-key": { type: "string", help: "Required. Persist before sending. Retry an unknown outcome with this same key and identical input." },
+            "max-rows": { type: "string", int: [0, 3600], help: "Required. Maximum whole-video row price authorized." },
+            "max-on-demand-cents": { type: "string", number: true, help: "Maximum new on-demand charge in cents. Defaults to zero." },
+        },
         run: async ({ client, positionals: [video], values: v }) => {
             const videoId = videoIdOf(video);
-            const key = str(v["idempotency-key"]) ?? randomUUID();
-            if (!v.json) note(`idempotency-key ${key}  (retry with --idempotency-key ${key} to avoid a second charge)`);
-            return client.transcripts.request({ "Idempotency-Key": key, videoId });
+            const key = str(v["idempotency-key"]);
+            const maxRows = num(v["max-rows"]);
+            const cents = num(v["max-on-demand-cents"]) ?? 0;
+            if (!key || maxRows === undefined) throw new UsageError("Preparation requires --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
+            if (cents < 0) throw new UsageError("--max-on-demand-cents must be nonnegative", "invalid_option");
+            try {
+                return await client.transcripts.request({ "Idempotency-Key": key, videoId, max_rows: maxRows, max_on_demand_cents: cents });
+            } catch (error) {
+                if (error instanceof ArcmiraError && error.statusCode !== undefined) throw error;
+                throw new ArcmiraError({ message: "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key." });
+            }
         },
-        print: ({ request: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
-            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left` : "";
-            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}  ${r.quote.rows} rows (${r.quote.quarters} x 15 min)${existing ? "  (already requested)" : ""}`);
-            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
-            else if (r.id) note(`poll: arcmira transcripts status ${r.id}`);
+        print: ({ request: r, existing }: Arcmira.TranscriptionSubmitResponse) => {
+            console.log(`${r.id}  ${r.videoId}  ${r.state}  ${r.quote.rows} rows${existing ? "  (existing request)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
+            else note(`poll after ${r.nextPollSeconds ?? "-"} s: arcmira transcripts status ${r.id}`);
         },
     },
     "transcripts status": {
@@ -758,10 +796,10 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: {},
         run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
-        print: (r: Arcmira.TranscriptRequest) => {
+        print: (r: Arcmira.TranscriptionRequest) => {
             const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
-            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.status}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
-            if (r.status === "complete") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
+            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
         },
     },
     occurrences: {

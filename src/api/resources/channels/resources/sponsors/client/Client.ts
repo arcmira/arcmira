@@ -54,11 +54,12 @@ export class SponsorsClient {
         request: Arcmira.channels.ListSponsorsRequest,
         requestOptions?: SponsorsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.ChannelSponsorsResponse>> {
-        const { channel_id: channelId, min_ad_reads: minAdReads, status, limit } = request;
+        const { channel_id: channelId, min_ad_reads: minAdReads, status, limit, src } = request;
         const _queryParams: Record<string, unknown> = {
             min_ad_reads: minAdReads,
             status: status != null ? status : undefined,
             limit,
+            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

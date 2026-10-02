@@ -11,7 +11,7 @@
 export interface SubmitMergesRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
-    /** A unique key you generate per logical request, such as a UUID. A retry with the same key and the same body within 24 hours returns the stored response with Idempotency-Replayed: true instead of running again. The same key with a different body answers 409 idempotency_conflict. Keys are scoped to the credential. */
+    /** Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
     "Idempotency-Key"?: string;
     /** The name as it appears in this video (e.g. a first-name-only mention). */
     sourceName: string;

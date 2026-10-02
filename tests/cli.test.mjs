@@ -28,7 +28,8 @@ const COMMANDS = {
     recommendations: ["recommendations", "ent_14", "--kind", "organic"],
     episodes: ["episodes", "UC-DRzaGnL_vtBUpCFH5M0tg", "-n", "2"],
     "transcripts get": ["transcripts", "get", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
-    "transcripts request": ["transcripts", "request", "dQw4w9WgXcQ"],
+    "transcripts quote": ["transcripts", "quote", "dQw4w9WgXcQ"],
+    "transcripts request": ["transcripts", "request", "dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-cli-intent"],
     "transcripts status": ["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"],
     occurrences: ["occurrences", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "topic"],
     status: ["status", "UC-DRzaGnL_vtBUpCFH5M0tg"],
@@ -66,17 +67,17 @@ test("transcript is an alias of transcripts get, listed as an alias", async () =
     assert.match(top.stdout, /^Aliases: transcript is transcripts get\.$/m);
 });
 
-test("transcripts request sends videoId and one Idempotency-Key, the caller's when given", async () => {
-    const auto = await arcmira(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ"]);
-    const sent = fake.requests[fake.requests.length - 1];
-    assert.equal(auto.code, 0, auto.stderr);
+test("transcripts request requires a saved key and ceiling before making a call", async () => {
+    const before = fake.requests.length;
+    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ"])).code, 2);
+    assert.equal(fake.requests.length, before);
+    const out = await arcmira(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "order-1"]);
+    assert.equal(out.code, 0, out.stderr);
+    const sent = fake.requests.at(-1);
     assert.equal(sent.path, "/v1/transcriptions");
-    assert.equal(sent.body.videoId, "dQw4w9WgXcQ");
-    assert.match(sent.headers["idempotency-key"], /^[0-9a-f-]{36}$/);
-    assert.match(auto.stderr, new RegExp(`idempotency-key ${sent.headers["idempotency-key"]}`));
-    assert.match(auto.stderr, /poll: arcmira transcripts status 2f2b4a3e/);
-    await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-key", "order-1"]);
-    assert.equal(fake.requests[fake.requests.length - 1].headers["idempotency-key"], "order-1");
+    assert.deepEqual(sent.body, { videoId: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0 });
+    assert.equal(sent.headers["idempotency-key"], "order-1");
+    assert.match(out.stderr, /transcripts status 2f2b4a3e/);
 });
 
 test("status with a request id points at transcripts status, exit 2, no call", async () => {

@@ -17,4 +17,6 @@ export interface ResolveEntitiesRequest {
     limit?: number;
     /** What the user said about the name, in their words ("the startup bank", "Canada's prime minister", "on My First Million"). Ranks candidates by their description and by the episodes they share with what the context names; a clear winner comes back as suggested with reason context. */
     context?: string;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.ResolveEntitiesRequestSrc;
 }

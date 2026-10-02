@@ -23,7 +23,7 @@ export class MentionsClient {
     }
 
     /**
-     * Cursor-paginated mentions filtered by entity (entity_id or entity_name is required), channel, text query, sentiment, appearance flag, and date range. Read timestamps from start_seconds / end_seconds (integer seconds; 0 means full episode); the MM:SS (or HH:MM:SS) string fields are deprecated. is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
+     * Cursor-paginated mentions filtered by entity (entity_id or entity_name is required), channel, text query, sentiment, appearance flag, and date range. The signed continuation binds the route, filters, limit, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Read timestamps from start_seconds / end_seconds (integer seconds; 0 means full episode); the MM:SS (or HH:MM:SS) string fields are deprecated. is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
      *
      * @param {Arcmira.ListMentionsRequest} request
      * @param {MentionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -63,6 +63,7 @@ export class MentionsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     details,
+                    src,
                 } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
@@ -78,6 +79,7 @@ export class MentionsClient {
                     date_from: dateFrom,
                     date_to: dateTo,
                     details: details != null ? details : undefined,
+                    src: src != null ? src : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -209,6 +211,7 @@ export class MentionsClient {
             published_after: publishedAfter,
             published_before: publishedBefore,
             limit,
+            src,
         } = request;
         const _queryParams: Record<string, unknown> = {
             channel_ids: channelIds,
@@ -219,6 +222,7 @@ export class MentionsClient {
             published_after: publishedAfter,
             published_before: publishedBefore,
             limit,
+            src: src != null ? src : undefined,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

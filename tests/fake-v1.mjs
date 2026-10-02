@@ -76,6 +76,7 @@ const ROUTES = [
     ["GET", /^\/v1\/channels\/([^/]+)\/sponsors$/, () => [200, body("list_channel_sponsors")]],
     ["GET", /^\/v1\/channels\/([^/]+)\/videos$/, () => [200, body("list_channel_videos")]],
     ["GET", /^\/v1\/channels\/([^/]+)\/coverage$/, () => [200, body("get_channel_coverage")]],
+    ["GET", /^\/v1\/transcripts\/([^/]+)\/quote$/, () => [200, body("quote_transcription")]],
     ["GET", /^\/v1\/transcripts\/([^/]+)$/, (m) => {
         if (m[1] === "missingvid0") return [404, notFoundBody("transcript_unavailable", "No transcript for this video.")];
         const b = body("get_transcript");

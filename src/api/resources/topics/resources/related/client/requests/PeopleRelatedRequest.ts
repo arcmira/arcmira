@@ -12,7 +12,7 @@ export interface PeopleRelatedRequest {
     /** The entity slug: the last segment of its arcmira.com page URL, as EntityRef.slug carries it. */
     slug: string;
     limit?: number;
-    /** Opaque cursor from a previous page's next_cursor. */
+    /** Signed continuation from next_cursor. Bound to route, filters, limit, caller and visibility; invalid or old tokens return invalid_cursor. Person appearance publication pages use a media-id insertion fence; aggregate sorts remain live. */
     cursor?: string;
     /** Substring filter over the row's text columns (e.g. video title, channel name, description). */
     q?: string;
@@ -22,4 +22,8 @@ export interface PeopleRelatedRequest {
     sort?: string;
     /** Sort direction. Default desc. */
     order?: Arcmira.topics.PeopleRelatedRequestOrder;
+    /** Person relationship lens: guest appearances or inbound mentions. */
+    mode?: Arcmira.topics.PeopleRelatedRequestMode;
+    /** For person appearances, true lists guest episodes and false lists inbound mentions. */
+    is_appearance?: Arcmira.topics.PeopleRelatedRequestIsAppearance;
 }

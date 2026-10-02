@@ -8,6 +8,7 @@ import type * as Arcmira from "../../../../index.js";
  */
 export interface ListMentionsRequest {
     limit?: number;
+    /** Signed continuation from next_cursor. Bound to this route, normalized query, caller and visibility; invalid or old tokens return invalid_cursor. */
     cursor?: string;
     entity_id?: string;
     entity_name?: string;
@@ -20,4 +21,6 @@ export interface ListMentionsRequest {
     date_from?: string;
     date_to?: string;
     details?: Arcmira.ListMentionsRequestDetails;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.ListMentionsRequestSrc;
 }

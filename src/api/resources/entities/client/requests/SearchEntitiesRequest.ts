@@ -13,4 +13,6 @@ export interface SearchEntitiesRequest {
     type?: Arcmira.SearchEntitiesRequestType;
     has_recommendations_data?: boolean;
     limit?: number;
+    /** The surface making this call. The Arcmira MCP server sends mcp-tool so every unlock link in a gate attributes to the directory install. Omit from your own client. */
+    src?: Arcmira.SearchEntitiesRequestSrc;
 }

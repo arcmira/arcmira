@@ -77,7 +77,10 @@ export class ChannelsClient {
         request: Arcmira.CoverageChannelsRequest,
         requestOptions?: ChannelsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.ChannelCoverageResponse>> {
-        const { channel_id: channelId } = request;
+        const { channel_id: channelId, src } = request;
+        const _queryParams: Record<string, unknown> = {
+            src: src != null ? src : undefined,
+        };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -93,7 +96,11 @@ export class ChannelsClient {
             ),
             method: "GET",
             headers: _headers,
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
+            queryString: core.url
+                .queryBuilder()
+                .addMany(_queryParams)
+                .mergeAdditional(requestOptions?.queryParams)
+                .build(),
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,

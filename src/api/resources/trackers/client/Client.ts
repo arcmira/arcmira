@@ -219,6 +219,7 @@ export class TrackersClient {
      * @throws {@link Arcmira.UnauthorizedError}
      * @throws {@link Arcmira.ForbiddenError}
      * @throws {@link Arcmira.NotFoundError}
+     * @throws {@link Arcmira.ConflictError}
      * @throws {@link Arcmira.TooManyRequestsError}
      * @throws {@link Arcmira.InternalServerError}
      * @throws {@link errors.ArcmiraError}
@@ -240,11 +241,12 @@ export class TrackersClient {
         request: Arcmira.DeleteTrackersRequest,
         requestOptions?: TrackersClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.MessageResponse>> {
-        const { id } = request;
+        const { id, "Idempotency-Key": idempotencyKey } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
             this._options?.headers,
+            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
             requestOptions?.headers,
         );
         const _response = await core.fetcher({
@@ -277,6 +279,8 @@ export class TrackersClient {
                     throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
                 case 404:
                     throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
+                case 409:
+                    throw new Arcmira.ConflictError(_response.error.body as Arcmira.Error_, _response.rawResponse);
                 case 429:
                     throw new Arcmira.TooManyRequestsError(
                         _response.error.body as Arcmira.Error_,

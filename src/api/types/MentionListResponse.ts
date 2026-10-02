@@ -10,6 +10,10 @@ export interface MentionListResponse {
     next_cursor: string | null;
     /** The resolved entity the mentions belong to. */
     entity: MentionListResponse.Entity;
+    /** Present on a free preview page: where the list stops and the plan that lifts it. Say so rather than calling this every mention. */
+    note?: string | undefined;
+    /** Present with note on a free preview page. */
+    unlock?: MentionListResponse.Unlock | undefined;
 }
 
 export namespace MentionListResponse {
@@ -53,5 +57,15 @@ export namespace MentionListResponse {
         appearances_page: string | null;
         /** For a person, the list of mentions of them on arcmira.com, page/mentions. Null for every other type: their page is the mentions list already. */
         mentions_page: string | null;
+    }
+
+    /**
+     * Present with note on a free preview page.
+     */
+    export interface Unlock {
+        /** The plan that lifts the preview. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

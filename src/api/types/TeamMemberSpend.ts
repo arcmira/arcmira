@@ -13,9 +13,9 @@ export interface TeamMemberSpend {
     seat_type: TeamMemberSpend.SeatType;
     /** Rows this member consumed in the current period. */
     rows_used: number;
-    /** On-demand overage spend for this member in the current period, in US cents, at the flat $0.004/row rate. */
+    /** Account-wide on-demand overage spend for this member in the current period, in US cents. */
     on_demand_spend_cents: number;
-    /** True when on-demand usage is active for this member. */
+    /** The member account's on-demand preference. Effective admission also depends on the team setting and remaining spend limit. */
     on_demand_enabled: boolean;
 }
 
