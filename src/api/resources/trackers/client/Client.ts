@@ -129,6 +129,7 @@ export class TrackersClient {
      *
      * @example
      *     await client.trackers.create({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         entityName: "entityName",
      *         entityType: "person"
      *     })
@@ -227,6 +228,7 @@ export class TrackersClient {
      *
      * @example
      *     await client.trackers.delete({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */
@@ -321,6 +323,7 @@ export class TrackersClient {
      *
      * @example
      *     await client.trackers.update({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */

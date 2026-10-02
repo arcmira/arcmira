@@ -31,7 +31,7 @@ def prepare(document, names):
     for path in ('/v1/openapi.json', '/v1/signups', '/v1/signups/verify', '/v1/search'):
         del doc['paths'][path]
     type_names = {
-        'TranscriptionRequest': 'TranscriptRequest',
+        'TranscriptionJob': 'TranscriptJob',
         'TranscriptionSubmitResponse': 'TranscriptRequestSubmitResponse',
         'TranscriptionListResponse': 'TranscriptRequestListResponse',
     }
@@ -48,6 +48,17 @@ def prepare(document, names):
         elif isinstance(value, list):
             for child in value: rename_refs(child)
     rename_refs(doc)
+    def collapse_job_refs(value):
+        # Fern inlines an allOf of the Job $ref plus a description; a bare $ref keeps one shared Job type.
+        if isinstance(value, dict):
+            parts = value.get('allOf')
+            if parts and sum('$ref' in part for part in parts) == 1 and all('$ref' in part or set(part) == {'description'} for part in parts) and any(part.get('$ref') == '#/components/schemas/TranscriptJob' for part in parts):
+                del value['allOf']
+                value['$ref'] = next(part['$ref'] for part in parts if '$ref' in part)
+            for child in value.values(): collapse_job_refs(child)
+        elif isinstance(value, list):
+            for child in value: collapse_job_refs(child)
+    collapse_job_refs(doc)
     # Fern 5.131.1 loses inherited example fields in this object intersection.
     suggestion = doc['components']['schemas']['ResolveSuggestion']
     members = [resolve(doc, part) for part in suggestion.pop('allOf')]
@@ -76,6 +87,10 @@ def prepare(document, names):
             elif key in names:
                 op['x-fern-sdk-group-name'] = names[key]['group']
                 op['x-fern-sdk-method-name'] = names[key]['method']
+            body = resolve(doc, op.get('requestBody', {})).get('content', {}).get('application/json', {}).get('schema', {})
+            # A deprecated body alias (videoId beside video_id) collides with its canonical name after camelCase normalization.
+            for name in [name for name, prop in body.get('properties', {}).items() if prop.get('deprecated')]:
+                del body['properties'][name]
             if path == '/v1/feedback' and method == 'post':
                 # Legacy query alternatives collide with the established body API.
                 op['parameters'] = [p for p in op.get('parameters', []) if not (p.get('in') == 'query' and p['name'] in {'type', 'query'})]
@@ -86,8 +101,9 @@ def prepare(document, names):
                 if code.startswith('2'):
                     response = resolve(doc, response)
                     schema = response.get('content', {}).get('application/json', {}).get('schema')
-                    if schema is not None and schema not in responses:
-                        responses.append(schema)
+                    for member in (schema or {}).get('oneOf', [schema] if schema is not None else []):
+                        if member not in responses:
+                            responses.append(member)
             if len(responses) > 1:
                 states = {}
                 for schema in responses:
@@ -106,8 +122,6 @@ def prepare(document, names):
                 items = collection(doc, responses[0])
                 if 'next_cursor' not in resolve(doc, responses[0]).get('properties', {}):
                     raise ValueError(f'Cursor operation lacks next_cursor: {path}')
-                if path in {'/v1/transcriptions', '/v1/channels/{channel_id}/videos'}:
-                    continue
                 op['x-fern-pagination'] = {'cursor': '$request.cursor', 'next_cursor': '$response.next_cursor', 'results': '$response.' + items}
     return doc
 

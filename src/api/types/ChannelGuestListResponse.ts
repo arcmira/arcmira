@@ -7,12 +7,8 @@ export interface ChannelGuestListResponse {
     items: ChannelGuestListResponse.Items.Item[];
     /** Rows matching the filter across all pages. */
     total: number;
-    /** Row offset of this page, as the cursor encoded it. 0 on the first page. */
-    offset: number;
     /** Page size applied, after the plan clamp. */
     limit: number;
-    /** Same value as has_more, kept for readers of the web shape. */
-    hasMore: boolean;
     /** True when more rows exist past this page. */
     has_more: boolean;
     /** Opaque cursor for the next page. Null on the last page. */

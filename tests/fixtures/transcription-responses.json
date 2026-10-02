@@ -133,14 +133,15 @@
       "duration_seconds": 600,
       "billing_scope": "full_video",
       "owned": false,
-      "eligible": false,
+      "eligible": true,
       "quote": {
         "quarters": 1,
         "rows": 75
       },
       "charge": {
-        "unit": "rows",
-        "amount": 75
+        "unit": "credits",
+        "amount": 300,
+        "from": "included"
       },
       "credits_per_row": 4,
       "max_on_demand_cents": 0,
@@ -156,14 +157,15 @@
           "duration_seconds": 600,
           "billing_scope": "full_video",
           "owned": false,
-          "eligible": false,
+          "eligible": true,
           "quote": {
             "quarters": 1,
             "rows": 75
           },
           "charge": {
-            "unit": "rows",
-            "amount": 75
+            "unit": "credits",
+            "amount": 300,
+            "from": "included"
           },
           "credits_per_row": 4,
           "max_on_demand_cents": 0,
@@ -178,36 +180,19 @@
     "status": 200,
     "body": {
       "id": "00000000-0000-4000-8000-000000000001",
-      "videoId": "dQw4w9WgXcQ",
-      "status": "queued",
+      "video_id": "dQw4w9WgXcQ",
       "state": "pending",
+      "status": "queued",
       "stage": "queued",
-      "quote": {
-        "quarters": 1,
-        "rows": 75
+      "charge": {
+        "unit": "credits",
+        "amount": 1200,
+        "from": "included"
       },
-      "etaSeconds": 172,
-      "nextPollSeconds": 29,
-      "createdAt": "2026-10-01 00:00:00"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "id": "00000000-0000-4000-8000-000000000001",
-          "videoId": "dQw4w9WgXcQ",
-          "status": "queued",
-          "state": "pending",
-          "stage": "queued",
-          "quote": {
-            "quarters": 1,
-            "rows": 75
-          },
-          "etaSeconds": 172,
-          "nextPollSeconds": 29,
-          "createdAt": "2026-10-01 00:00:00"
-        }
-      }
+      "eta_seconds": 172,
+      "next_poll_seconds": 29,
+      "created_at": "2026-10-01 00:00:00",
+      "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
     }
   },
   "list_transcriptions": {
@@ -216,48 +201,209 @@
       "requests": [
         {
           "id": "00000000-0000-4000-8000-000000000001",
-          "videoId": "dQw4w9WgXcQ",
-          "status": "queued",
+          "video_id": "dQw4w9WgXcQ",
           "state": "pending",
+          "status": "queued",
           "stage": "queued",
-          "quote": {
-            "quarters": 1,
-            "rows": 75
+          "charge": {
+            "unit": "credits",
+            "amount": 1200,
+            "from": "included"
           },
-          "etaSeconds": 172,
-          "nextPollSeconds": 29,
-          "createdAt": "2026-10-01 00:00:00",
+          "eta_seconds": 172,
+          "next_poll_seconds": 29,
+          "created_at": "2026-10-01 00:00:00",
+          "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
           "title": "First video"
         }
       ],
       "has_more": false,
       "next_cursor": null
-    },
-    "responses": {
-      "200": {
-        "status": 200,
+    }
+  },
+  "preparation_required": {
+    "status": 200,
+    "body": {
+      "state": "preparation_required",
+      "quality": "premium",
+      "video_id": "dQw4w9WgXcQ",
+      "quote": {
+        "rows": 300,
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
+        },
+        "eligible": true,
+        "max_on_demand_cents": 0
+      },
+      "action": {
+        "method": "POST",
+        "url": "https://api.arcmira.com/v1/transcriptions",
         "body": {
-          "requests": [
-            {
-              "id": "00000000-0000-4000-8000-000000000001",
-              "videoId": "dQw4w9WgXcQ",
-              "status": "queued",
-              "state": "pending",
-              "stage": "queued",
-              "quote": {
-                "quarters": 1,
-                "rows": 75
-              },
-              "etaSeconds": 172,
-              "nextPollSeconds": 29,
-              "createdAt": "2026-10-01 00:00:00",
-              "title": "First video"
-            }
-          ],
-          "has_more": false,
-          "next_cursor": null
+          "video_id": "dQw4w9WgXcQ"
         }
+      },
+      "last_attempt": {
+        "status": "refunded",
+        "error": "Transcription timed out."
       }
+    }
+  },
+  "pending_premium": {
+    "status": 200,
+    "body": {
+      "state": "pending",
+      "quality": "premium",
+      "video_id": "dQw4w9WgXcQ",
+      "job": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "video_id": "dQw4w9WgXcQ",
+        "state": "pending",
+        "status": "queued",
+        "stage": "queued",
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
+        },
+        "eta_seconds": 172,
+        "next_poll_seconds": 29,
+        "created_at": "2026-10-01 00:00:00",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+      }
+    }
+  },
+  "submit_pending": {
+    "status": 200,
+    "body": {
+      "job": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "video_id": "dQw4w9WgXcQ",
+        "state": "pending",
+        "status": "queued",
+        "stage": "queued",
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
+        },
+        "eta_seconds": 172,
+        "next_poll_seconds": 29,
+        "created_at": "2026-10-01 00:00:00",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+      },
+      "existing": false
+    }
+  },
+  "submit_ready": {
+    "status": 200,
+    "body": {
+      "job": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "video_id": "dQw4w9WgXcQ",
+        "state": "ready",
+        "status": "complete",
+        "stage": null,
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
+        },
+        "created_at": "2026-10-01 00:00:00",
+        "completed_at": "2026-10-01 00:04:10",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+      },
+      "existing": true
+    }
+  },
+  "job_ready": {
+    "status": 200,
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "video_id": "dQw4w9WgXcQ",
+      "state": "ready",
+      "status": "complete",
+      "stage": null,
+      "charge": {
+        "unit": "credits",
+        "amount": 1200,
+        "from": "included"
+      },
+      "created_at": "2026-10-01 00:00:00",
+      "completed_at": "2026-10-01 00:04:10",
+      "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "job_refunded": {
+    "status": 200,
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "video_id": "dQw4w9WgXcQ",
+      "state": "refunded",
+      "status": "refunded",
+      "stage": null,
+      "charge": {
+        "unit": "credits",
+        "amount": 1200,
+        "from": "included"
+      },
+      "created_at": "2026-10-01 00:00:00",
+      "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
+      "error": "Transcription timed out.",
+      "refunded": true,
+      "completed_at": "2026-10-01 00:04:10"
+    }
+  },
+  "premium_ready": {
+    "status": 200,
+    "body": {
+      "state": "ready",
+      "video": {
+        "id": "dQw4w9WgXcQ",
+        "title": "TBPN | Tuesday, August 4",
+        "channel_id": "UC-DRzaGnL_vtBUpCFH5M0tg",
+        "channel_name": "TBPN",
+        "published_at": "2026-08-04T17:00:00.000Z",
+        "duration_seconds": 3600,
+        "watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      },
+      "quality": "premium",
+      "source": "arcmira_premium",
+      "language": "en",
+      "languages": [],
+      "lines": [
+        {
+          "start": 0,
+          "end": 20,
+          "text": "Ramp has been on the show for a while now.",
+          "speaker": 0
+        },
+        {
+          "start": 20,
+          "end": 45,
+          "text": "The pitch is still the same, spend less time on expenses.",
+          "speaker": 1
+        }
+      ],
+      "speakers": [
+        {
+          "id": 0,
+          "name": "John Coogan",
+          "entity_id": 91,
+          "confidence": "high"
+        },
+        {
+          "id": 1,
+          "name": "Speaker 1",
+          "entity_id": null,
+          "confidence": null
+        }
+      ],
+      "revision": "rev_1",
+      "rows_billed": 0,
+      "as_of": "2026-08-05T00:00:00.000Z",
+      "note": "Premium transcripts are Arcmira's own. Every Premium transcript is diarized: each line carries a speaker. We identify each speaker from the audio, the video, and internal and community review. We are right most of the time and wrong sometimes, so when a name matters, say it came from Arcmira's speaker identification and cite the line."
     }
   }
 }

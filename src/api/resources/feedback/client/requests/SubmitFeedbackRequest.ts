@@ -5,6 +5,7 @@ import type * as Arcmira from "../../../../index.js";
 /**
  * @example
  *     {
+ *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
  *         type: "recommendations",
  *         query: {
  *             "key": "value"
@@ -12,7 +13,7 @@ import type * as Arcmira from "../../../../index.js";
  *     }
  */
 export interface SubmitFeedbackRequest {
-    /** Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
+    /** 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
     "Idempotency-Key"?: string;
     /** The surface being reviewed. Values: recommendations (/v1/recommendations rows by com_* id; requires a Pro+ plan), channel_sponsors (sponsor entities on a channel; requires a Pro+ plan), mentions (/v1/mentions rows by men_* id), entities_search (/v1/entities/search hits), entities (/v1/entities/lookup and /v1/entities/{id} payloads), channels (/v1/channels/{slug} payloads), monitor_alert (fired alert rows from /v1/monitors/{id}/alerts or /v1/trackers/{id}/alerts; corrections target the alert row id), appearances (person appearance rows), search (rows from /v1/search or /v1/entities/search). */
     type: SubmitFeedbackRequest.Type;

@@ -85,12 +85,13 @@ const ROUTES = [
     }],
     ["POST", /^\/v1\/transcriptions$/, (_m, _url, json) => {
         const b = body("submit_transcription");
-        Object.assign(b.request, { id: "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", videoId: json?.videoId ?? "", etaSeconds: 540, nextPollSeconds: 30 });
+        const id = "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60";
+        Object.assign(b.job, { id, video_id: json?.video_id ?? "", eta_seconds: 540, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${id}` });
         return [fixtures.submit_transcription.status, b];
     }],
     ["GET", /^\/v1\/transcriptions\/([^/]+)$/, (m) => {
         const b = body("get_transcription");
-        Object.assign(b, { id: m[1], videoId: "dQw4w9WgXcQ", status: "transcribing", stage: "transcribing", etaSeconds: 300, nextPollSeconds: 30 });
+        Object.assign(b, { id: m[1], status: "transcribing", stage: "transcribing", eta_seconds: 300, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${m[1]}` });
         return [200, b];
     }],
     ["POST", /^\/v1\/monitors$/, (_m, _url, json) => {

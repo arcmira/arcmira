@@ -23,7 +23,7 @@ export class AppearancesClient {
     }
 
     /**
-     * Appearances (the person was actually present in the media) for one person, newest first. Person-only: the equivalent route for any other entity type returns a 400 (appearances_person_only). Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape. The rows are display-oriented. For programmatic pagination, date filtering, and the standard mention-row shape, use GET /v1/mentions?entity_id=...&is_appearance=true instead.
+     * Appearances (the person was actually present in the media) for one person, newest first. Person-only: the equivalent route for any other entity type returns a 400 (appearances_person_only). Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied. The rows are display-oriented. For programmatic pagination, date filtering, and the standard mention-row shape, use GET /v1/mentions?entity_id=...&is_appearance=true instead.
      *
      * @param {Arcmira.people.ListAppearancesRequest} request
      * @param {AppearancesClient.RequestOptions} requestOptions - Request-specific configuration.

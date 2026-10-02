@@ -2,9 +2,9 @@
 
 Generated from `fern/openapi.json` and the public SDK overlay. Run `python3 scripts/build-reference.py`.
 
-Transcript reads return `state: ready` or `state: pending`. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.
+Transcript reads return `state: ready`, `state: preparation_required` or `state: pending`. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.
 
-Preparation requires a persisted Idempotency-Key and max_rows. max_on_demand_cents defaults to zero. Retry a lost response with the same key and identical input.
+Preparation from included credits is one POST of `{ video_id }` with no key; repeats join the same job. A positive max_on_demand_cents needs an Idempotency-Key and max_rows; retry a lost response with the same key and identical input.
 
 ## health.check
 
@@ -110,7 +110,7 @@ Cursor-paginated mentions for one entity, newest media first. Read timestamps fr
 
 `GET /v1/entities/{id}/recommendations`
 
-Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) for one entity, newest media first. The signed continuation binds the route, filters, limit, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Read timestamps from start_seconds / end_seconds (integer seconds); the MM:SS string fields are deprecated. Rows below min_confidence (default 0.7) and disputed rows (unless include_disputed=true) are excluded.
+Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) for one entity, newest media first. The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Read timestamps from start_seconds / end_seconds (integer seconds); the MM:SS string fields are deprecated. Rows below min_confidence (default 0.7) and disputed rows (unless include_disputed=true) are excluded.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -129,7 +129,7 @@ Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) 
 
 `GET /v1/mentions`
 
-Cursor-paginated mentions filtered by entity (entity_id or entity_name is required), channel, text query, sentiment, appearance flag, and date range. The signed continuation binds the route, filters, limit, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Read timestamps from start_seconds / end_seconds (integer seconds; 0 means full episode); the MM:SS (or HH:MM:SS) string fields are deprecated. is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
+Cursor-paginated mentions filtered by entity (entity_id or entity_name is required), channel, text query, sentiment, appearance flag, and date range. The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Read timestamps from start_seconds / end_seconds (integer seconds; 0 means full episode); the MM:SS (or HH:MM:SS) string fields are deprecated. is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -151,7 +151,7 @@ Cursor-paginated mentions filtered by entity (entity_id or entity_name is requir
 
 `GET /v1/recommendations`
 
-Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) filtered by entity (entity_id or entity_name is required), channel, mention_class, confidence, and date range. The signed continuation binds the route, filters, limit, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Read timestamps from start_seconds / end_seconds (integer seconds); the MM:SS string fields are deprecated.
+Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) filtered by entity (entity_id or entity_name is required), channel, mention_class, confidence, and date range. The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Read timestamps from start_seconds / end_seconds (integer seconds); the MM:SS string fields are deprecated.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -254,7 +254,7 @@ How many videos of a YouTube channel are searchable, the newest publish date amo
 
 `GET /v1/channels/{channel_id}/videos`
 
-The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Pass next_cursor as cursor to continue. The signed token binds the route, filters, limit, caller and visibility; invalid or old tokens return invalid_cursor. A first-page media ID fence excludes later insertions, including old-date backfills; edits and deletions to existing rows remain live. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; channel backfill is not available yet. Bills one row per video returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Pass next_cursor as cursor to continue. The signed token binds the route, filters, caller and visibility; invalid or old tokens return invalid_cursor. A first-page media ID fence excludes later insertions, including old-date backfills; edits and deletions to existing rows remain live. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; channel backfill is not available yet. Bills one row per video returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -295,7 +295,7 @@ Get a person entity page
 
 `GET /v1/people/{slug}/appearances`
 
-Appearances (the person was actually present in the media) for one person, newest first. Person-only: the equivalent route for any other entity type returns a 400 (appearances_person_only). Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape. The rows are display-oriented. For programmatic pagination, date filtering, and the standard mention-row shape, use GET /v1/mentions?entity_id=...&is_appearance=true instead.
+Appearances (the person was actually present in the media) for one person, newest first. Person-only: the equivalent route for any other entity type returns a 400 (appearances_person_only). Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied. The rows are display-oriented. For programmatic pagination, date filtering, and the standard mention-row shape, use GET /v1/mentions?entity_id=...&is_appearance=true instead.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -313,7 +313,7 @@ Appearances (the person was actually present in the media) for one person, newes
 
 `GET /v1/people/{slug}/topics`
 
-The topics that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The topics that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -331,7 +331,7 @@ The topics that co-occur with this person in indexed media, with q/field/sort/or
 
 `GET /v1/people/{slug}/people`
 
-The people that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The people that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -349,7 +349,7 @@ The people that co-occur with this person in indexed media, with q/field/sort/or
 
 `GET /v1/people/{slug}/organizations`
 
-The organizations that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The organizations that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -367,7 +367,7 @@ The organizations that co-occur with this person in indexed media, with q/field/
 
 `GET /v1/people/{slug}/products`
 
-The products that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The products that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -385,7 +385,7 @@ The products that co-occur with this person in indexed media, with q/field/sort/
 
 `GET /v1/people/{slug}/channels`
 
-The channels that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The channels that co-occur with this person in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -413,7 +413,7 @@ Get a topic entity page
 
 `GET /v1/topics/{slug}/topics`
 
-The topics that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The topics that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -431,7 +431,7 @@ The topics that co-occur with this topic in indexed media, with q/field/sort/ord
 
 `GET /v1/topics/{slug}/people`
 
-The people that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The people that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -449,7 +449,7 @@ The people that co-occur with this topic in indexed media, with q/field/sort/ord
 
 `GET /v1/topics/{slug}/organizations`
 
-The organizations that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The organizations that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -467,7 +467,7 @@ The organizations that co-occur with this topic in indexed media, with q/field/s
 
 `GET /v1/topics/{slug}/products`
 
-The products that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The products that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -485,7 +485,7 @@ The products that co-occur with this topic in indexed media, with q/field/sort/o
 
 `GET /v1/topics/{slug}/channels`
 
-The channels that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The channels that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -513,7 +513,7 @@ Get a organization entity page
 
 `GET /v1/organizations/{slug}/topics`
 
-The topics that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The topics that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -531,7 +531,7 @@ The topics that co-occur with this organization in indexed media, with q/field/s
 
 `GET /v1/organizations/{slug}/people`
 
-The people that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The people that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -549,7 +549,7 @@ The people that co-occur with this organization in indexed media, with q/field/s
 
 `GET /v1/organizations/{slug}/organizations`
 
-The organizations that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The organizations that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -567,7 +567,7 @@ The organizations that co-occur with this organization in indexed media, with q/
 
 `GET /v1/organizations/{slug}/products`
 
-The products that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The products that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -585,7 +585,7 @@ The products that co-occur with this organization in indexed media, with q/field
 
 `GET /v1/organizations/{slug}/channels`
 
-The channels that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The channels that co-occur with this organization in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -613,7 +613,7 @@ Get a product entity page
 
 `GET /v1/products/{slug}/topics`
 
-The topics that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The topics that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -631,7 +631,7 @@ The topics that co-occur with this product in indexed media, with q/field/sort/o
 
 `GET /v1/products/{slug}/people`
 
-The people that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The people that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -649,7 +649,7 @@ The people that co-occur with this product in indexed media, with q/field/sort/o
 
 `GET /v1/products/{slug}/organizations`
 
-The organizations that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The organizations that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -667,7 +667,7 @@ The organizations that co-occur with this product in indexed media, with q/field
 
 `GET /v1/products/{slug}/products`
 
-The products that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The products that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -685,7 +685,7 @@ The products that co-occur with this product in indexed media, with q/field/sort
 
 `GET /v1/products/{slug}/channels`
 
-The channels that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The channels that co-occur with this product in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -713,7 +713,7 @@ Channel pages include a recommendations_summary teaser: sponsor_count for all ca
 
 `GET /v1/channels/{slug}/topics`
 
-The topics that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The topics that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -731,7 +731,7 @@ The topics that co-occur with this channel in indexed media, with q/field/sort/o
 
 `GET /v1/channels/{slug}/people`
 
-The people that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The people that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -749,7 +749,7 @@ The people that co-occur with this channel in indexed media, with q/field/sort/o
 
 `GET /v1/channels/{slug}/organizations`
 
-The organizations that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The organizations that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -767,7 +767,7 @@ The organizations that co-occur with this channel in indexed media, with q/field
 
 `GET /v1/channels/{slug}/products`
 
-The products that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The products that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -785,7 +785,7 @@ The products that co-occur with this channel in indexed media, with q/field/sort
 
 `GET /v1/channels/{slug}/channels`
 
-The channels that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+The channels that co-occur with this channel in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -803,7 +803,7 @@ The channels that co-occur with this channel in indexed media, with q/field/sort
 
 `GET /v1/channels/{slug}/guests`
 
-People who appeared as guests on the channel, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+People who appeared as guests on the channel, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -915,12 +915,12 @@ Attaches EXISTING trackers to the monitor by id ({ trackerIds: ["trk_..."] }). I
 
 `GET /v1/monitors/{id}/alerts`
 
-The newest n alert deliveries for the monitor, as a single page. This endpoint does not paginate: has_more is always false and next_cursor is always null. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
+The newest limit alert deliveries for the monitor (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
-| `n` | query | no | integer 1..100 |
+| `limit` | query | no | integer 1..100 |
 
 ## trackers.list
 
@@ -985,12 +985,12 @@ Deletes the tracker. Cannot be undone.
 
 `GET /v1/trackers/{id}/alerts`
 
-The newest n alert deliveries for the tracker, as a single page. This endpoint does not paginate: has_more is always false and next_cursor is always null. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
+The newest limit alert deliveries for the tracker (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
-| `n` | query | no | integer 1..100 |
+| `limit` | query | no | integer 1..100 |
 
 ## team.members
 
@@ -1020,7 +1020,7 @@ Account usage log across every active team member, including personal-key use an
 
 `GET /v1/transcripts/{video_id}`
 
-Caption retrieval costs one row per started 15 minutes. Premium retrieval is free and never buys, generates, or returns fallback captions. It returns owned ready content, 202 pending with a status URL, or 403 purchase_required with quote and prepare URLs. Purchase the full video explicitly through POST /v1/transcriptions. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium responses retain revision and line indexes for corrections.
+Caption retrieval costs one row per started 15 minutes. Premium retrieval is free and never buys, generates, or returns fallback captions. Branch on state: 200 ready is owned content; 202 pending carries the job, with Retry-After; 200 preparation_required carries the whole-video quote and the action to take, POST /v1/transcriptions with { video_id }, plus last_attempt when the previous purchase failed. Plans without Premium read captions with an access gate instead. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium responses retain revision and line indexes for corrections.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -1036,7 +1036,7 @@ Caption retrieval costs one row per started 15 minutes. Premium retrieval is fre
 
 `GET /v1/transcripts/{video_id}/quote`
 
-Optional free quote. It does not reserve funds or start generation. max_rows authorizes rows, while max_on_demand_cents separately authorizes new money and defaults to zero on purchase. The accepted purchase stores its pricing mode.
+Optional free quote. It does not reserve funds or start generation. max_rows authorizes rows, while max_on_demand_cents separately authorizes new money and defaults to zero on purchase. The accepted purchase stores its pricing mode. A video with no known duration, or one past the 12 hour cap, answers 400 invalid_query with param video_id.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -1056,21 +1056,21 @@ Free (0 rows), any key. Returns the video metadata and every caption track YouTu
 
 `POST /v1/transcriptions`
 
-Explicit whole-video purchase. Requires Idempotency-Key and max_rows; max_on_demand_cents defaults to zero. Accepted price, mode, and debit identity persist across retries. Included rows or credits are reserved up front; monetary on-demand usage is reserved until Premium is ready. Existing owned unlocks cost zero. A terminal generation failure refunds the exact original debit and period before reporting refunded. A repeated key returns the same request; different intent with that key returns idempotency_conflict. Poll the returned request with Retry-After. Pending work returns 202 and an existing artifact returns 201.
+Explicit whole-video Premium purchase in one request: POST { video_id }. With no max_rows the purchase is capped at the current quote, and max_on_demand_cents defaults to zero, so it spends included rows or credits only and moves no money. Idempotency-Key is optional: without one, a purchase already open or owned for this video is returned with existing: true, and two simultaneous requests buy once. max_on_demand_cents above 0 is the only way to move money and requires both Idempotency-Key and max_rows (400 invalid_body names the missing one in param). A video with no known duration or longer than 12 hours answers 400 invalid_query with param video_id. A plan without Premium answers 403 forbidden with unlock. Accepted price, mode, and debit identity persist across retries. Included rows or credits are reserved up front; monetary on-demand usage is reserved until Premium is ready. Existing owned unlocks cost zero. A terminal generation failure refunds the exact original debit and period before reporting refunded. A repeated key returns the same request; different intent with that key returns idempotency_conflict. The body is { job, existing }. Poll job.status_url after Retry-After. A pending job returns 202; a ready, failed or refunded job returns 200. Idempotency-Replayed: true marks a replay of the same key; a different key joined onto the active purchase answers existing: true without it.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
-| `Idempotency-Key` | header | yes | string |
-| `max_on_demand_cents` | body | no | number 0.. |
-| `max_rows` | body | yes | integer 0..3600 |
-| `videoId` | body | no | string |
+| `Idempotency-Key` | header | no | string |
+| `video_id` | body | no | string |
 | `url` | body | no | string |
+| `max_rows` | body | no | integer 0..3600 |
+| `max_on_demand_cents` | body | no | integer 0.. |
 
 ## transcripts.listRequests
 
 `GET /v1/transcriptions`
 
-Your transcription requests in descending creation time and id order. limit defaults to 20 and accepts 1–100. Follow next_cursor with the same video_id, limit and credential; has_more is false and next_cursor is null on the last page. A traversal excludes requests inserted after its first page. Each entry has the same shape as the status poll plus a `title` field (the video title, null when unknown). The scheduled reconciler advances requests; reading this list never dispatches work or changes billing. In-flight entries carry `etaSeconds` + `nextPollSeconds`.
+Your transcription requests in descending creation time and id order. limit defaults to 20 and accepts 1–100. Follow next_cursor with the same video_id, limit and credential; has_more is false and next_cursor is null on the last page. A traversal excludes requests inserted after its first page. Each entry has the same shape as the status poll plus a `title` field (the video title, null when unknown). The scheduled reconciler advances requests; reading this list never dispatches work or changes billing. In-flight entries carry `eta_seconds` and `next_poll_seconds`.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -1082,7 +1082,7 @@ Your transcription requests in descending creation time and id order. limit defa
 
 `GET /v1/transcriptions/{id}`
 
-Agent-friendly polling contract: while the request is in flight the response carries a Retry-After header (seconds) and body fields `etaSeconds` + `nextPollSeconds`. Sleep on Retry-After and re-poll. `status` walks queued → downloading → transcribing → analyzing → complete (user-facing `stage` folds downloading into transcribing). refund_pending retains Retry-After and nextPollSeconds until reversal completes; it has no completion ETA. Terminal statuses (`complete`, `failed`, `refunded`) drop Retry-After. On `complete`, fetch the transcript via GET /v1/transcripts/{video_id}; the successful purchase owns the permanent unlock. `refunded` means the pipeline failed and the rows were returned. A caller with no account holds no jobs: it is refused with 401 job_requires_account, whose unlock points at sign-up.
+Agent-friendly polling contract: while the request is in flight the response carries a Retry-After header (seconds) and body fields `eta_seconds` and `next_poll_seconds`. Sleep on Retry-After and re-poll. `status` walks queued → downloading → transcribing → analyzing → complete (user-facing `stage` folds downloading into transcribing). refund_pending retains Retry-After and next_poll_seconds until reversal completes; it has no completion ETA. Terminal statuses (`complete`, `failed`, `refunded`) drop Retry-After. On `complete`, fetch the transcript via GET /v1/transcripts/{video_id}; the successful purchase owns the permanent unlock. `refunded` means the pipeline failed and the rows were returned. A caller with no account holds no jobs: it is refused with 401 job_requires_account, whose unlock points at sign-up.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -1092,7 +1092,7 @@ Agent-friendly polling contract: while the request is in flight the response car
 
 `POST /v1/videos/{video_id}/corrections`
 
-Unified corrections ingestion for all kinds: line_edit, speaker_reassign, speaker_identify, add_person, entity_tag, segment_rewrite. Corrections are free (0 rows) and land as pending-review rows attributed to your API key; speaker_identify/add_person also create a community-flagged appearance immediately. segment_rewrite is the structural primitive: it replaces an inclusive segment range with new segments (an empty replacements array deletes the range); timestamps can be pinned per replacement with optional start/end seconds, and unpinned times are repaired by char-proportional interpolation between pins. Anchored kinds (line_edit, speaker_reassign, entity_tag, segment_rewrite) must echo the `revision` from a Premium transcript read and an `anchor` ({ segmentIndex, contentHash: djb2 of the covered segment text }); `anchor.segmentIndex` is the line's `index` in that read. Error semantics for outbox-style clients: A 409 with a revision/anchor reason means the transcript changed (body { reason, currentRevision }); create a new event and key after re-anchoring, because the original refusal consumed its sequence and is replayable. A 409 with reason idempotency_conflict means a finalized key was reused for changed intent; recover the original request instead of rebasing that key. A 412 sequence mismatch (body { expectedSeq }) stores no receipt or effect; synchronize local counters and resend under the same key.
+Unified corrections ingestion for all kinds: line_edit, speaker_reassign, speaker_identify, add_person, entity_tag, segment_rewrite. Corrections are free (0 rows) and land as pending-review rows attributed to your API key; speaker_identify/add_person also create a community-flagged appearance immediately. segment_rewrite is the structural primitive: it replaces an inclusive segment range with new segments (an empty replacements array deletes the range); timestamps can be pinned per replacement with optional start/end seconds, and unpinned times are repaired by char-proportional interpolation between pins. Anchored kinds (line_edit, speaker_reassign, entity_tag, segment_rewrite) must echo the `revision` from a Premium transcript read and an `anchor` ({ segmentIndex, contentHash: djb2 of the covered segment text }); `anchor.segmentIndex` is the line's `index` in that read. Every refusal uses the shared error envelope. Error semantics for outbox-style clients: a 409 revision_mismatch or anchor_mismatch means the transcript changed, and error.current_revision is the revision to re-read; create a new event and key after re-anchoring, because the original refusal consumed its sequence and is replayable. A 409 idempotency_conflict means a finalized key was reused for changed intent; recover the original request instead of rebasing that key. A 412 sequence_mismatch stores no receipt or effect; error.expected_seq is the next seq, so synchronize local counters and resend under the same key.
 
 | Field | Location | Required | Type |
 |---|---|---|---|

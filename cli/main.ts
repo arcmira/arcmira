@@ -701,7 +701,7 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
         run: async ({ client, positionals: [channel], values: v }) =>
-            client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) }),
+            (await client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) })).response,
         print: (r: Arcmira.ChannelVideosResponse) => {
             if (r.episodes.length === 0) return console.log("Nothing indexed for this channel.");
             for (const e of r.episodes) console.log(`${day(e.published_at)}  ${e.video_id}  ${seconds(e.duration_seconds).padStart(7)}  ${e.title ?? ""}`);
@@ -733,8 +733,12 @@ const COMMANDS: Record<string, Command> = {
             }),
         print: (r: Arcmira.TranscriptResult) => {
             if (r.state === "pending") {
-                console.log(`pending  ${r.status_url}`);
-                note(`poll after ${r.next_poll_seconds} s; no purchase was made by this read`);
+                console.log(`pending  ${r.job.status_url}`);
+                note(`poll after ${r.job.next_poll_seconds ?? "-"} s; no purchase was made by this read`);
+                return;
+            }
+            if (r.state === "preparation_required") {
+                console.log(`preparation_required  ${r.video_id}`);
                 return;
             }
             const names = new Map((r.speakers ?? []).map((s) => [s.id, s.name]));
@@ -775,16 +779,16 @@ const COMMANDS: Record<string, Command> = {
             if (!key || maxRows === undefined) throw new UsageError("Preparation requires --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
             if (cents < 0) throw new UsageError("--max-on-demand-cents must be nonnegative", "invalid_option");
             try {
-                return await client.transcripts.request({ "Idempotency-Key": key, videoId, max_rows: maxRows, max_on_demand_cents: cents });
+                return await client.transcripts.request({ "Idempotency-Key": key, video_id: videoId, max_rows: maxRows, max_on_demand_cents: cents });
             } catch (error) {
                 if (error instanceof ArcmiraError && error.statusCode !== undefined) throw error;
                 throw new ArcmiraError({ message: "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key." });
             }
         },
-        print: ({ request: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
-            console.log(`${r.id}  ${r.videoId}  ${r.state}  ${r.quote.rows} rows${existing ? "  (existing request)" : ""}`);
-            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
-            else note(`poll after ${r.nextPollSeconds ?? "-"} s: arcmira transcripts status ${r.id}`);
+        print: ({ job: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
+            console.log(`${r.id}  ${r.video_id}  ${r.state}${r.charge ? `  ${r.charge.amount} credits` : ""}${existing ? "  (existing request)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
+            else if (r.state === "pending") note(`poll after ${r.next_poll_seconds ?? "-"} s: arcmira transcripts status ${r.id}`);
         },
     },
     "transcripts status": {
@@ -796,10 +800,10 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: {},
         run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
-        print: (r: Arcmira.TranscriptRequest) => {
-            const eta = r.etaSeconds != null ? `, about ${seconds(r.etaSeconds)} left, next poll in ${r.nextPollSeconds ?? "-"} s` : "";
-            console.log(`${r.id ?? "-"}  ${r.videoId}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (rows refunded)" : ""}`);
-            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.videoId} --quality premium`);
+        print: (r: Arcmira.TranscriptJob) => {
+            const eta = r.eta_seconds != null ? `, about ${seconds(r.eta_seconds)} left, next poll in ${r.next_poll_seconds ?? "-"} s` : "";
+            console.log(`${r.id}  ${r.video_id}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (credits refunded)" : ""}`);
+            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
         },
     },
     occurrences: {

@@ -595,54 +595,61 @@
   "submit_transcription": {
     "status": 202,
     "body": {
-      "request": {
+      "job": {
         "id": "00000000-0000-4000-8000-000000000001",
-        "videoId": "dQw4w9WgXcQ",
-        "status": "queued",
+        "video_id": "dQw4w9WgXcQ",
         "state": "pending",
+        "status": "queued",
         "stage": "queued",
-        "quote": {
-          "quarters": 1,
-          "rows": 75
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
         },
-        "etaSeconds": 172,
-        "nextPollSeconds": 29,
-        "createdAt": "2026-10-01 00:00:00"
-      }
+        "eta_seconds": 172,
+        "next_poll_seconds": 29,
+        "created_at": "2026-10-01 00:00:00",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+      },
+      "existing": false
     }
   },
   "get_transcription": {
     "status": 200,
     "body": {
       "id": "00000000-0000-4000-8000-000000000001",
-      "videoId": "dQw4w9WgXcQ",
-      "status": "queued",
+      "video_id": "dQw4w9WgXcQ",
       "state": "pending",
+      "status": "queued",
       "stage": "queued",
-      "quote": {
-        "quarters": 1,
-        "rows": 75
+      "charge": {
+        "unit": "credits",
+        "amount": 1200,
+        "from": "included"
       },
-      "etaSeconds": 172,
-      "nextPollSeconds": 29,
-      "createdAt": "2026-10-01 00:00:00"
+      "eta_seconds": 172,
+      "next_poll_seconds": 29,
+      "created_at": "2026-10-01 00:00:00",
+      "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
     },
     "responses": {
       "200": {
         "status": 200,
         "body": {
           "id": "00000000-0000-4000-8000-000000000001",
-          "videoId": "dQw4w9WgXcQ",
-          "status": "queued",
+          "video_id": "dQw4w9WgXcQ",
           "state": "pending",
+          "status": "queued",
           "stage": "queued",
-          "quote": {
-            "quarters": 1,
-            "rows": 75
+          "charge": {
+            "unit": "credits",
+            "amount": 1200,
+            "from": "included"
           },
-          "etaSeconds": 172,
-          "nextPollSeconds": 29,
-          "createdAt": "2026-10-01 00:00:00"
+          "eta_seconds": 172,
+          "next_poll_seconds": 29,
+          "created_at": "2026-10-01 00:00:00",
+          "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
         }
       }
     }
@@ -788,14 +795,15 @@
       "duration_seconds": 600,
       "billing_scope": "full_video",
       "owned": false,
-      "eligible": false,
+      "eligible": true,
       "quote": {
         "quarters": 1,
         "rows": 75
       },
       "charge": {
-        "unit": "rows",
-        "amount": 75
+        "unit": "credits",
+        "amount": 300,
+        "from": "included"
       },
       "credits_per_row": 4,
       "max_on_demand_cents": 0,
@@ -811,14 +819,15 @@
           "duration_seconds": 600,
           "billing_scope": "full_video",
           "owned": false,
-          "eligible": false,
+          "eligible": true,
           "quote": {
             "quarters": 1,
             "rows": 75
           },
           "charge": {
-            "unit": "rows",
-            "amount": 75
+            "unit": "credits",
+            "amount": 300,
+            "from": "included"
           },
           "credits_per_row": 4,
           "max_on_demand_cents": 0,
@@ -835,17 +844,19 @@
       "requests": [
         {
           "id": "00000000-0000-4000-8000-000000000001",
-          "videoId": "dQw4w9WgXcQ",
-          "status": "queued",
+          "video_id": "dQw4w9WgXcQ",
           "state": "pending",
+          "status": "queued",
           "stage": "queued",
-          "quote": {
-            "quarters": 1,
-            "rows": 75
+          "charge": {
+            "unit": "credits",
+            "amount": 1200,
+            "from": "included"
           },
-          "etaSeconds": 172,
-          "nextPollSeconds": 29,
-          "createdAt": "2026-10-01 00:00:00",
+          "eta_seconds": 172,
+          "next_poll_seconds": 29,
+          "created_at": "2026-10-01 00:00:00",
+          "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
           "title": "First video"
         }
       ],
@@ -859,17 +870,19 @@
           "requests": [
             {
               "id": "00000000-0000-4000-8000-000000000001",
-              "videoId": "dQw4w9WgXcQ",
-              "status": "queued",
+              "video_id": "dQw4w9WgXcQ",
               "state": "pending",
+              "status": "queued",
               "stage": "queued",
-              "quote": {
-                "quarters": 1,
-                "rows": 75
+              "charge": {
+                "unit": "credits",
+                "amount": 1200,
+                "from": "included"
               },
-              "etaSeconds": 172,
-              "nextPollSeconds": 29,
-              "createdAt": "2026-10-01 00:00:00",
+              "eta_seconds": 172,
+              "next_poll_seconds": 29,
+              "created_at": "2026-10-01 00:00:00",
+              "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
               "title": "First video"
             }
           ],

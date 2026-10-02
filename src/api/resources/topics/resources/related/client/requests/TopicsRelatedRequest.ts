@@ -12,7 +12,7 @@ export interface TopicsRelatedRequest {
     /** The entity slug: the last segment of its arcmira.com page URL, as EntityRef.slug carries it. */
     slug: string;
     limit?: number;
-    /** Signed continuation from next_cursor. Bound to route, filters, limit, caller and visibility; invalid or old tokens return invalid_cursor. Person appearance publication pages use a media-id insertion fence; aggregate sorts remain live. */
+    /** Signed continuation from next_cursor. Bound to route, filters, caller and visibility; invalid or old tokens return invalid_cursor. Person appearance publication pages use a media-id insertion fence; aggregate sorts remain live. */
     cursor?: string;
     /** Substring filter over the row's text columns (e.g. video title, channel name, description). */
     q?: string;

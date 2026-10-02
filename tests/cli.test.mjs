@@ -75,7 +75,7 @@ test("transcripts request requires a saved key and ceiling before making a call"
     assert.equal(out.code, 0, out.stderr);
     const sent = fake.requests.at(-1);
     assert.equal(sent.path, "/v1/transcriptions");
-    assert.deepEqual(sent.body, { videoId: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0 });
+    assert.deepEqual(sent.body, { video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 0 });
     assert.equal(sent.headers["idempotency-key"], "order-1");
     assert.match(out.stderr, /transcripts status 2f2b4a3e/);
 });

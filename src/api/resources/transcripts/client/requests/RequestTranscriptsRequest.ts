@@ -3,20 +3,18 @@
 /**
  * @example
  *     {
- *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
- *         videoId: "dQw4w9WgXcQ",
- *         max_rows: 300
+ *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90"
  *     }
  */
 export interface RequestTranscriptsRequest {
-    /** Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
-    "Idempotency-Key": string;
-    /** Maximum new monetary on-demand charge in cents. Omit to authorize none. */
-    max_on_demand_cents?: number;
-    /** Maximum whole-video rows authorized. Credit mode charges four credits per row. Required even when submitting without a quote. */
-    max_rows: number;
-    /** YouTube video id (11 characters). Either videoId or url is required. */
-    videoId?: string;
-    /** A YouTube watch/short/live URL. Either videoId or url is required. */
+    /** 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
+    "Idempotency-Key"?: string;
+    /** YouTube video id (11 characters). Either video_id or url is required. */
+    video_id?: string;
+    /** A YouTube watch/short/live URL. Either video_id or url is required. */
     url?: string;
+    /** Maximum whole-video rows authorized. Credit mode charges four credits per row. Omit it to cap the purchase at the current quote. Required with max_on_demand_cents above 0. */
+    max_rows?: number;
+    /** Maximum new monetary on-demand charge in whole cents. Defaults to 0, which moves no money. Above 0 it requires Idempotency-Key and max_rows. */
+    max_on_demand_cents?: number;
 }

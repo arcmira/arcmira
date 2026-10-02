@@ -96,11 +96,11 @@ await new ArcmiraClient({ apiKey: "k", baseUrl: "http://127.0.0.1:${port}", maxR
 
 test("transcript requests live on transcripts: request POSTs, status polls", async () => {
     assert.equal("transcriptions" in client, false);
-    const order = await client.transcripts.request({ videoId: "dQw4w9WgXcQ", max_rows: 300, "Idempotency-Key": "order-1" });
+    const order = await client.transcripts.request({ video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 50, "Idempotency-Key": "order-1" });
     assert.equal(last().method, "POST");
     assert.equal(last().path, "/v1/transcriptions");
     assert.equal(last().headers["idempotency-key"], "order-1");
-    const state = await client.transcripts.status({ id: order.request.id });
-    assert.equal(last().path, `/v1/transcriptions/${order.request.id}`);
-    assert.equal(state.id, order.request.id);
+    const state = await client.transcripts.status({ id: order.job.id });
+    assert.equal(last().path, `/v1/transcriptions/${order.job.id}`);
+    assert.equal(state.id, order.job.id);
 });

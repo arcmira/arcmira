@@ -15,7 +15,7 @@ export namespace TranscriptRequestListResponse {
     export type Requests = Requests.Item[];
 
     export namespace Requests {
-        export interface Item extends Arcmira.TranscriptRequest {
+        export interface Item extends Arcmira.TranscriptJob {
             /** Video title for display. Null when unknown. */
             title: string | null;
         }

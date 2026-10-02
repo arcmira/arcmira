@@ -11,7 +11,7 @@ export interface ListVideosRequest {
     channel_id: string;
     /** Videos to return, 1 to 25, newest first. Default 10. Pass 1 for the latest episode. */
     limit?: number;
-    /** Opaque continuation from next_cursor. Bound to the channel, filters, limit, caller, and visibility. Invalid or old tokens return invalid_cursor. */
+    /** Opaque continuation from next_cursor. Bound to the channel, filters, caller, and visibility; limit may change between pages. Invalid or old tokens return invalid_cursor. */
     cursor?: string;
     /** ISO date. Only videos published on or after this day. */
     published_after?: string;

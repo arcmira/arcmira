@@ -402,10 +402,10 @@ const orderKey = order.requests[0]?.headers["idempotency-key"] ?? "";
 const orderOwn = await run(["transcripts", "request", "dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "order-1", "--json"]);
 g.transcripts_request = {
     pass:
-        order.code === 0 && order.requests.length === 1 && order.requests[0].method === "POST" && order.requests[0].path === "/v1/transcriptions" && parses(order.requests[0].body)?.videoId === "dQw4w9WgXcQ" &&
+        order.code === 0 && order.requests.length === 1 && order.requests[0].method === "POST" && order.requests[0].path === "/v1/transcriptions" && parses(order.requests[0].body)?.video_id === "dQw4w9WgXcQ" &&
         orderKey === "saved-audit-intent" && parses(order.requests[0].body)?.max_rows === 300 && new RegExp(`transcripts status ${JOB}`).test(order.stderr) &&
-        orderOwn.code === 0 && orderOwn.requests[0]?.headers["idempotency-key"] === "order-1" && parses(orderOwn.stdout)?.request?.id === JOB,
-    rule: "transcripts request POSTs /v1/transcriptions with videoId, cost ceilings and the supplied persisted Idempotency-Key, then names the poll command",
+        orderOwn.code === 0 && orderOwn.requests[0]?.headers["idempotency-key"] === "order-1" && parses(orderOwn.stdout)?.job?.id === JOB,
+    rule: "transcripts request POSTs /v1/transcriptions with video_id, cost ceilings and the supplied persisted Idempotency-Key, then names the poll command",
 };
 const moved = await run(["status", JOB]);
 const movedJson = await run(["status", JOB, "--json"]);

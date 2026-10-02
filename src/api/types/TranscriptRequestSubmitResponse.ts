@@ -3,9 +3,7 @@
 import type * as Arcmira from "../index.js";
 
 export interface TranscriptRequestSubmitResponse {
-    request: Arcmira.TranscriptRequest;
-    /** True when an in-flight (or already-satisfied) request for the same video was returned instead of creating a new one. */
-    existing?: boolean | undefined;
-    /** Only present (true) when this purchase consumed the rest of the included row allocation. */
-    overLimit?: boolean | undefined;
+    job: Arcmira.TranscriptJob;
+    /** True when a request for this video already existed (in flight or ready) and was returned instead of creating a new one. */
+    existing: boolean;
 }

@@ -8,6 +8,8 @@ export interface TranscriptPurchaseQuote {
     billing_scope: TranscriptPurchaseQuote.BillingScope;
     owned: boolean;
     eligible: boolean;
+    /** Present when eligible is false: the plan checkout that can buy this transcript, as a button label and an absolute link. */
+    upgrade?: TranscriptPurchaseQuote.Upgrade | undefined;
     quote: Arcmira.TranscriptQuote;
     charge: TranscriptPurchaseQuote.Charge;
     credits_per_row: number;
@@ -23,9 +25,19 @@ export namespace TranscriptPurchaseQuote {
     } as const;
     export type BillingScope = (typeof BillingScope)[keyof typeof BillingScope];
 
+    /**
+     * Present when eligible is false: the plan checkout that can buy this transcript, as a button label and an absolute link.
+     */
+    export interface Upgrade {
+        label: string;
+        href: string;
+    }
+
     export interface Charge {
         unit: Charge.Unit;
         amount: number;
+        /** Where the charge would come from at the current balance. */
+        from: Charge.From;
     }
 
     export namespace Charge {
@@ -34,5 +46,12 @@ export namespace TranscriptPurchaseQuote {
             Credits: "credits",
         } as const;
         export type Unit = (typeof Unit)[keyof typeof Unit];
+        /** Where the charge would come from at the current balance. */
+        export const From = {
+            Included: "included",
+            OnDemand: "on_demand",
+            Mixed: "mixed",
+        } as const;
+        export type From = (typeof From)[keyof typeof From];
     }
 }

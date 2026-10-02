@@ -20,14 +20,15 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(doc, before)
         union = prepared['components']['schemas']['TranscriptResult']
         self.assertEqual(union['discriminator']['propertyName'], 'state')
-        self.assertEqual(set(union['discriminator']['mapping']), {'ready','pending'})
+        self.assertEqual(set(union['discriminator']['mapping']), {'ready','preparation_required','pending'})
+        self.assertEqual(prepared['components']['schemas']['TranscriptPending']['properties']['job'], {'$ref': '#/components/schemas/TranscriptJob'})
         for path, collection in [('/v1/transcriptions','requests'),('/v1/channels/{channel_id}/videos','episodes')]:
             operation = prepared['paths'][path]['get']
-            self.assertNotIn('x-fern-pagination', operation)
-            schema = operation['responses']['200']['content']['application/json']['schema']
-            self.assertEqual(TOOLS['collection'](prepared, schema), collection)
+            self.assertEqual(operation['x-fern-pagination']['results'], '$response.' + collection)
         post = prepared['paths']['/v1/transcriptions']['post']
-        self.assertTrue(next(p for p in post['parameters'] if p['name']=='Idempotency-Key')['required'])
-        self.assertIn('max_rows', post['requestBody']['content']['application/json']['schema']['required'])
+        self.assertFalse(next(p for p in post['parameters'] if p['name']=='Idempotency-Key')['required'])
+        body = post['requestBody']['content']['application/json']['schema']
+        self.assertNotIn('videoId', body['properties'])
+        self.assertNotIn('required', body)
 
 if __name__ == '__main__': unittest.main()

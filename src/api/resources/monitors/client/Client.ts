@@ -135,6 +135,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.create({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         name: "name"
      *     })
      */
@@ -232,6 +233,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.delete({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */
@@ -326,6 +328,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.update({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */
@@ -423,6 +426,7 @@ export class MonitorsClient {
      *
      * @example
      *     await client.monitors.rotateWebhookSecret({
+     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id"
      *     })
      */

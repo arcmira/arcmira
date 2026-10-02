@@ -26,8 +26,7 @@ export interface TranscriptResponse {
     rows_billed: number;
     /** When the transcript was produced. */
     as_of: string | null;
-    /** Reserved for job metadata. Pending Premium retrieval uses its separate 202 response. */
-    premium_job?: TranscriptResponse.PremiumJob | undefined;
+    premium_job?: Arcmira.TranscriptJob | undefined;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptResponse.Access | undefined;
     /** One steering sentence for the agent reading this. On Premium it is the diarization disclosure verbatim. */
@@ -99,20 +98,6 @@ export namespace TranscriptResponse {
     }
 
     /**
-     * Reserved for job metadata. Pending Premium retrieval uses its separate 202 response.
-     */
-    export interface PremiumJob {
-        /** Transcription request id. Poll it with GET /v1/transcriptions/{id}. */
-        job_id: string | null;
-        /** Pipeline status at submit time. */
-        status: string;
-        /** Seconds to wait before polling again. */
-        next_poll_seconds: number | null;
-        /** Estimated seconds until the Premium transcript is ready. */
-        eta_seconds: number | null;
-    }
-
-    /**
      * The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would.
      */
     export interface Access {
@@ -132,6 +117,10 @@ export namespace TranscriptResponse {
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
+        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
+        current_revision?: string | undefined;
+        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
+        expected_seq?: number | undefined;
         doc_url: string;
         request_id: string;
     }

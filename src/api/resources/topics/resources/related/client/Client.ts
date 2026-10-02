@@ -23,7 +23,7 @@ export class RelatedClient {
     }
 
     /**
-     * The topics that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+     * The topics that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.topics.TopicsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -162,7 +162,7 @@ export class RelatedClient {
     }
 
     /**
-     * The people that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+     * The people that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.topics.PeopleRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -301,7 +301,7 @@ export class RelatedClient {
     }
 
     /**
-     * The organizations that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+     * The organizations that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.topics.OrganizationsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -442,7 +442,7 @@ export class RelatedClient {
     }
 
     /**
-     * The products that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+     * The products that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.topics.ProductsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -581,7 +581,7 @@ export class RelatedClient {
     }
 
     /**
-     * The channels that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, limit, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total, offset, limit and hasMore mirror the web shape.
+     * The channels that co-occur with this topic in indexed media, with q/field/sort/order filtering. Signed cursor pagination: rows are in items, and next_cursor (null on the last page) feeds cursor. A token binds route, filters, caller and visibility; malformed or old tokens return invalid_cursor. Aggregate and display lists are live: changed ranks or deleted rows may shift later pages. total counts every matching row and limit is the page size applied.
      *
      * @param {Arcmira.topics.ChannelsRelatedRequest} request
      * @param {RelatedClient.RequestOptions} requestOptions - Request-specific configuration.

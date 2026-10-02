@@ -21,8 +21,8 @@ def field(name, where, schema, required, description=''):
 
 operations=[]
 reference=['# API reference', '', 'Generated from `fern/openapi.json` and the public SDK overlay. Run `python3 scripts/build-reference.py`.', '',
-           'Transcript reads return `state: ready` or `state: pending`. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.', '',
-           'Preparation requires a persisted Idempotency-Key and max_rows. max_on_demand_cents defaults to zero. Retry a lost response with the same key and identical input.', '']
+           'Transcript reads return `state: ready`, `state: preparation_required` or `state: pending`. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.', '',
+           'Preparation from included credits is one POST of `{ video_id }` with no key; repeats join the same job. A positive max_on_demand_cents needs an Idempotency-Key and max_rows; retry a lost response with the same key and identical input.', '']
 for path, methods in doc['paths'].items():
     for method, op in methods.items():
         if method not in {'get','post','put','patch','delete'}: continue
