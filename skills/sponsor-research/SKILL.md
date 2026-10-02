@@ -7,7 +7,7 @@ description: "Sponsor and ad-read research on podcasts and YouTube: who sponsors
 
 Two directions. A show to its sponsors: `arcmira.sponsors(channelId)` ranks recurring sponsors by ad reads with first and last seen dates. A brand to the shows it sponsors: `arcmira.recommendations(entityId, { kind: "sponsored" })` lists each ad read, which the program groups by show.
 
-Use it through the arcmira MCP server (`describe`, then `execute` with a program) or the arcmira CLI, whose commands have the same names. The `arcmira` skill and `describe` carry the full method reference.
+Use it through the arcmira MCP server (`describe`, then `execute` with a program) or the arcmira CLI, whose commands have the same names. `describe` carries the full method reference (CLI: `arcmira <command> --help`), and the `arcmira` skill the shared procedure.
 
 ## When to use
 
@@ -102,4 +102,6 @@ return {
 
 When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work may use included credits without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
 
-Never fill an index gap from memory or the web. Docs: https://arcmira.com/docs/mcp-server
+Search as_of is the newest publication date among the returned passages, not the date the whole index was updated. For channel freshness, call arcmira.status({ channelId }) and report channel.search_indexed_through for transcript search. A result date or an empty query does not establish missing recent episodes.
+
+Keep outside evidence separate from Arcmira results. Docs: https://arcmira.com/docs/mcp-server

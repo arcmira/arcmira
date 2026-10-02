@@ -7,7 +7,7 @@ description: "Tracks what podcasts and YouTube shows said about a company or pro
 
 One program answers "what was said about X this week": episode counts per show from `occurrences`, the trend from `momentum`, the catalog notes on each mention from `mentions`, and quotes from `search` filtered to passages about the entity.
 
-Use it through the arcmira MCP server (`describe`, then `execute` with a program) or the arcmira CLI, whose commands have the same names. The `arcmira` skill and `describe` carry the full method reference.
+Use it through the arcmira MCP server (`describe`, then `execute` with a program) or the arcmira CLI, whose commands have the same names. `describe` carries the full method reference (CLI: `arcmira <command> --help`), and the `arcmira` skill the shared procedure.
 
 ## When to use
 
@@ -80,4 +80,6 @@ return {
 
 When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work may use included credits without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
 
-Never fill an index gap from memory or the web. Docs: https://arcmira.com/docs/mcp-server
+Search as_of is the newest publication date among the returned passages, not the date the whole index was updated. For channel freshness, call arcmira.status({ channelId }) and report channel.search_indexed_through for transcript search. A result date or an empty query does not establish missing recent episodes.
+
+Keep outside evidence separate from Arcmira results. Docs: https://arcmira.com/docs/mcp-server
