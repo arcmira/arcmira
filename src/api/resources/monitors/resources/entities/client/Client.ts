@@ -24,7 +24,7 @@ export class EntitiesClient {
     }
 
     /**
-     * Follows each entity ({ entity_ids: ["ent_..."] }) in the monitor: the account's existing tracker for the entity is reused, else a tracker is created for the canonical entity (a merged id follows its redirect), then the trackers are attached. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids; duplicates count once. Each id gets one result in request order. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
+     * Follows each entity ({ entity_ids: ["ent_..."] }) and each exact name ({ names: [{ name, type }] }) in the monitor: the monitor account's existing tracker for the entity or name (compared case-insensitively) is reused, else a tracker is created under the monitor's account (the team owner on a team monitor) for the canonical entity (a merged id follows its redirect) or the name as given, then the trackers are attached, all in one write. Use names for something not yet indexed; a channel is named by its YouTube channel id, and a channel name answers 400 id_required. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids and names together; duplicates count once. Each gets one result, ids first then names, in request order; a names result carries name and type in place of entity_id. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
      *
      * @param {Arcmira.monitors.AddEntitiesRequest} request
      * @param {EntitiesClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -42,8 +42,7 @@ export class EntitiesClient {
      * @example
      *     await client.monitors.entities.add({
      *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
-     *         id: "id",
-     *         entity_ids: ["entity_ids"]
+     *         id: "id"
      *     })
      */
     public add(

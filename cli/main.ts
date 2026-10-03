@@ -713,7 +713,7 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["get_transcript"],
         summary: "Full transcript of one YouTube video from its URL or id.",
-        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--language de,en] [--paragraphs] [--start S --end S]",
+        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--retry] [--language de,en] [--paragraphs] [--start S --end S]",
         examples: [
             "arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120",
             "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'",
@@ -730,6 +730,7 @@ const COMMANDS: Record<string, Command> = {
             paragraphs: { type: "boolean", help: "Paragraphs for reading instead of timestamped lines." },
             start: { type: "string", number: true, help: "Window start in seconds." },
             end: { type: "string", number: true, help: "Window end in seconds." },
+            retry: { type: "boolean", help: "Premium only. Buy the transcript again after the last purchase failed." },
         },
         run: ({ client, positionals: [video], values: v }) =>
             client.transcripts.get({
@@ -739,9 +740,15 @@ const COMMANDS: Record<string, Command> = {
                 timestamps: v.paragraphs ? false : undefined,
                 start: num(v.start),
                 end: num(v.end),
+                retry: v.retry ? true : undefined,
             }),
         exitCode: (r: Arcmira.TranscriptResult) => {
             if (r.state === "ready") return 0;
+            if (r.state === "failed") {
+                const next = r.last_attempt.status === "refund_pending" ? "Its refund is still settling; try again later." : "Run it again with --retry to buy it again.";
+                note(`The last Premium purchase for ${r.video_id} ${r.last_attempt.status === "failed" ? "failed" : "was refunded"} (${r.last_attempt.error.replace(/\.$/, "")}). ${next}`);
+                return 1;
+            }
             const eta = r.job.eta_seconds != null ? `, about ${Math.max(1, Math.round(r.job.eta_seconds / 60))} min left` : "";
             note(`Premium for ${r.video_id} is still ${r.job.status}${eta}. Run the same command again later; it reads this job and never buys twice.`);
             return EXIT_PENDING;

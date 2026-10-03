@@ -6,7 +6,8 @@ Generated from the v1 document of 2026-10-02. The document dropped from 88 opera
 
 Added.
 
-- `client.monitors.entities.add({ id, entity_ids, person_match_mode? })` follows indexed entities by id in a monitor. Each id gets one result; one that cannot be followed comes back with `attached: false` and a `reason`.
+- `client.monitors.entities.add({ id, entity_ids?, names?, person_match_mode? })` follows entities in a monitor by id, or by exact name and type for a name not yet indexed. Each id or name gets one result; one that cannot be followed comes back with `attached: false` and a `reason`.
+- `trackers.create` and `names[]` accept `org` for `organization`, and the duplicate check ignores case.
 - `client.integrations.slack.list()` lists connected Slack workspaces with the `slack_integration_id` and `slack_channel_id` values a monitor needs.
 - `monitors.create` takes `team_id`. `Monitor` carries `access`, `muted` and `team`.
 - `feedback.submit` takes `category` and `mcp_call_id`, and `type: "experience"` reports how a task went as a whole.
@@ -15,7 +16,7 @@ Added.
 
 Breaking changes from 0.3.
 
-- Premium is one read. `transcripts.get({ video_id, quality: "premium" })` answers `ready` (200) when the account owns the transcript. Otherwise it buys the whole video within the plan and the account's on-demand budget and answers `pending` (202) with the `job` and a `Retry-After` header. Read again after `Retry-After`; repeated reads join the same purchase and never buy twice. `TranscriptResult` is `TranscriptResult.Ready | TranscriptResult.Pending`; `preparation_required` is gone.
+- Premium is one read. `transcripts.get({ video_id, quality: "premium" })` answers `ready` (200) when the account owns the transcript. Otherwise it buys the whole video within the plan and the account's on-demand budget and answers `pending` (202) with the `job` and a `Retry-After` header. Read again after `Retry-After`; repeated reads join the same purchase and never buy twice. When the last purchase for the video failed or was refunded, the read answers `failed` (200) with the `job` and `last_attempt` and buys nothing; pass `retry: true` to buy it again. `TranscriptResult` is `TranscriptResult.Ready | TranscriptResult.Pending | TranscriptResult.Failed`; `preparation_required` is gone. Priced refusals carry one `RefusedQuote` type.
 - `transcripts.prepareAndWait` is removed, with `PreparationError`, `PreparationFailedError`, `PreparationTimeoutError`, `PremiumUnavailableError` and `PrepareAndWaitRequest`. Loop on `transcripts.get` until `state === "ready"`; the README has the loop.
 - `transcripts.request` and `transcripts.status` are removed, with `TranscriptRequestSubmitResponse`. `transcripts.listRequests` still lists past purchases.
 - A Premium refusal throws from the read itself. `PaymentRequiredError` (402) carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` (403) carries `paid_plan_required`. Nothing is charged.

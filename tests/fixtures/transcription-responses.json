@@ -372,5 +372,35 @@
         }
       }
     }
+  },
+  "premium_failed": {
+    "status": 200,
+    "body": {
+      "state": "failed",
+      "quality": "premium",
+      "video_id": "dQw4w9WgXcQ",
+      "job": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "video_id": "dQw4w9WgXcQ",
+        "state": "refunded",
+        "status": "refunded",
+        "stage": null,
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
+        },
+        "created_at": "2026-10-01 00:00:00",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
+        "error": "Transcription timed out.",
+        "refunded": true,
+        "completed_at": "2026-10-01 00:04:10"
+      },
+      "last_attempt": {
+        "status": "refunded",
+        "error": "Transcription timed out."
+      },
+      "note": "The last Premium purchase for this video failed, and this read bought nothing. Read again with retry=true to buy it again at the current quote."
+    }
   }
 }

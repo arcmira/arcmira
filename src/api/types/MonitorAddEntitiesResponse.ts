@@ -5,6 +5,6 @@ import type * as Arcmira from "../index.js";
 export interface MonitorAddEntitiesResponse {
     /** The monitor the entities were added to. */
     monitor_id: string;
-    /** One result per distinct requested entity id, in request order. */
+    /** One result per distinct requested entity id, then one per distinct requested name, each in request order. */
     results: Arcmira.MonitorEntityResult[];
 }

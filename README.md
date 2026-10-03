@@ -33,7 +33,7 @@ if (read.state === "ready") for (const line of read.lines ?? []) console.log(lin
 else console.log(`transcribing, read again in ${read.job.next_poll_seconds ?? 30} s`);
 ```
 
-A Premium read is one GET. When your account does not own the transcript yet, the read buys it within your plan: included credits first, then your on-demand budget, which you set in the dashboard and which is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never buy twice. `transcripts.quote({ video_id })` prices it first, free.
+A Premium read is one GET. When your account does not own the transcript yet, the read buys it within your plan: included credits first, then your on-demand budget, which you set in the dashboard and which is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never buy twice. When the last purchase failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and buys nothing; read with `retry: true` to buy it again. `transcripts.quote({ video_id })` prices it first, free.
 
 A read the plan cannot pay for throws instead. `PaymentRequiredError` carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` carries `paid_plan_required` on a free plan. Both carry the price in `err.body.error.details.quote`.
 
@@ -44,6 +44,7 @@ async function premium(video_id: string) {
     for (;;) {
         const { data, rawResponse } = await arcmira.transcripts.get({ video_id, quality: "premium" }).withRawResponse();
         if (data.state === "ready") return data;
+        if (data.state === "failed") throw new Error(`${data.last_attempt.status}: ${data.last_attempt.error}`);
         await sleep(Number(rawResponse.headers.get("retry-after")) || data.job.next_poll_seconds || 30);
     }
 }
@@ -222,7 +223,7 @@ Reads take ids. `--entity`, `--about`, `--by` and every entity positional take a
 
 Every dated command takes `--after` (inclusive) and `--before` (exclusive), as a date or an ISO 8601 datetime with an offset, read in UTC. September is `--after 2026-09-01 --before 2026-10-01`.
 
-`arcmira transcripts get <video> --quality premium` is one read. When your account does not own the transcript, the read buys it within your plan (included credits, then your on-demand budget) and exits 4 while it transcribes, naming the minutes left on stderr. Run the same command again later: it reads the same job and never buys twice. A plan that cannot pay exits 1 and prints the quote. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
+`arcmira transcripts get <video> --quality premium` is one read. When your account does not own the transcript, the read buys it within your plan (included credits, then your on-demand budget) and exits 4 while it transcribes, naming the minutes left on stderr. Run the same command again later: it reads the same job and never buys twice. When the last purchase failed it exits 1 and names the error; add `--retry` to buy it again. A plan that cannot pay exits 1 and prints the quote. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
 
 `arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. A POST without `-H 'Idempotency-Key: ...'` gets a generated key; `--verbose` shows it. Reuse the same key and input to retry a write. The path may drop the `/v1` prefix.
 

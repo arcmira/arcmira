@@ -20,15 +20,15 @@ export interface TranscriptJob {
     eta_seconds?: number | undefined;
     /** Seconds to sleep before the next poll (also sent as the Retry-After header). Only present while the request is in flight. */
     next_poll_seconds?: number | undefined;
-    /** Failure reason. Only present when state is failed or refunded. */
+    /** Failure reason. Only present when state is failed or refunded, or status is refund_pending. */
     error?: string | undefined;
-    /** True when the charge was returned. Only present when state is failed or refunded. */
+    /** True when the charge was returned. Only present when state is failed or refunded, or status is refund_pending (false until the refund lands). */
     refunded?: boolean | undefined;
     /** When the request was submitted. */
     created_at: string;
     /** When the request reached a terminal status. Absent while in flight. */
     completed_at?: string | undefined;
-    /** Absolute URL of GET /v1/transcriptions/{id} for this job. */
+    /** Absolute URL to read again for this job: GET /v1/transcripts/{video_id}?quality=premium, which answers 202 while it prepares, 200 ready once it is, and 200 failed if it failed. */
     status_url: string;
 }
 

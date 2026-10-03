@@ -16,10 +16,11 @@ const premiumBody = (id, videoId) => {
     if (b.job) Object.assign(b.job, { video_id: videoId, status_url: `https://api.arcmira.com/v1/transcriptions/${b.job.id}` });
     return b;
 };
-/** Premium reads by video id: premiumVid* buys on the first read (202) and is ready after; pendingVid* stays pending; brokeVid* is refused 402; freeVid* is refused 403. */
+/** Premium reads by video id: premiumVid* buys on the first read (202) and is ready after; pendingVid* stays pending; failedVid* answers its failed purchase until retry=true buys it again (202); brokeVid* is refused 402; freeVid* is refused 403. */
 const PREMIUM = [
     [/^premiumVid/, (videoId) => (bought.has(videoId) ? [200, premiumBody("premium_ready", videoId)] : (bought.add(videoId), [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }]))],
     [/^pendingVid/, (videoId) => [202, premiumBody("pending_premium", videoId), { "retry-after": "1" }]],
+    [/^failedVid/, (videoId, url) => (url.searchParams.get("retry") === "true" ? [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }] : [200, premiumBody("premium_failed", videoId)])],
     [/^brokeVid/, () => [402, premiumBody("refused_quota")]],
     [/^freeVid/, () => [403, premiumBody("paid_plan_required")]],
 ];
@@ -103,7 +104,7 @@ const ROUTES = [
     ["GET", /^\/v1\/transcripts\/([^/]+)$/, (m, url) => {
         if (m[1] === "missingvid0") return [404, notFoundBody("transcript_unavailable", "No transcript for this video.")];
         const premiumRead = url.searchParams.get("quality") === "premium" && PREMIUM.find(([pattern]) => pattern.test(m[1]));
-        if (premiumRead) return premiumRead[1](m[1]);
+        if (premiumRead) return premiumRead[1](m[1], url);
         const b = body("get_transcript");
         b.lines = [{ start: 0, end: 4, text: "Welcome back to the show." }, { start: 4, end: 9, text: "Today we talk about agent payments." }];
         return [200, b];

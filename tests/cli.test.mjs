@@ -87,6 +87,15 @@ test("a Premium read is one GET: 202 exits 4 with the eta, the next read prints 
     assert.equal(JSON.parse(json.stdout).state, "pending");
 });
 
+test("a failed Premium purchase exits 1 and buys again only with --retry", async () => {
+    const failed = await arcmira(["transcripts", "get", "failedVid01", "--quality", "premium"]);
+    assert.equal(failed.code, 1);
+    assert.match(failed.stderr, /The last Premium purchase for failedVid01 was refunded \(Transcription timed out\)\. Run it again with --retry to buy it again\./);
+    const retried = await arcmira(["transcripts", "get", "failedVid01", "--quality", "premium", "--retry"]);
+    assert.equal(retried.code, 4);
+    assert.equal(fake.requests.at(-1).query.retry, "true");
+});
+
 test("a refused Premium read exits 1 with the quote and the unlock", async () => {
     const quota = await arcmira(["transcripts", "get", "brokeVid001", "--quality", "premium"]);
     assert.equal(quota.code, 1);

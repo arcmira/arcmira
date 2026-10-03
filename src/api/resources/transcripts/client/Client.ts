@@ -154,7 +154,7 @@ export class TranscriptsClient {
     }
 
     /**
-     * Caption retrieval costs one row per started 15 minutes. quality=premium is one read: an owned transcript answers 200 ready at zero rows; otherwise this call buys the whole video within the account's plan and on-demand budget, included credits first and then on-demand money up to the account limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same purchase and never buy twice. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and nothing is charged. A default-premium account with nothing owned reads captions with a note. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium responses retain revision and line indexes for corrections.
+     * Caption retrieval costs one row per started 15 minutes. quality=premium is one read: an owned transcript answers 200 ready at zero rows; otherwise this call buys the whole video within the account's plan and on-demand budget, included credits first and then on-demand money up to the account limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same purchase and never buy twice. When the last purchase for the video failed, the read answers 200 state failed with the job and last_attempt and buys nothing; retry=true buys it again. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and nothing is charged. A default-premium account with nothing owned reads captions with a note. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium lines carry speaker and index, and the body carries speakers and revision.
      *
      * @param {Arcmira.GetTranscriptsRequest} request
      * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -186,13 +186,14 @@ export class TranscriptsClient {
         request: Arcmira.GetTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.TranscriptResult>> {
-        const { video_id: videoId, quality, language, timestamps, start, end, refresh } = request;
+        const { video_id: videoId, quality, language, timestamps, start, end, retry, refresh } = request;
         const _queryParams: Record<string, unknown> = {
             quality: quality != null ? quality : undefined,
             language,
             timestamps,
             start,
             end,
+            retry,
             refresh,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();

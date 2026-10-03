@@ -300,7 +300,7 @@ Attaches EXISTING trackers to the monitor by id ({ tracker_ids: ["trk_..."] }). 
 
 `GET /v1/monitors/{id}/alerts`
 
-The newest limit alert deliveries for the monitor (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
+The newest limit alert deliveries for the monitor (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are the ids GET /v1/entities/{id} and GET /v1/mentions use, and video_id is the YouTube video id that GET /v1/transcripts/{video_id} reads. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -311,13 +311,14 @@ The newest limit alert deliveries for the monitor (default 25, at most 100), as 
 
 `POST /v1/monitors/{id}/entities`
 
-Follows each entity ({ entity_ids: ["ent_..."] }) in the monitor: the account's existing tracker for the entity is reused, else a tracker is created for the canonical entity (a merged id follows its redirect), then the trackers are attached. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids; duplicates count once. Each id gets one result in request order. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
+Follows each entity ({ entity_ids: ["ent_..."] }) and each exact name ({ names: [{ name, type }] }) in the monitor: the monitor account's existing tracker for the entity or name (compared case-insensitively) is reused, else a tracker is created under the monitor's account (the team owner on a team monitor) for the canonical entity (a merged id follows its redirect) or the name as given, then the trackers are attached, all in one write. Use names for something not yet indexed; a channel is named by its YouTube channel id, and a channel name answers 400 id_required. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids and names together; duplicates count once. Each gets one result, ids first then names, in request order; a names result carries name and type in place of entity_id. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
 | `Idempotency-Key` | header | no | string |
-| `entity_ids` | body | yes | string[] |
+| `entity_ids` | body | no | string[] |
+| `names` | body | no | object[] |
 | `person_match_mode` | body | no | string |
 
 ## integrations.slack.list
@@ -389,7 +390,7 @@ Deletes the tracker. Cannot be undone.
 
 `GET /v1/trackers/{id}/alerts`
 
-The newest limit alert deliveries for the tracker (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are public-ID forms that join directly against entity and mention rows; media_id and appearance_id are raw integer ids, matching the numeric ids used elsewhere in the API. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
+The newest limit alert deliveries for the tracker (default 25, at most 100), as a single page. has_more is true when older alerts exist past limit; this endpoint does not paginate, so next_cursor is always null and a larger limit reads further. entity_id ("ent_{n}") and mention_id ("men_{n}") are the ids GET /v1/entities/{id} and GET /v1/mentions use, and video_id is the YouTube video id that GET /v1/transcripts/{video_id} reads. Dispute a fired alert via POST /v1/feedback with type monitor_alert.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -400,7 +401,7 @@ The newest limit alert deliveries for the tracker (default 25, at most 100), as 
 
 `GET /v1/transcripts/{video_id}`
 
-Caption retrieval costs one row per started 15 minutes. quality=premium is one read: an owned transcript answers 200 ready at zero rows; otherwise this call buys the whole video within the account's plan and on-demand budget, included credits first and then on-demand money up to the account limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same purchase and never buy twice. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and nothing is charged. A default-premium account with nothing owned reads captions with a note. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium responses retain revision and line indexes for corrections.
+Caption retrieval costs one row per started 15 minutes. quality=premium is one read: an owned transcript answers 200 ready at zero rows; otherwise this call buys the whole video within the account's plan and on-demand budget, included credits first and then on-demand money up to the account limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same purchase and never buy twice. When the last purchase for the video failed, the read answers 200 state failed with the job and last_attempt and buys nothing; retry=true buys it again. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and nothing is charged. A default-premium account with nothing owned reads captions with a note. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium lines carry speaker and index, and the body carries speakers and revision.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -410,6 +411,7 @@ Caption retrieval costs one row per started 15 minutes. quality=premium is one r
 | `timestamps` | query | no | boolean |
 | `start` | query | no | number or null 0.. |
 | `end` | query | no | number or null 0.. |
+| `retry` | query | no | boolean |
 | `refresh` | query | no | boolean |
 
 ## transcripts.quote

@@ -38,10 +38,10 @@ class GenerationTests(unittest.TestCase):
         TOOLS['prepare'](DOCUMENT, NAMES)
         self.assertEqual(DOCUMENT, before)
 
-    def test_transcript_result_discriminates_ready_and_pending(self):
+    def test_transcript_result_discriminates_ready_pending_and_failed(self):
         union = self.prepared['components']['schemas']['TranscriptResult']
         self.assertEqual(union['discriminator']['propertyName'], 'state')
-        self.assertEqual(set(union['discriminator']['mapping']), {'ready', 'pending'})
+        self.assertEqual(set(union['discriminator']['mapping']), {'ready', 'pending', 'failed'})
         responses = self.prepared['paths']['/v1/transcripts/{video_id}']['get']['responses']
         for code in ('200', '202'):
             self.assertEqual(responses[code]['content']['application/json']['schema'], {'$ref': '#/components/schemas/TranscriptResult'})

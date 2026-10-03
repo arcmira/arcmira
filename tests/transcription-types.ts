@@ -12,12 +12,14 @@ async function consumer() {
         void speaker;
         // @ts-expect-error the ready variant carries no job
         result.job;
-    } else {
-        const state: 'pending' = result.state;
+    } else if (result.state === 'pending') {
         const job: Arcmira.TranscriptJob = result.job;
         job.status_url.toUpperCase();
         // @ts-expect-error pending has no transcript lines
         result.lines;
+    } else {
+        const state: 'failed' = result.state;
+        void result.last_attempt;
         void state;
     }
     for await (const mention of await client.mentions.list({ entity_id: 'ent_14', after: '2026-09-01', before: '2026-10-01' })) void mention.start_seconds;

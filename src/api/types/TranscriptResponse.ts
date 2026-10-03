@@ -18,7 +18,7 @@ export interface TranscriptResponse {
     paragraphs?: TranscriptResponse.Paragraphs.Item[] | undefined;
     /** Premium only. Speaker identification is right most of the time and wrong sometimes; say it came from Arcmira when a name matters. */
     speakers?: TranscriptResponse.Speakers.Item[] | undefined;
-    /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. Echo it on every correction; a 409 means it changed underneath you, so read again. */
+    /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. It changes when any of those change. */
     revision?: string | undefined;
     /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free. */
     range?: TranscriptResponse.Range | undefined;
@@ -58,7 +58,7 @@ export namespace TranscriptResponse {
             text: string;
             /** The person saying this line, present on every Premium line. Join it against speakers[].id. */
             speaker?: number | undefined;
-            /** Line index, present on every Premium line. Echo it as anchor.segmentIndex when you correct the line. */
+            /** Line index, present on every Premium line. Stable within one revision. */
             index?: number | undefined;
         }
     }
@@ -118,10 +118,6 @@ export namespace TranscriptResponse {
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
-        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
-        current_revision?: string | undefined;
-        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
-        expected_seq?: number | undefined;
         /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
         details?: Access.Details | undefined;
         doc_url: string;
@@ -192,51 +188,9 @@ export namespace TranscriptResponse {
          * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
          */
         export interface Details {
-            /** The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required. */
-            quote?: Details.Quote | undefined;
-            /** On max_charge_exceeded: the accepted purchase for this video that holds a higher money ceiling. Poll it at /v1/transcriptions/{id} instead of starting another. */
-            existing_request_id?: string | undefined;
+            quote?: Arcmira.RefusedQuote | undefined;
             /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
             existing_id?: string | undefined;
-        }
-
-        export namespace Details {
-            /**
-             * The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required.
-             */
-            export interface Quote extends Arcmira.TranscriptQuote {
-                /** What the purchase would charge at the current balance. Absent when no current price could be read. */
-                charge?: Quote.Charge | undefined;
-                /** The money ceiling the current quote needs, in whole cents. Send at least this as max_on_demand_cents with a new intent. */
-                max_on_demand_cents?: number | undefined;
-            }
-
-            export namespace Quote {
-                /**
-                 * What the purchase would charge at the current balance. Absent when no current price could be read.
-                 */
-                export interface Charge {
-                    unit: Charge.Unit;
-                    amount: number;
-                    /** Where the charge would come from at the current balance. */
-                    from: Charge.From;
-                }
-
-                export namespace Charge {
-                    export const Unit = {
-                        Rows: "rows",
-                        Credits: "credits",
-                    } as const;
-                    export type Unit = (typeof Unit)[keyof typeof Unit];
-                    /** Where the charge would come from at the current balance. */
-                    export const From = {
-                        Included: "included",
-                        OnDemand: "on_demand",
-                        Mixed: "mixed",
-                    } as const;
-                    export type From = (typeof From)[keyof typeof From];
-                }
-            }
         }
     }
 }

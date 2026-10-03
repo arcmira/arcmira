@@ -11,7 +11,7 @@
 export interface CreateTrackersRequest {
     /** One key per intent, 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Keys are scoped to the account, credential and resource family. The same key and normalized method, path and body returns the committed response with Idempotency-Replayed: true. A changed intent within the same family returns 409 idempotency_conflict. Monitor and tracker families have independent namespaces. Secret recovery is limited as described by the operation. */
     "Idempotency-Key"?: string;
-    /** The exact name to watch, matched case-insensitively against analyzed media, so a tracker can exist before the entity is indexed. For a channel, the YouTube channel id (UC plus 22 characters), never a name: a channel name answers 400 id_required naming GET /v1/entities/resolve?q=...&type=channel and best.youtube_channel_id. Required on create. Creating a duplicate (same name + type) returns 409 tracker_already_exists with the existing tracker id in error.details.existing_id. */
+    /** The exact name to watch, matched case-insensitively against analyzed media, so a tracker can exist before the entity is indexed. For a channel, the YouTube channel id (UC plus 22 characters), never a name: a channel name answers 400 id_required naming GET /v1/entities/resolve?q=...&type=channel and best.youtube_channel_id. Required on create. Creating a duplicate (same name, compared case-insensitively, and type) returns 409 tracker_already_exists with the existing tracker id in error.details.existing_id. */
     entity_name: string;
     /** Entity type of the tracked entity. Required on create. org is accepted for organization, and the tracker answers organization. */
     entity_type: CreateTrackersRequest.EntityType;
@@ -40,6 +40,7 @@ export namespace CreateTrackersRequest {
     export const EntityType = {
         Person: "person",
         Organization: "organization",
+        Org: "org",
         Product: "product",
         Topic: "topic",
         Channel: "channel",
