@@ -1,7 +1,7 @@
 {
   "name": "arcmira",
   "version": "0.4.0",
-  "description": "Search YouTube and podcast transcripts. Mentions, momentum, sponsors, and organic recommendations. The Arcmira TypeScript SDK and the arcmira CLI.",
+  "description": "YouTube transcript search with timestamps, mentions, sponsors and recommendations. Official Arcmira TypeScript SDK and CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
   "homepage": "https://arcmira.com/docs",
@@ -20,7 +20,11 @@
     "podcast monitoring",
     "transcript",
     "youtube monitoring",
-    "mcp"
+    "mcp",
+    "youtube-transcript-search",
+    "transcript-search",
+    "youtube-transcript",
+    "typescript-sdk"
   ],
   "bin": {
     "arcmira": "./dist/cli/main.js"
