@@ -8,8 +8,6 @@ import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
 import * as Arcmira from "../../../index.js";
-import { GuestsClient } from "../resources/guests/client/Client.js";
-import { RelatedClient } from "../resources/related/client/Client.js";
 import { SponsorsClient } from "../resources/sponsors/client/Client.js";
 import { VideosClient } from "../resources/videos/client/Client.js";
 
@@ -23,8 +21,6 @@ export class ChannelsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<ChannelsClient.Options>;
     protected _sponsors: SponsorsClient | undefined;
     protected _videos: VideosClient | undefined;
-    protected _related: RelatedClient | undefined;
-    protected _guests: GuestsClient | undefined;
 
     constructor(options: ChannelsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
@@ -36,14 +32,6 @@ export class ChannelsClient {
 
     public get videos(): VideosClient {
         return (this._videos ??= new VideosClient(this._options));
-    }
-
-    public get related(): RelatedClient {
-        return (this._related ??= new RelatedClient(this._options));
-    }
-
-    public get guests(): GuestsClient {
-        return (this._guests ??= new GuestsClient(this._options));
     }
 
     /**
@@ -139,101 +127,5 @@ export class ChannelsClient {
             "GET",
             "/v1/channels/{channel_id}/coverage",
         );
-    }
-
-    /**
-     * Channel pages include a recommendations_summary teaser: sponsor_count for all callers; top_sponsors additionally requires a Pro+ plan.
-     *
-     * @param {Arcmira.GetChannelsRequest} request
-     * @param {ChannelsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.PaymentRequiredError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.channels.get({
-     *         slug: "slug"
-     *     })
-     */
-    public get(
-        request: Arcmira.GetChannelsRequest,
-        requestOptions?: ChannelsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.ChannelPageResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__get(request, requestOptions));
-    }
-
-    private async __get(
-        request: Arcmira.GetChannelsRequest,
-        requestOptions?: ChannelsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.ChannelPageResponse>> {
-        const { slug } = request;
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                `v1/channels/${core.url.encodePathParam(slug)}`,
-            ),
-            method: "GET",
-            headers: _headers,
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.ChannelPageResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 402:
-                    throw new Arcmira.PaymentRequiredError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/channels/{slug}");
     }
 }

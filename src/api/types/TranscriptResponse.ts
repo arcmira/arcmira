@@ -18,7 +18,7 @@ export interface TranscriptResponse {
     paragraphs?: TranscriptResponse.Paragraphs.Item[] | undefined;
     /** Premium only. Speaker identification is right most of the time and wrong sometimes; say it came from Arcmira when a name matters. */
     speakers?: TranscriptResponse.Speakers.Item[] | undefined;
-    /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. Echo it on every correction; a 409 means it changed underneath you, so read again. */
+    /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. It changes when any of those change. */
     revision?: string | undefined;
     /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free. */
     range?: TranscriptResponse.Range | undefined;
@@ -58,7 +58,7 @@ export namespace TranscriptResponse {
             text: string;
             /** The person saying this line, present on every Premium line. Join it against speakers[].id. */
             speaker?: number | undefined;
-            /** Line index, present on every Premium line. Echo it as anchor.segmentIndex when you correct the line. */
+            /** Line index, present on every Premium line. Stable within one revision. */
             index?: number | undefined;
         }
     }
@@ -82,8 +82,8 @@ export namespace TranscriptResponse {
             id: number;
             /** The identified person, or Speaker 1, Speaker 2 and so on for a voice nobody has identified yet. */
             name: string;
-            /** Raw entity id of the identified person. Null when the speaker is unidentified. */
-            entity_id: number | null;
+            /** Public entity id ("ent_{n}") of the identified person. Null when the speaker is unidentified. */
+            entity_id: string | null;
             /** high when the name was reviewed, low when it is your own identification still awaiting review, null when nobody is identified. */
             confidence: string | null;
         }
@@ -118,10 +118,8 @@ export namespace TranscriptResponse {
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
-        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
-        current_revision?: string | undefined;
-        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
-        expected_seq?: number | undefined;
+        /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
+        details?: Access.Details | undefined;
         doc_url: string;
         request_id: string;
     }
@@ -184,6 +182,15 @@ export namespace TranscriptResponse {
                 /** Absolute endpoint carrying its ?src= attribution. Call it verbatim. */
                 url: string;
             }
+        }
+
+        /**
+         * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
+         */
+        export interface Details {
+            quote?: Arcmira.RefusedQuote | undefined;
+            /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
+            existing_id?: string | undefined;
         }
     }
 }

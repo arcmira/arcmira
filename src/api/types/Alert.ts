@@ -11,10 +11,8 @@ export interface Alert {
     entity_id: string | null;
     /** Public id ("men_{n}") of the mention/appearance row that triggered the alert. Joins directly against mention rows (e.g. /v1/mentions). Null when not appearance-scoped. */
     mention_id: string | null;
-    /** Media row that triggered the alert. A raw integer database id, matching the numeric media ids used elsewhere in the API (e.g. mention media.id). Null when not media-scoped. */
-    media_id: number | null;
-    /** Appearance row that triggered the alert. A raw integer database id, matching the numeric appearance_id on mention rows (same number as in mention_id). Null when not appearance-scoped. */
-    appearance_id: number | null;
+    /** YouTube video id (11 characters) of the video that triggered the alert. Null when not media-scoped. */
+    video_id: string | null;
     /** Id of the active mention excerpt used as mention evidence. Null when the alert was sent before evidence was recorded. */
     excerpt_id: string | null;
     /** Which evidence layer was sent. Null on older rows. */

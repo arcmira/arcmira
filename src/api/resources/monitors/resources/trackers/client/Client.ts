@@ -112,7 +112,7 @@ export class TrackersClient {
     }
 
     /**
-     * Attaches EXISTING trackers to the monitor by id ({ trackerIds: ["trk_..."] }). It does not create trackers: create them first via POST /v1/trackers, then attach. Attached trackers use the monitor's delivery settings. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none are attached. attachedCount reports the unique attached count.
+     * Attaches EXISTING trackers to the monitor by id ({ tracker_ids: ["trk_..."] }). It does not create trackers: create them first via POST /v1/trackers, then attach. Attached trackers use the monitor's delivery settings. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none are attached. attached_count reports the unique attached count.
      *
      * @param {Arcmira.monitors.AddTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -131,7 +131,7 @@ export class TrackersClient {
      *     await client.monitors.trackers.add({
      *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
      *         id: "id",
-     *         trackerIds: ["trackerIds"]
+     *         tracker_ids: ["tracker_ids"]
      *     })
      */
     public add(

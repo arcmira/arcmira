@@ -15,23 +15,23 @@ export namespace MonitorTrackersResponse {
             /** Tracker id. */
             id: string;
             /** Tracked entity name. */
-            entityName: string;
+            entity_name: string;
             /** Tracked entity type. */
-            entityType: string;
-            /** User-facing display name. Falls back to entityName when not customized. */
-            displayName: string;
+            entity_type: string;
+            /** User-facing display name. Falls back to entity_name when not customized. */
+            display_name: string;
             /** True when the tracker is paused. */
-            isPaused: boolean;
+            paused: boolean;
             /** When the tracker was paused. Null unless paused. */
-            pausedAt: string | null;
+            paused_at: string | null;
             /** When the tracker last produced an alert. Null until the first alert. */
-            lastNotifiedAt: string | null;
+            last_notified_at: string | null;
             /** When the tracker was created. */
-            createdAt: string;
+            created_at: string;
             /** When the tracker was last updated. */
-            updatedAt: string | null;
+            updated_at: string | null;
             /** The monitor id from the request path. */
-            monitorId: string;
+            monitor_id: string;
         }
     }
 }

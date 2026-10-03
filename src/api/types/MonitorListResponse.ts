@@ -3,7 +3,7 @@
 import type * as Arcmira from "../index.js";
 
 export interface MonitorListResponse {
-    /** All monitors for the account, ordered by dashboard sort position, then name. */
+    /** The account's personal monitors and the monitors of every team it belongs to, ordered by dashboard sort position, then name. */
     monitors: MonitorListResponse.Monitors.Item[];
 }
 
@@ -13,11 +13,11 @@ export namespace MonitorListResponse {
     export namespace Monitors {
         export interface Item extends Arcmira.Monitor {
             /** Number of trackers in the monitor. */
-            trackerCount: number;
+            tracker_count: number;
             /** Alert deliveries written for this monitor since the start of the calendar month. */
-            alertsThisMonth: number;
+            alerts_this_month: number;
             /** Display metadata for the connected Slack integration. Null/absent when Slack is not configured. */
-            slackIntegration?: (Item.SlackIntegration | null) | undefined;
+            slack_integration?: (Item.SlackIntegration | null) | undefined;
         }
 
         export namespace Item {

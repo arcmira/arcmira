@@ -51,18 +51,12 @@ export class VideosClient {
             async (
                 request: Arcmira.channels.ListVideosRequest,
             ): Promise<core.WithRawResponse<Arcmira.ChannelVideosResponse>> => {
-                const {
-                    channel_id: channelId,
-                    limit,
-                    cursor,
-                    published_after: publishedAfter,
-                    published_before: publishedBefore,
-                } = request;
+                const { channel_id: channelId, limit, cursor, after, before } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
-                    published_after: publishedAfter,
-                    published_before: publishedBefore,
+                    after,
+                    before,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
                 const _headers: core.Fetcher.Args["headers"] = mergeHeaders(

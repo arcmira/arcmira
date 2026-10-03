@@ -3,11 +3,11 @@
 import type * as Arcmira from "../index.js";
 
 export interface FeedbackResponse {
-    /** Id of the persisted feedback record. Read it back via GET /v1/feedback/{feedback_id}. */
-    feedback_id: number;
-    /** The feedback type you submitted. Values: recommendations, channel_sponsors, mentions, entities_search, entities, channels, monitor_alert, appearances, search. */
+    /** Id of the persisted feedback record, fbk_ and digits. Read it back via GET /v1/feedback/{feedback_id}. */
+    feedback_id: string;
+    /** The feedback type you submitted. Values: recommendations, channel_sponsors, mentions, entities_search, entities, channels, monitor_alert, appearances, search, experience. */
     type: string;
-    /** The query object the feedback is attached to, echoed back. */
+    /** The query object the feedback is attached to, echoed back. category and mcp_call_id, when sent, are recorded in it under those names. */
     query: Record<string, unknown>;
     /** Count of corrections applied automatically. CURRENTLY always 0: public submissions are logged for review, never auto-applied. */
     applied: number;

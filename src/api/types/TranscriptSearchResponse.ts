@@ -6,22 +6,25 @@ export interface TranscriptSearchResponse {
     /** The q parameter echoed back. */
     query: string;
     /** The limit applied. */
-    requestedK: number;
+    limit: number;
     /** Chunks returned. */
-    returnedN: number;
+    returned: number;
     filters: TranscriptSearchResponse.Filters;
+    window: Arcmira.PublicationWindow;
     /** Ranked slices. Empty means no hit in the shows we index; say so, never search the open web. */
     chunks: Arcmira.TranscriptSearchChunk[];
     /** True when some retrieval batches failed and these chunks are what survived. */
     partial?: boolean | undefined;
     /** How many batches failed when partial is true. */
-    failedBatches?: number | undefined;
-    /** Newest publishedAt among the chunks. Null when there are none. */
+    failed_batches?: number | undefined;
+    /** Newest published_at among the chunks. Null when there are none. */
     as_of: string | null;
     /** Health of the search index behind these results. Catalog routes are unaffected by it. */
     search_index: TranscriptSearchResponse.SearchIndex;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptSearchResponse.Access | undefined;
+    /** Present when your plan's freshness gate cut the window and nothing older matched; note says so. */
+    unlock?: TranscriptSearchResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
 }
@@ -29,17 +32,28 @@ export interface TranscriptSearchResponse {
 export namespace TranscriptSearchResponse {
     export interface Filters {
         /** Channel ids the search was scoped to, after entity_ids were expanded. */
-        channelIds: string[];
+        channel_ids: string[];
         /** Exact explicit entity_ids accepted for this search. Every id was resolved; an unknown id is refused. */
-        entityIds: string[];
-        publishedAfter: string | null;
-        publishedBefore: string | null;
+        entity_ids: string[];
         /** The about ids, each with its name and type. */
         about: Arcmira.NamedEntityRef[];
         /** The by ids, each with its name and type. */
         by: Arcmira.NamedEntityRef[];
-        /** The kind values applied. */
-        kind: string[];
+        /** The passage classes applied. */
+        kind: Filters.Kind.Item[];
+    }
+
+    export namespace Filters {
+        export type Kind = Kind.Item[];
+
+        export namespace Kind {
+            export const Item = {
+                Sponsored: "sponsored",
+                Organic: "organic",
+                Mention: "mention",
+            } as const;
+            export type Item = (typeof Item)[keyof typeof Item];
+        }
     }
 
     /**
@@ -83,10 +97,8 @@ export namespace TranscriptSearchResponse {
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
-        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
-        current_revision?: string | undefined;
-        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
-        expected_seq?: number | undefined;
+        /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
+        details?: Access.Details | undefined;
         doc_url: string;
         request_id: string;
     }
@@ -150,5 +162,24 @@ export namespace TranscriptSearchResponse {
                 url: string;
             }
         }
+
+        /**
+         * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
+         */
+        export interface Details {
+            quote?: Arcmira.RefusedQuote | undefined;
+            /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
+            existing_id?: string | undefined;
+        }
+    }
+
+    /**
+     * Present when your plan's freshness gate cut the window and nothing older matched; note says so.
+     */
+    export interface Unlock {
+        /** The plan that lifts the freshness gate. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

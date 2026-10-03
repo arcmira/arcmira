@@ -15,8 +15,8 @@ test.after(() => fake.close());
 test("sends the bearer key and the SDK user agent", async () => {
     await client.me.get();
     assert.equal(last().headers.authorization, "Bearer test-key");
-    assert.equal(last().headers["user-agent"], "arcmira/0.3.0");
-    assert.equal(last().headers["x-fern-sdk-version"], "0.3.0");
+    assert.equal(last().headers["user-agent"], "arcmira/0.4.0");
+    assert.equal(last().headers["x-fern-sdk-version"], "0.4.0");
 });
 
 test("falls back to ARCMIRA_API_KEY", async () => {
@@ -29,29 +29,56 @@ test("falls back to ARCMIRA_API_KEY", async () => {
     assert.equal(last().headers.authorization, "Bearer env-key");
 });
 
-test("search returns typed chunks", async () => {
-    const hits = await client.transcripts.search({ q: "agent payments", limit: 5 });
+test("transcripts.search calls GET /v1/search and returns snake_case chunks", async () => {
+    const hits = await client.transcripts.search({ q: "agent payments", kind: "sponsored,organic", after: "2026-09-01", before: "2026-10-01", limit: 5 });
+    assert.equal(last().path, "/v1/search");
+    assert.deepEqual(last().query, { q: "agent payments", kind: "sponsored,organic", after: "2026-09-01", before: "2026-10-01", limit: "5" });
     assert.equal(hits.query, "agent payments");
     assert.equal(hits.chunks[0].text, "agent payments on air");
-    assert.deepEqual(last().query, { q: "agent payments", limit: "5" });
+    assert.equal(hits.chunks[0].watch_url, "https://arcmira.com/watch?v=dQw4w9WgXcQ&t=1");
+    assert.deepEqual(hits.window, { after: "2026-09-01", before: "2026-10-01" });
 });
 
-test("a paged list walks next_cursor to the end", async () => {
+test("a paged list walks next_cursor through the named collection", async () => {
     const before = fake.requests.length;
     const ids = [];
-    for await (const mention of await client.mentions.list({ entity_id: "ent_14" })) ids.push(mention.id);
+    for await (const mention of await client.mentions.list({ entity_id: "ent_14", after: "2026-09-01", before: "2026-10-01" })) ids.push(mention.id);
     assert.deepEqual(ids, ["men_1", "men_2", "men_3"]);
     const pages = fake.requests.slice(before);
     assert.equal(pages.length, 2);
+    assert.deepEqual(pages[0].query, { entity_id: "ent_14", after: "2026-09-01", before: "2026-10-01" });
     assert.equal(pages[1].query.cursor, "c2");
 });
 
-test("a write sends a JSON body", async () => {
-    const { monitor } = await client.monitors.create({ name: "Ramp", notifyFrequency: "daily" });
+test("recommendations.list takes entity_id and the class vocabulary", async () => {
+    const page = await client.recommendations.list({ entity_id: "ent_14", class: "sponsored", channel_id: "UC-DRzaGnL_vtBUpCFH5M0tg" });
+    assert.equal(last().path, "/v1/recommendations");
+    assert.deepEqual(last().query, { entity_id: "ent_14", class: "sponsored", channel_id: "UC-DRzaGnL_vtBUpCFH5M0tg" });
+    assert.equal(page.response.recommendations[0].class, "sponsored");
+});
+
+test("monitor and tracker writes send snake_case bodies", async () => {
+    const { monitor } = await client.monitors.create({ name: "Ramp", notify_frequency: "daily", notify_emails: ["hi@arcmira.com"] });
     assert.equal(last().method, "POST");
     assert.equal(last().headers["content-type"], "application/json");
-    assert.deepEqual(last().body, { name: "Ramp", notifyFrequency: "daily" });
+    assert.deepEqual(last().body, { name: "Ramp", notify_frequency: "daily", notify_emails: ["hi@arcmira.com"] });
     assert.equal(monitor.name, "Ramp");
+    await client.monitors.update({ id: "mon_2", paused: true });
+    assert.deepEqual([last().method, last().path, last().body], ["PATCH", "/v1/monitors/mon_2", { paused: true }]);
+    const { tracker } = await client.trackers.create({ entity_name: "Mercury", entity_type: "organization" });
+    assert.deepEqual(last().body, { entity_name: "Mercury", entity_type: "organization" });
+    await client.monitors.trackers.add({ id: "mon_2", tracker_ids: [tracker.id] });
+    assert.deepEqual(last().body, { tracker_ids: [tracker.id] });
+    const added = await client.monitors.entities.add({ id: "mon_2", entity_ids: ["ent_14"], person_match_mode: "both" });
+    assert.deepEqual(last().body, { entity_ids: ["ent_14"], person_match_mode: "both" });
+    assert.equal(added.results[0].tracker_id, "trk_100");
+});
+
+test("a duplicate follow is a typed ConflictError carrying error.details.existing_id", async () => {
+    const err = await client.trackers.create({ entity_name: "brex", entity_type: "organization" }).catch((e) => e);
+    assert.ok(err instanceof Arcmira.ConflictError);
+    assert.equal(err.body.error.code, "tracker_already_exists");
+    assert.equal(err.body.error.details.existing_id, "trk_9");
 });
 
 test("a plan gate is a typed PaymentRequiredError with the parsed body", async () => {
@@ -70,11 +97,11 @@ test("a 404 is a typed NotFoundError", async () => {
     assert.equal(err.body.error.code, "transcript_unavailable");
 });
 
-test("an entity page list 404 carries the v1 envelope", async () => {
-    const err = await client.people.related.topics({ slug: "nobody" }).catch((e) => e);
-    assert.ok(err instanceof Arcmira.NotFoundError);
-    assert.equal(err.body.error.type, "not_found");
-    assert.equal(err.body.error.code, "entity_not_found");
+test("the methods whose operations left the document are gone", () => {
+    for (const group of ["people", "topics", "organizations", "products", "corrections", "team"]) assert.equal(group in client, false, group);
+    for (const method of ["request", "status", "captions", "prepareAndWait"]) assert.equal(method in client.transcripts, false, method);
+    for (const method of ["search", "lookup", "cards"]) assert.equal(method in client.entities, false, method);
+    assert.equal("get" in client.channels, false);
 });
 
 test("a process exits promptly after a request that could not connect", async () => {
@@ -92,15 +119,4 @@ await new ArcmiraClient({ apiKey: "k", baseUrl: "http://127.0.0.1:${port}", maxR
     const elapsed = Date.now() - started;
     assert.equal(stdout.trim(), "ArcmiraError");
     assert.ok(elapsed < 5_000, `exited after ${elapsed} ms; the request timer outlived the failed fetch`);
-});
-
-test("transcript requests live on transcripts: request POSTs, status polls", async () => {
-    assert.equal("transcriptions" in client, false);
-    const order = await client.transcripts.request({ video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 50, "Idempotency-Key": "order-1" });
-    assert.equal(last().method, "POST");
-    assert.equal(last().path, "/v1/transcriptions");
-    assert.equal(last().headers["idempotency-key"], "order-1");
-    const state = await client.transcripts.status({ id: order.job.id });
-    assert.equal(last().path, `/v1/transcriptions/${order.job.id}`);
-    assert.equal(state.id, order.job.id);
 });

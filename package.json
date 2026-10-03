@@ -1,6 +1,6 @@
 {
   "name": "arcmira",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Search YouTube and podcast transcripts. Mentions, momentum, sponsors, and organic recommendations. The Arcmira TypeScript SDK and the arcmira CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
@@ -71,27 +71,16 @@
       },
       "default": "./dist/cjs/index.js"
     },
-    "./health": {
+    "./channels": {
       "import": {
-        "types": "./dist/esm/api/resources/health/exports.d.mts",
-        "default": "./dist/esm/api/resources/health/exports.mjs"
+        "types": "./dist/esm/api/resources/channels/exports.d.mts",
+        "default": "./dist/esm/api/resources/channels/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/health/exports.d.ts",
-        "default": "./dist/cjs/api/resources/health/exports.js"
+        "types": "./dist/cjs/api/resources/channels/exports.d.ts",
+        "default": "./dist/cjs/api/resources/channels/exports.js"
       },
-      "default": "./dist/cjs/api/resources/health/exports.js"
-    },
-    "./me": {
-      "import": {
-        "types": "./dist/esm/api/resources/me/exports.d.mts",
-        "default": "./dist/esm/api/resources/me/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/me/exports.d.ts",
-        "default": "./dist/cjs/api/resources/me/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/me/exports.js"
+      "default": "./dist/cjs/api/resources/channels/exports.js"
     },
     "./entities": {
       "import": {
@@ -104,28 +93,6 @@
       },
       "default": "./dist/cjs/api/resources/entities/exports.js"
     },
-    "./mentions": {
-      "import": {
-        "types": "./dist/esm/api/resources/mentions/exports.d.mts",
-        "default": "./dist/esm/api/resources/mentions/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/mentions/exports.d.ts",
-        "default": "./dist/cjs/api/resources/mentions/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/mentions/exports.js"
-    },
-    "./recommendations": {
-      "import": {
-        "types": "./dist/esm/api/resources/recommendations/exports.d.mts",
-        "default": "./dist/esm/api/resources/recommendations/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/recommendations/exports.d.ts",
-        "default": "./dist/cjs/api/resources/recommendations/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/recommendations/exports.js"
-    },
     "./feedback": {
       "import": {
         "types": "./dist/esm/api/resources/feedback/exports.d.mts",
@@ -137,71 +104,49 @@
       },
       "default": "./dist/cjs/api/resources/feedback/exports.js"
     },
-    "./transcripts": {
+    "./health": {
       "import": {
-        "types": "./dist/esm/api/resources/transcripts/exports.d.mts",
-        "default": "./dist/esm/api/resources/transcripts/exports.mjs"
+        "types": "./dist/esm/api/resources/health/exports.d.mts",
+        "default": "./dist/esm/api/resources/health/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/transcripts/exports.d.ts",
-        "default": "./dist/cjs/api/resources/transcripts/exports.js"
+        "types": "./dist/cjs/api/resources/health/exports.d.ts",
+        "default": "./dist/cjs/api/resources/health/exports.js"
       },
-      "default": "./dist/cjs/api/resources/transcripts/exports.js"
+      "default": "./dist/cjs/api/resources/health/exports.js"
     },
-    "./channels": {
+    "./integrations": {
       "import": {
-        "types": "./dist/esm/api/resources/channels/exports.d.mts",
-        "default": "./dist/esm/api/resources/channels/exports.mjs"
+        "types": "./dist/esm/api/resources/integrations/exports.d.mts",
+        "default": "./dist/esm/api/resources/integrations/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/channels/exports.d.ts",
-        "default": "./dist/cjs/api/resources/channels/exports.js"
+        "types": "./dist/cjs/api/resources/integrations/exports.d.ts",
+        "default": "./dist/cjs/api/resources/integrations/exports.js"
       },
-      "default": "./dist/cjs/api/resources/channels/exports.js"
+      "default": "./dist/cjs/api/resources/integrations/exports.js"
     },
-    "./people": {
+    "./me": {
       "import": {
-        "types": "./dist/esm/api/resources/people/exports.d.mts",
-        "default": "./dist/esm/api/resources/people/exports.mjs"
+        "types": "./dist/esm/api/resources/me/exports.d.mts",
+        "default": "./dist/esm/api/resources/me/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/people/exports.d.ts",
-        "default": "./dist/cjs/api/resources/people/exports.js"
+        "types": "./dist/cjs/api/resources/me/exports.d.ts",
+        "default": "./dist/cjs/api/resources/me/exports.js"
       },
-      "default": "./dist/cjs/api/resources/people/exports.js"
+      "default": "./dist/cjs/api/resources/me/exports.js"
     },
-    "./topics": {
+    "./mentions": {
       "import": {
-        "types": "./dist/esm/api/resources/topics/exports.d.mts",
-        "default": "./dist/esm/api/resources/topics/exports.mjs"
+        "types": "./dist/esm/api/resources/mentions/exports.d.mts",
+        "default": "./dist/esm/api/resources/mentions/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/topics/exports.d.ts",
-        "default": "./dist/cjs/api/resources/topics/exports.js"
+        "types": "./dist/cjs/api/resources/mentions/exports.d.ts",
+        "default": "./dist/cjs/api/resources/mentions/exports.js"
       },
-      "default": "./dist/cjs/api/resources/topics/exports.js"
-    },
-    "./organizations": {
-      "import": {
-        "types": "./dist/esm/api/resources/organizations/exports.d.mts",
-        "default": "./dist/esm/api/resources/organizations/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/organizations/exports.d.ts",
-        "default": "./dist/cjs/api/resources/organizations/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/organizations/exports.js"
-    },
-    "./products": {
-      "import": {
-        "types": "./dist/esm/api/resources/products/exports.d.mts",
-        "default": "./dist/esm/api/resources/products/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/products/exports.d.ts",
-        "default": "./dist/cjs/api/resources/products/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/products/exports.js"
+      "default": "./dist/cjs/api/resources/mentions/exports.js"
     },
     "./monitors": {
       "import": {
@@ -214,6 +159,17 @@
       },
       "default": "./dist/cjs/api/resources/monitors/exports.js"
     },
+    "./recommendations": {
+      "import": {
+        "types": "./dist/esm/api/resources/recommendations/exports.d.mts",
+        "default": "./dist/esm/api/resources/recommendations/exports.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/api/resources/recommendations/exports.d.ts",
+        "default": "./dist/cjs/api/resources/recommendations/exports.js"
+      },
+      "default": "./dist/cjs/api/resources/recommendations/exports.js"
+    },
     "./trackers": {
       "import": {
         "types": "./dist/esm/api/resources/trackers/exports.d.mts",
@@ -225,27 +181,16 @@
       },
       "default": "./dist/cjs/api/resources/trackers/exports.js"
     },
-    "./team": {
+    "./transcripts": {
       "import": {
-        "types": "./dist/esm/api/resources/team/exports.d.mts",
-        "default": "./dist/esm/api/resources/team/exports.mjs"
+        "types": "./dist/esm/api/resources/transcripts/exports.d.mts",
+        "default": "./dist/esm/api/resources/transcripts/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/team/exports.d.ts",
-        "default": "./dist/cjs/api/resources/team/exports.js"
+        "types": "./dist/cjs/api/resources/transcripts/exports.d.ts",
+        "default": "./dist/cjs/api/resources/transcripts/exports.js"
       },
-      "default": "./dist/cjs/api/resources/team/exports.js"
-    },
-    "./corrections": {
-      "import": {
-        "types": "./dist/esm/api/resources/corrections/exports.d.mts",
-        "default": "./dist/esm/api/resources/corrections/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/corrections/exports.d.ts",
-        "default": "./dist/cjs/api/resources/corrections/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/corrections/exports.js"
+      "default": "./dist/cjs/api/resources/transcripts/exports.js"
     },
     "./channels/sponsors": {
       "import": {
@@ -269,60 +214,16 @@
       },
       "default": "./dist/cjs/api/resources/channels/resources/videos/exports.js"
     },
-    "./channels/related": {
+    "./integrations/slack": {
       "import": {
-        "types": "./dist/esm/api/resources/channels/resources/related/exports.d.mts",
-        "default": "./dist/esm/api/resources/channels/resources/related/exports.mjs"
+        "types": "./dist/esm/api/resources/integrations/resources/slack/exports.d.mts",
+        "default": "./dist/esm/api/resources/integrations/resources/slack/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/channels/resources/related/exports.d.ts",
-        "default": "./dist/cjs/api/resources/channels/resources/related/exports.js"
+        "types": "./dist/cjs/api/resources/integrations/resources/slack/exports.d.ts",
+        "default": "./dist/cjs/api/resources/integrations/resources/slack/exports.js"
       },
-      "default": "./dist/cjs/api/resources/channels/resources/related/exports.js"
-    },
-    "./channels/guests": {
-      "import": {
-        "types": "./dist/esm/api/resources/channels/resources/guests/exports.d.mts",
-        "default": "./dist/esm/api/resources/channels/resources/guests/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/channels/resources/guests/exports.d.ts",
-        "default": "./dist/cjs/api/resources/channels/resources/guests/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/channels/resources/guests/exports.js"
-    },
-    "./entities/mentions": {
-      "import": {
-        "types": "./dist/esm/api/resources/entities/resources/mentions/exports.d.mts",
-        "default": "./dist/esm/api/resources/entities/resources/mentions/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/entities/resources/mentions/exports.d.ts",
-        "default": "./dist/cjs/api/resources/entities/resources/mentions/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/entities/resources/mentions/exports.js"
-    },
-    "./entities/recommendations": {
-      "import": {
-        "types": "./dist/esm/api/resources/entities/resources/recommendations/exports.d.mts",
-        "default": "./dist/esm/api/resources/entities/resources/recommendations/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/entities/resources/recommendations/exports.d.ts",
-        "default": "./dist/cjs/api/resources/entities/resources/recommendations/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/entities/resources/recommendations/exports.js"
-    },
-    "./monitors/trackers": {
-      "import": {
-        "types": "./dist/esm/api/resources/monitors/resources/trackers/exports.d.mts",
-        "default": "./dist/esm/api/resources/monitors/resources/trackers/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/monitors/resources/trackers/exports.d.ts",
-        "default": "./dist/cjs/api/resources/monitors/resources/trackers/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/monitors/resources/trackers/exports.js"
+      "default": "./dist/cjs/api/resources/integrations/resources/slack/exports.js"
     },
     "./monitors/alerts": {
       "import": {
@@ -335,71 +236,27 @@
       },
       "default": "./dist/cjs/api/resources/monitors/resources/alerts/exports.js"
     },
-    "./organizations/related": {
+    "./monitors/entities": {
       "import": {
-        "types": "./dist/esm/api/resources/organizations/resources/related/exports.d.mts",
-        "default": "./dist/esm/api/resources/organizations/resources/related/exports.mjs"
+        "types": "./dist/esm/api/resources/monitors/resources/entities/exports.d.mts",
+        "default": "./dist/esm/api/resources/monitors/resources/entities/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/organizations/resources/related/exports.d.ts",
-        "default": "./dist/cjs/api/resources/organizations/resources/related/exports.js"
+        "types": "./dist/cjs/api/resources/monitors/resources/entities/exports.d.ts",
+        "default": "./dist/cjs/api/resources/monitors/resources/entities/exports.js"
       },
-      "default": "./dist/cjs/api/resources/organizations/resources/related/exports.js"
+      "default": "./dist/cjs/api/resources/monitors/resources/entities/exports.js"
     },
-    "./people/appearances": {
+    "./monitors/trackers": {
       "import": {
-        "types": "./dist/esm/api/resources/people/resources/appearances/exports.d.mts",
-        "default": "./dist/esm/api/resources/people/resources/appearances/exports.mjs"
+        "types": "./dist/esm/api/resources/monitors/resources/trackers/exports.d.mts",
+        "default": "./dist/esm/api/resources/monitors/resources/trackers/exports.mjs"
       },
       "require": {
-        "types": "./dist/cjs/api/resources/people/resources/appearances/exports.d.ts",
-        "default": "./dist/cjs/api/resources/people/resources/appearances/exports.js"
+        "types": "./dist/cjs/api/resources/monitors/resources/trackers/exports.d.ts",
+        "default": "./dist/cjs/api/resources/monitors/resources/trackers/exports.js"
       },
-      "default": "./dist/cjs/api/resources/people/resources/appearances/exports.js"
-    },
-    "./people/related": {
-      "import": {
-        "types": "./dist/esm/api/resources/people/resources/related/exports.d.mts",
-        "default": "./dist/esm/api/resources/people/resources/related/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/people/resources/related/exports.d.ts",
-        "default": "./dist/cjs/api/resources/people/resources/related/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/people/resources/related/exports.js"
-    },
-    "./products/related": {
-      "import": {
-        "types": "./dist/esm/api/resources/products/resources/related/exports.d.mts",
-        "default": "./dist/esm/api/resources/products/resources/related/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/products/resources/related/exports.d.ts",
-        "default": "./dist/cjs/api/resources/products/resources/related/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/products/resources/related/exports.js"
-    },
-    "./team/usageEvents": {
-      "import": {
-        "types": "./dist/esm/api/resources/team/resources/usageEvents/exports.d.mts",
-        "default": "./dist/esm/api/resources/team/resources/usageEvents/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/team/resources/usageEvents/exports.d.ts",
-        "default": "./dist/cjs/api/resources/team/resources/usageEvents/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/team/resources/usageEvents/exports.js"
-    },
-    "./topics/related": {
-      "import": {
-        "types": "./dist/esm/api/resources/topics/resources/related/exports.d.mts",
-        "default": "./dist/esm/api/resources/topics/resources/related/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/topics/resources/related/exports.d.ts",
-        "default": "./dist/cjs/api/resources/topics/resources/related/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/topics/resources/related/exports.js"
+      "default": "./dist/cjs/api/resources/monitors/resources/trackers/exports.js"
     },
     "./trackers/alerts": {
       "import": {
@@ -412,39 +269,6 @@
       },
       "default": "./dist/cjs/api/resources/trackers/resources/alerts/exports.js"
     },
-    "./transcripts/edits": {
-      "import": {
-        "types": "./dist/esm/api/resources/transcripts/resources/edits/exports.d.mts",
-        "default": "./dist/esm/api/resources/transcripts/resources/edits/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/transcripts/resources/edits/exports.d.ts",
-        "default": "./dist/cjs/api/resources/transcripts/resources/edits/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/transcripts/resources/edits/exports.js"
-    },
-    "./transcripts/speakers": {
-      "import": {
-        "types": "./dist/esm/api/resources/transcripts/resources/speakers/exports.d.mts",
-        "default": "./dist/esm/api/resources/transcripts/resources/speakers/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/transcripts/resources/speakers/exports.d.ts",
-        "default": "./dist/cjs/api/resources/transcripts/resources/speakers/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/transcripts/resources/speakers/exports.js"
-    },
-    "./transcripts/merges": {
-      "import": {
-        "types": "./dist/esm/api/resources/transcripts/resources/merges/exports.d.mts",
-        "default": "./dist/esm/api/resources/transcripts/resources/merges/exports.mjs"
-      },
-      "require": {
-        "types": "./dist/cjs/api/resources/transcripts/resources/merges/exports.d.ts",
-        "default": "./dist/cjs/api/resources/transcripts/resources/merges/exports.js"
-      },
-      "default": "./dist/cjs/api/resources/transcripts/resources/merges/exports.js"
-    },
     "./package.json": "./package.json"
   },
   "browser": {
@@ -454,6 +278,5 @@
     "stream": false,
     "crypto": false
   },
-  "sideEffects": false,
-  "dependencies": {}
+  "sideEffects": false
 }

@@ -2,9 +2,9 @@
 
 export interface WebhookSecretRotateResponse {
     /** The NEW webhook signing secret ("whsec_..."). Store it securely. The same Idempotency-Key can recover it for up to 24 hours while it remains the current or valid previous secret. A displaced or expired secret returns idempotency_result_expired without rotating again. */
-    webhookSecret: string;
+    webhook_secret: string;
     /** Last 4 characters of the new secret, for identifying which secret you hold. */
-    webhookSecretHint: string;
+    webhook_secret_hint: string;
     /** End of the 24-hour overlap window. Until then, deliveries carry an additional X-Arcmira-Signature-Previous header computed with the previous secret over the same {timestamp}.{payload} string, so you can verify with either secret while you roll. Null when the monitor had no previous secret (nothing to overlap). */
-    previousSecretExpiresAt: string | null;
+    previous_secret_expires_at: string | null;
 }

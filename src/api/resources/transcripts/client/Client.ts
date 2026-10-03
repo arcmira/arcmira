@@ -2,16 +2,12 @@
 
 import type { BaseClientOptions, BaseRequestOptions } from "../../../../BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "../../../../BaseClient.js";
-import { mergeHeaders, mergeOnlyDefinedHeaders } from "../../../../core/headers.js";
+import { mergeHeaders } from "../../../../core/headers.js";
 import * as core from "../../../../core/index.js";
-import { mergeAdditionalBodyParameters } from "../../../../core/requestBody.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
 import * as Arcmira from "../../../index.js";
-import { EditsClient } from "../resources/edits/client/Client.js";
-import { MergesClient } from "../resources/merges/client/Client.js";
-import { SpeakersClient } from "../resources/speakers/client/Client.js";
 
 export declare namespace TranscriptsClient {
     export type Options = BaseClientOptions;
@@ -21,28 +17,13 @@ export declare namespace TranscriptsClient {
 
 export class TranscriptsClient {
     protected readonly _options: NormalizedClientOptionsWithAuth<TranscriptsClient.Options>;
-    protected _edits: EditsClient | undefined;
-    protected _speakers: SpeakersClient | undefined;
-    protected _merges: MergesClient | undefined;
 
     constructor(options: TranscriptsClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
-    public get edits(): EditsClient {
-        return (this._edits ??= new EditsClient(this._options));
-    }
-
-    public get speakers(): SpeakersClient {
-        return (this._speakers ??= new SpeakersClient(this._options));
-    }
-
-    public get merges(): MergesClient {
-        return (this._merges ??= new MergesClient(this._options));
-    }
-
     /**
-     * Search indexed YouTube and podcast transcripts for short spoken slices. Each result includes spoken text, a watch URL, and a publish date. Scope with channel_ids (or channel) and entity_ids (a person id filters to that person's appearances); narrow to passages about entities with about, to a speaker with by, and to mention, recommendation_sponsored or recommendation_organic passages with kind. Every filter takes ids, never names: resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter. Results carry names beside ids (filters.about, filters.by, chunk about and speakers_by). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. A published_after narrower than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per chunk returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+     * Search indexed YouTube and podcast transcripts for short spoken slices. Each result includes spoken text, a watch URL, and a publish date. Scope with channel_ids (or channel) and entity_ids (a person id filters to that person's appearances); narrow to passages about entities with about, to a speaker with by, and to sponsored, organic or mention passages with kind. Every filter takes ids, never names: resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter. Results carry names beside ids (filters.about, filters.by, chunk about and speakers_by). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. An after later than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per chunk returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
      *
      * @param {Arcmira.SearchTranscriptsRequest} request
      * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -82,8 +63,8 @@ export class TranscriptsClient {
             about,
             by,
             kind,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
+            after,
+            before,
             source,
             limit,
         } = request;
@@ -95,8 +76,8 @@ export class TranscriptsClient {
             about,
             by,
             kind,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
+            after,
+            before,
             source: source != null ? source : undefined,
             limit,
         };
@@ -111,7 +92,7 @@ export class TranscriptsClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.ArcmiraEnvironment.Default,
-                "v1/transcripts/search",
+                "v1/search",
             ),
             method: "GET",
             headers: _headers,
@@ -169,11 +150,11 @@ export class TranscriptsClient {
             }
         }
 
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/transcripts/search");
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/search");
     }
 
     /**
-     * Caption retrieval costs one row per started 15 minutes. Premium retrieval is free and never buys, generates, or returns fallback captions. Branch on state: 200 ready is owned content; 202 pending carries the job, with Retry-After; 200 preparation_required carries the whole-video quote and the action to take, POST /v1/transcriptions with { video_id }, plus last_attempt when the previous purchase failed. Plans without Premium read captions with an access gate instead. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium responses retain revision and line indexes for corrections.
+     * Caption retrieval costs one row per started 15 minutes. quality=premium is one read: an owned transcript answers 200 ready at zero rows; otherwise this call buys the whole video within the account's plan and on-demand budget, included credits first and then on-demand money up to the account limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same purchase and never buy twice. When the last purchase for the video failed, the read answers 200 state failed with the job and last_attempt and buys nothing; retry=true buys it again. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and nothing is charged. A default-premium account with nothing owned reads captions with a note. start/end only trim the returned content; language selects caption tracks, timestamps=false returns paragraphs. Premium lines carry speaker and index, and the body carries speakers and revision.
      *
      * @param {Arcmira.GetTranscriptsRequest} request
      * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -205,13 +186,14 @@ export class TranscriptsClient {
         request: Arcmira.GetTranscriptsRequest,
         requestOptions?: TranscriptsClient.RequestOptions,
     ): Promise<core.WithRawResponse<Arcmira.TranscriptResult>> {
-        const { video_id: videoId, quality, language, timestamps, start, end, refresh } = request;
+        const { video_id: videoId, quality, language, timestamps, start, end, retry, refresh } = request;
         const _queryParams: Record<string, unknown> = {
             quality: quality != null ? quality : undefined,
             language,
             timestamps,
             start,
             end,
+            retry,
             refresh,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -287,7 +269,7 @@ export class TranscriptsClient {
     }
 
     /**
-     * Optional free quote. It does not reserve funds or start generation. max_rows authorizes rows, while max_on_demand_cents separately authorizes new money and defaults to zero on purchase. The accepted purchase stores its pricing mode. A video with no known duration, or one past the 12 hour cap, answers 400 invalid_query with param video_id.
+     * Optional free quote: the price a Premium read of this video would charge right now, as rows and credits, where the credits would come from, and max_on_demand_cents, the on-demand money the read would need beyond included credits within the account limit. It does not reserve funds or start generation. A video with no known duration, or one past the 12 hour cap, answers 400 invalid_query with param video_id.
      *
      * @param {Arcmira.QuoteTranscriptsRequest} request
      * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -378,107 +360,6 @@ export class TranscriptsClient {
             _response.rawResponse,
             "GET",
             "/v1/transcripts/{video_id}/quote",
-        );
-    }
-
-    /**
-     * Free (0 rows), any key. Returns the video metadata and every caption track YouTube lists for it, each as { code, name, generated }. Call it when GET /v1/transcripts/{video_id} answered transcript_unavailable without languages, or before asking for a specific track. Listing is served from a day-long cache; a cold listing answers 503 transcript_fetching with Retry-After while the fetch continues in the background.
-     *
-     * @param {Arcmira.CaptionsTranscriptsRequest} request
-     * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link Arcmira.ServiceUnavailableError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.transcripts.captions({
-     *         video_id: "video_id"
-     *     })
-     */
-    public captions(
-        request: Arcmira.CaptionsTranscriptsRequest,
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.VideoCaptionsResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__captions(request, requestOptions));
-    }
-
-    private async __captions(
-        request: Arcmira.CaptionsTranscriptsRequest,
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.VideoCaptionsResponse>> {
-        const { video_id: videoId } = request;
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                `v1/videos/${core.url.encodePathParam(videoId)}/captions`,
-            ),
-            method: "GET",
-            headers: _headers,
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.VideoCaptionsResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 503:
-                    throw new Arcmira.ServiceUnavailableError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(
-            _response.error,
-            _response.rawResponse,
-            "GET",
-            "/v1/videos/{video_id}/captions",
         );
     }
 
@@ -604,201 +485,5 @@ export class TranscriptsClient {
                 return list(core.setObjectProperty(request, "cursor", response?.next_cursor));
             },
         });
-    }
-
-    /**
-     * Explicit whole-video Premium purchase in one request: POST { video_id }. With no max_rows the purchase is capped at the current quote, and max_on_demand_cents defaults to zero, so it spends included rows or credits only and moves no money. Idempotency-Key is optional: without one, a purchase already open or owned for this video is returned with existing: true, and two simultaneous requests buy once. max_on_demand_cents above 0 is the only way to move money and requires both Idempotency-Key and max_rows (400 invalid_body names the missing one in param). A video with no known duration or longer than 12 hours answers 400 invalid_body with param video_id. A plan without Premium answers 403 paid_plan_required with unlock. Accepted price, mode, and debit identity persist across retries. Included rows or credits are reserved up front; monetary on-demand usage is reserved until Premium is ready. Existing owned unlocks cost zero. A terminal generation failure refunds the exact original debit and period before reporting refunded. A repeated key returns the same request; different intent with that key returns idempotency_conflict. The body is { job, existing }. Poll job.status_url after Retry-After. A pending job returns 202; a ready, failed or refunded job returns 200. Idempotency-Replayed: true marks a replay of the same key; a different key joined onto the active purchase answers existing: true without it.
-     *
-     * @param {Arcmira.RequestTranscriptsRequest} request
-     * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.PaymentRequiredError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.ConflictError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.transcripts.request({
-     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90"
-     *     })
-     */
-    public request(
-        request: Arcmira.RequestTranscriptsRequest = {},
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.TranscriptRequestSubmitResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__request(request, requestOptions));
-    }
-
-    private async __request(
-        request: Arcmira.RequestTranscriptsRequest = {},
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.TranscriptRequestSubmitResponse>> {
-        const { "Idempotency-Key": idempotencyKey, ..._body } = request;
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                "v1/transcriptions",
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
-            requestType: "json",
-            body: mergeAdditionalBodyParameters(_body, requestOptions?.additionalBodyParameters),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return {
-                data: _response.body as Arcmira.TranscriptRequestSubmitResponse,
-                rawResponse: _response.rawResponse,
-            };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 402:
-                    throw new Arcmira.PaymentRequiredError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 409:
-                    throw new Arcmira.ConflictError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/v1/transcriptions");
-    }
-
-    /**
-     * Agent-friendly polling contract: while the request is in flight the response carries a Retry-After header (seconds) and body fields `eta_seconds` and `next_poll_seconds`. Sleep on Retry-After and re-poll. `status` walks queued → downloading → transcribing → analyzing → complete (user-facing `stage` folds downloading into transcribing). refund_pending retains Retry-After and next_poll_seconds until reversal completes; it has no completion ETA. Terminal statuses (`complete`, `failed`, `refunded`) drop Retry-After. On `complete`, fetch the transcript via GET /v1/transcripts/{video_id}; the successful purchase owns the permanent unlock. `refunded` means the pipeline failed and the rows were returned. A caller with no account holds no jobs: it is refused with 401 job_requires_account, whose unlock points at sign-up.
-     *
-     * @param {Arcmira.StatusTranscriptsRequest} request
-     * @param {TranscriptsClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.transcripts.status({
-     *         id: "id"
-     *     })
-     */
-    public status(
-        request: Arcmira.StatusTranscriptsRequest,
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.TranscriptJob> {
-        return core.HttpResponsePromise.fromPromise(this.__status(request, requestOptions));
-    }
-
-    private async __status(
-        request: Arcmira.StatusTranscriptsRequest,
-        requestOptions?: TranscriptsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.TranscriptJob>> {
-        const { id } = request;
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                `v1/transcriptions/${core.url.encodePathParam(id)}`,
-            ),
-            method: "GET",
-            headers: _headers,
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.TranscriptJob, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/v1/transcriptions/{id}");
     }
 }

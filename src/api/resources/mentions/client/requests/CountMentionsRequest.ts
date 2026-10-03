@@ -17,10 +17,10 @@ export interface CountMentionsRequest {
     entity_types?: string;
     /** mentions counts talk about an entity; appearances counts a person being present; both counts either. Default mentions. */
     mode?: Arcmira.CountMentionsRequestMode;
-    /** ISO date. Counts are all-time without it. A window narrower than your plan's freshness gate is refused with freshness_requires_paid rather than widened. */
-    published_after?: string;
-    /** ISO date. Only media published before this day. */
-    published_before?: string;
+    /** Only media published at or after this instant. Counts are all-time without it. An after later than your plan's freshness gate is refused with freshness_requires_paid rather than widened. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    after?: string;
+    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    before?: string;
     /** Rows in the ranked table, 1 to 40. Default 20. */
     limit?: number;
 }

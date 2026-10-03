@@ -43,7 +43,7 @@ type Values = Record<string, string | boolean | string[] | undefined>;
 type Context = { client: ArcmiraClient; values: Values; positionals: string[]; baseUrl: string; apiKey?: string };
 
 type Command = {
-    section: "data" | "account" | "any";
+    section: "data" | "follow" | "account" | "any";
     /** operationIds this command calls, for `arcmira schema <command>`. */
     operations?: string[];
     summary: string;
@@ -58,10 +58,8 @@ type Command = {
     exitCode?: (result: any, ctx: Context) => number;
 };
 
-/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. */
-const EXIT_PREPARATION_REQUIRED = 3;
+/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. 3 is retired with Premium preparation. */
 const EXIT_PENDING = 4;
-const waitCommand = (videoId: string) => `arcmira transcripts get ${videoId} --quality premium --wait`;
 
 const GLOBAL: Record<string, OptionSpec> = {
     json: { type: "boolean", help: "Print the API response as JSON on stdout; errors as JSON on stderr." },
@@ -79,19 +77,25 @@ const GLOBAL: Record<string, OptionSpec> = {
 /** Groups: `arcmira auth <sub>` runs the command named here. */
 const GROUPS: Record<string, Record<string, string>> = {
     auth: { login: "login", logout: "logout", status: "whoami", token: "auth token" },
-    transcripts: { get: "transcripts get", quote: "transcripts quote", request: "transcripts request", status: "transcripts status" },
+    transcripts: { get: "transcripts get", quote: "transcripts quote" },
+    trackers: { list: "trackers list", create: "trackers create" },
+    monitors: { list: "monitors list", create: "monitors create", update: "monitors update", trackers: "monitors trackers", add: "monitors add", attach: "monitors attach" },
+    integrations: { slack: "integrations slack" },
 };
 
 /** Short names for commands that live in a group; help lists them as aliases, not commands. */
-const ALIASES: Record<string, string> = { transcript: "transcripts get" };
+const ALIASES: Record<string, string> = { transcript: "transcripts get", follow: "trackers create" };
 
 /** Names held for later versions, each with the way to reach the same endpoints today. */
 const RESERVED: Record<string, string> = {
-    monitors: "use `arcmira api GET /v1/monitors` (arcmira schema monitors lists the endpoints)",
-    trackers: "use `arcmira api GET /v1/trackers` (arcmira schema trackers lists the endpoints)",
-    corrections: "use `arcmira api POST /v1/videos/<video_id>/corrections --body @correction.json` (arcmira schema submit_correction)",
     feedback: "use `arcmira api POST /v1/feedback --body @feedback.json` (arcmira schema submit_feedback)",
     keys: "manage keys at https://arcmira.com/dashboard?tab=api-keys",
+};
+
+/** Commands earlier versions had, each with what replaces it. */
+const RETIRED: Record<string, string> = {
+    "transcripts request": "a Premium read buys its own transcript now: arcmira transcripts get <video> --quality premium",
+    "transcripts status": "read the transcript again: arcmira transcripts get <video> --quality premium answers the job while it runs",
 };
 
 class UsageError extends Error {
@@ -117,7 +121,6 @@ const note = (text: string) => console.error(text);
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const CHANNEL_ID = /^UC[A-Za-z0-9_-]{22}$/;
 const ENTITY_ID = /^ent_\d+$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
 const ENTITY_TYPES = ["person", "organization", "product", "topic", "channel"] as const;
 
@@ -133,45 +136,17 @@ function videoIdOf(input: string): string {
     throw new UsageError(`"${input}" is not a YouTube video id or URL`, "invalid_video");
 }
 
-/** A malformed id is a usage error; anything else is a name to resolve. */
-function checkIdShape(value: string, kind: "entity" | "channel"): void {
-    if (kind === "entity" && /^ent_/i.test(value) && !ENTITY_ID.test(value)) throw new UsageError(`"${value}" is not an entity id (ent_ and digits)`, "invalid_entity");
-    if (kind === "channel" && /^UC\S{20,}$/.test(value) && !CHANNEL_ID.test(value)) throw new UsageError(`"${value}" is not a YouTube channel id (UC and 22 characters)`, "invalid_channel");
-    if (value.trim().length < 2) throw new UsageError(`"${value}" is too short to resolve; pass an id or a name of 2 or more characters`, "invalid_name");
+/** Reads take ids. A name where an id belongs is a usage error naming the resolve call that finds the id, before any request. */
+function needId(value: string, kind: "entity" | "channel", flag: string): void {
+    if (kind === "entity" && !ENTITY_ID.test(value)) {
+        throw new UsageError(`${flag} takes an entity id like ent_14, got "${value}"`, "id_required", `arcmira resolve "${value}"`);
+    }
+    if (kind === "channel" && !CHANNEL_ID.test(value)) {
+        throw new UsageError(`${flag} takes a YouTube channel id (UC and 22 characters), got "${value}"`, "id_required", `arcmira resolve "${value.replace(/^@/, "")}" --type channel`);
+    }
 }
-
-type EntityRow = Arcmira.ResolveCandidate;
 
 const rowLine = (row: { id: string; type: string; name: string; youtube_channel_id?: string | null }) => `${row.id}  ${row.type}  ${row.name}${row.youtube_channel_id ? `  ${row.youtube_channel_id}` : ""}`;
-
-/** The pick GET /v1/entities/resolve makes for a name, stated on stderr: best as is, suggested as an assumption, ask as a usage error listing the options. */
-async function resolveName(client: ArcmiraClient, name: string, type?: "channel" | "person"): Promise<EntityRow> {
-    const r = await client.entities.resolve({ q: name, type });
-    if (r.best) {
-        note(`resolved "${name}" to ${rowLine(r.best)}`);
-        return r.best;
-    }
-    if (r.suggested) {
-        note(`assumed "${name}" is ${rowLine(r.suggested)}, because ${r.suggested.evidence}. Pass an id to pick another.`);
-        return r.suggested;
-    }
-    if (r.ask) {
-        const options = r.ask.options.map((o) => `  ${o.id}  ${o.label}`).join("\n");
-        throw new UsageError(`${r.ask.question} Pass one of these ids:\n${options}`, "name_ambiguous", `arcmira resolve "${name}"${type ? ` --type ${type}` : ""} --context "<what you mean>"`);
-    }
-    throw new UsageError(`no ${type ?? "entity"} matches "${name}"`, "name_not_found", `arcmira resolve "${name}"`);
-}
-
-async function entityId(client: ArcmiraClient, value: string, type?: "person"): Promise<string> {
-    return ENTITY_ID.test(value) ? value : (await resolveName(client, value, type)).id;
-}
-
-async function channelId(client: ArcmiraClient, value: string): Promise<string> {
-    if (CHANNEL_ID.test(value)) return value;
-    const row = await resolveName(client, value, "channel");
-    if (!row.youtube_channel_id) throw new UsageError(`"${value}" resolved to ${row.id}, which has no YouTube channel id`, "name_not_channel");
-    return row.youtube_channel_id;
-}
 
 const configDir = () => join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "arcmira");
 const configPath = () => join(configDir(), "config.json");
@@ -269,7 +244,7 @@ function collectionPage(value: unknown): { body: Record<string, unknown>; key: s
     if (typeof value !== "object" || value === null) throw new UsageError("Pagination requires a JSON object", "invalid_page");
     const entries = Object.entries(value);
     const arrays = entries.filter(([, field]) => Array.isArray(field));
-    if (arrays.length !== 1 || !["data", "requests", "episodes", "items"].includes(arrays[0][0]))
+    if (arrays.length !== 1 || !["mentions", "recommendations", "alerts", "episodes", "requests"].includes(arrays[0][0]))
         throw new UsageError("Unknown or ambiguous pagination collection", "invalid_page");
     const [key, rows] = arrays[0];
     const body = Object.fromEntries(entries);
@@ -287,8 +262,6 @@ async function runApi({ positionals, values: v, baseUrl, apiKey }: Context): Pro
         ...(request.body !== undefined ? { "content-type": "application/json" } : {}),
         ...request.headers,
     };
-    if (request.method === "POST" && url.pathname === "/v1/transcriptions" && !headers["idempotency-key"])
-        throw new UsageError("Preparation requires a persisted Idempotency-Key header", "missing_idempotency_key");
     if (request.method === "POST" && !headers["idempotency-key"]) headers["idempotency-key"] = randomUUID();
     const call = async (target: URL) => {
         if (v.verbose) {
@@ -368,14 +341,41 @@ async function searchDocs(query: string): Promise<{ query: string; results: DocH
     return { query, results: results.filter((r) => r.link) };
 }
 
+/** One half-open window on every dated command: after is inclusive, before is exclusive, both read in UTC. */
 const dateOptions: Record<string, OptionSpec> = {
-    after: { type: "string", date: true, help: "Only media published on or after this date (YYYY-MM-DD or ISO 8601)." },
-    before: { type: "string", date: true, help: "Only media published before this date." },
+    after: { type: "string", date: true, help: "Only media published at or after this date (YYYY-MM-DD, or ISO 8601 with an offset)." },
+    before: { type: "string", date: true, help: "Only media published before this date. September is --after 2026-09-01 --before 2026-10-01." },
 };
-const catalogDates: Record<string, OptionSpec> = {
-    after: { type: "string", date: true, help: "Only media published on or after this date (YYYY-MM-DD or ISO 8601)." },
-    before: { type: "string", date: true, help: "Only media published on or before this date." },
+/** A plan's freshness gate ends the window earlier than asked; the echoed window says where. */
+const windowCut = (window: Arcmira.PublicationWindow, sent: string | undefined): boolean =>
+    window.before !== null && (sent === undefined || Date.parse(window.before) < Date.parse(sent));
+const FOLLOW_TYPES = ["person", "organization", "org", "product", "topic", "channel"] as const;
+const PERSON_MATCH_MODES = ["mentions", "appearances", "both"] as const;
+const monitorOptions: Record<string, OptionSpec> = {
+    frequency: { type: "string", short: "f", oneOf: ["realtime", "hourly", "daily"], help: "realtime (each alert as it happens), hourly or daily (a digest)." },
+    email: { type: "string", multiple: true, help: "Send alerts to this address. Repeat for more; replaces the list on update." },
+    "webhook-url": { type: "string", help: "POST alerts to this HTTPS URL. The signing secret prints once." },
+    "slack-integration": { type: "string", help: "Slack workspace id from arcmira integrations slack." },
+    "slack-channel": { type: "string", help: "Slack channel id in that workspace." },
 };
+function monitorFields(v: Values) {
+    const emails = many(v.email);
+    const webhook = str(v["webhook-url"]);
+    const slack = str(v["slack-channel"]);
+    return {
+        notify_frequency: str(v.frequency) as Arcmira.CreateMonitorsRequest.NotifyFrequency | undefined,
+        notify_emails: emails.length > 0 ? emails : undefined,
+        ...(webhook ? { notify_webhook: true, webhook_url: webhook } : {}),
+        ...(slack ? { notify_slack: true, slack_channel_id: slack, slack_integration_id: str(v["slack-integration"]) } : {}),
+    };
+}
+function printMonitor({ monitor: m, message }: Arcmira.MonitorMutationResponse) {
+    console.log(`${m.id}  ${m.name}  ${m.notify_frequency ?? "-"}  ${m.tracker_count} trackers${m.paused ? "  paused" : ""}`);
+    if (m.webhook_secret) console.log(`webhook secret (shown once): ${m.webhook_secret}`);
+    note(message);
+}
+const trackerLine = (t: { id: string; entity_type: string; entity_name: string; paused: boolean; monitor_id?: string }) =>
+    `${t.id}  ${t.entity_type.padEnd(12)}  ${t.entity_name}${t.monitor_id ? `  monitor ${t.monitor_id}` : ""}${t.paused ? "  paused" : ""}`;
 const limit = (max: number, help: string): Record<string, OptionSpec> => ({ limit: { type: "string", short: "n", int: [1, max], help } });
 const cursor: Record<string, OptionSpec> = { cursor: { type: "string", help: "Page cursor from the previous page (printed on stderr, or next_cursor in --json)." } };
 
@@ -395,7 +395,7 @@ const WORKED_EXAMPLES = [
     },
     {
         task: "Who talks about a topic, on which shows, and when.",
-        steps: ['arcmira search "agent payments" --after 2026-09-01 --limit 5', 'arcmira search "stablecoins" --channel UC-DRzaGnL_vtBUpCFH5M0tg --json | jq -r \'.chunks[].watchUrl\''],
+        steps: ['arcmira search "agent payments" --after 2026-09-01 --limit 5', 'arcmira search "stablecoins" --channel UC-DRzaGnL_vtBUpCFH5M0tg --json | jq -r \'.chunks[].watch_url\''],
     },
     {
         task: "Who sponsors a show, and who recommends a product for free.",
@@ -404,6 +404,10 @@ const WORKED_EXAMPLES = [
     {
         task: "Is a company getting more airtime than a rival.",
         steps: ["arcmira resolve Brex                      # ent_258320  organization  brex", "arcmira momentum ent_14 ent_258320"],
+    },
+    {
+        task: "Get alerts when a name comes up, before or after it is indexed.",
+        steps: ['arcmira monitors create "Fintech" --frequency daily', "arcmira follow Ramp --type org --monitor <monitor-id>", "arcmira monitors add <monitor-id> ent_258320"],
     },
     {
         task: "Read one video.",
@@ -415,7 +419,7 @@ const WORKED_EXAMPLES = [
     },
     {
         task: "Any endpoint the commands do not cover.",
-        steps: ["arcmira schema monitors", "arcmira api GET /v1/monitors"],
+        steps: ["arcmira schema monitors", "arcmira api GET /v1/monitors/<monitor-id>/alerts -F limit=50"],
     },
 ];
 
@@ -503,50 +507,45 @@ async function runSetup({ values: v, apiKey, baseUrl }: Context): Promise<SetupR
 const COMMANDS: Record<string, Command> = {
     search: {
         section: "data",
-        operations: ["search_transcripts"],
-        summary: "Search spoken transcript slices for one topic or phrase.",
-        usage: "search <query> [--channel UC...|name] [--about ent_...|name] [--by ent_...|name] [--kind K] [--entity ent_...] [--source ...] [--after DATE] [--limit N]",
+        operations: ["search"],
+        summary: "Search spoken transcript passages for one topic or phrase.",
+        usage: "search <query> [--channel UC...] [--about ent_...] [--by ent_...] [--entity ent_...] [--kind sponsored|organic|mention] [--source S] [--after DATE] [--before DATE] [--limit N]",
         examples: [
             'arcmira search "agent payments" --limit 3',
-            "arcmira resolve Ramp && arcmira search \"corporate cards\" --about ent_14 --kind recommendation_sponsored",
-            "arcmira search stablecoins --channel UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-06-01",
+            'arcmira search "corporate cards" --about ent_14 --kind sponsored',
+            "arcmira search stablecoins --channel UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-09-01 --before 2026-10-01",
         ],
         positionals: "text",
         options: {
-            channel: { type: "string", multiple: true, short: "c", help: "Channel to search: UC id, @handle or name. Repeat for up to 8." },
-            entity: { type: "string", multiple: true, short: "e", help: "Entity to scope by: ent_ id or name. Repeat for up to 8." },
-            about: { type: "string", multiple: true, help: "Passages about this entity: ent_ id or name. Repeat for up to 8." },
-            by: { type: "string", multiple: true, help: "Passages spoken by this person: ent_ id or name. Repeat for up to 8." },
-            kind: { type: "string", multiple: true, oneOf: ["mention", "recommendation_sponsored", "recommendation_organic"], help: "Passage kind: mention, recommendation_sponsored or recommendation_organic. Repeat to combine." },
+            channel: { type: "string", multiple: true, short: "c", help: "Channel to search, by YouTube channel id (UC...). Repeat for up to 8." },
+            entity: { type: "string", multiple: true, short: "e", help: "Passages with this entity, by ent_ id. Repeat for up to 8." },
+            about: { type: "string", multiple: true, help: "Passages about this entity, by ent_ id. Repeat for up to 8." },
+            by: { type: "string", multiple: true, help: "Passages spoken by this person, by ent_ id. Repeat for up to 8." },
+            kind: { type: "string", multiple: true, oneOf: ["sponsored", "organic", "mention"], help: "Passage class: sponsored, organic or mention. Repeat to combine." },
             source: { type: "string", oneOf: ["arcmira_premium", "creator_captions", "third_party_quick"], help: "arcmira_premium, creator_captions or third_party_quick." },
             ...dateOptions,
-            ...limit(20, "Chunks to return, 1 to 20. Default 5."),
+            ...limit(20, "Passages to return, 1 to 20. Default 5."),
         },
-        run: async ({ client, positionals, values: v }) => {
-            const channels = await Promise.all(many(v.channel).map((c) => channelId(client, c)));
-            const entities = await Promise.all(many(v.entity).map((e) => entityId(client, e)));
-            const about = await Promise.all(many(v.about).map((e) => entityId(client, e)));
-            const by = await Promise.all(many(v.by).map((e) => entityId(client, e, "person")));
-            return client.transcripts.search({
+        run: ({ client, positionals, values: v }) =>
+            client.transcripts.search({
                 q: positionals.join(" "),
-                channel_ids: channels.join(",") || undefined,
-                entity_ids: entities.join(",") || undefined,
-                about: about.join(",") || undefined,
-                by: by.join(",") || undefined,
+                channel_ids: many(v.channel).join(",") || undefined,
+                entity_ids: many(v.entity).join(",") || undefined,
+                about: many(v.about).join(",") || undefined,
+                by: many(v.by).join(",") || undefined,
                 kind: many(v.kind).join(",") || undefined,
                 source: str(v.source) as Arcmira.SearchTranscriptsRequestSource | undefined,
-                published_after: str(v.after),
-                published_before: str(v.before),
+                after: str(v.after),
+                before: str(v.before),
                 limit: num(v.limit),
-            });
-        },
+            }),
         print: (r: Arcmira.TranscriptSearchResponse, { values: v }) => {
             if (r.chunks.length === 0) console.log("No hits in the index.");
             for (const c of r.chunks) {
-                console.log(`${c.score.toFixed(3)}  ${c.channelName ?? c.channelId ?? "-"}  ${day(c.publishedAt)}  ${c.watchUrl}`);
+                console.log(`${c.score.toFixed(3)}  ${c.channel_name ?? c.channel_id ?? "-"}  ${day(c.published_at)}  ${c.watch_url}`);
                 console.log(`  ${c.text}`);
             }
-            if (r.filters.publishedBefore && !str(v.before)) note(`Results stop at media published before ${day(r.filters.publishedBefore)}, where your plan's window ends.`);
+            if (windowCut(r.window, str(v.before))) note(`Results stop at media published before ${day(r.window.before)}, where your plan's window ends.`);
             if (r.access) note(r.access.message);
             if (r.search_index.state === "catching_up" && r.search_index.missing_before) note(`Transcripts published before ${r.search_index.missing_before} are still being added to search.`);
         },
@@ -584,33 +583,27 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["list_mentions"],
         summary: "Catalog rows of where an entity was mentioned, newest first.",
-        usage: "mentions --entity ent_...|name [--channel UC...|name] [--after DATE] [--before DATE] [--limit N] [--cursor C]",
-        examples: ["arcmira mentions --entity ent_14 --channel UC-DRzaGnL_vtBUpCFH5M0tg", 'arcmira mentions --entity "Sam Altman" --after 2026-08-01 --before 2026-08-31'],
+        usage: "mentions --entity ent_... [--channel UC...] [--after DATE] [--before DATE] [--limit N] [--cursor C]",
+        examples: ["arcmira mentions --entity ent_14 --channel UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira mentions --entity ent_14 --after 2026-08-01 --before 2026-09-01"],
         positionals: "none",
         options: {
-            entity: { type: "string", short: "e", help: "Entity: ent_ id or name. Required." },
-            channel: { type: "string", short: "c", help: "Only this channel: UC id, @handle or name." },
-            ...catalogDates,
+            entity: { type: "string", short: "e", help: "Entity, by ent_ id. Required. arcmira resolve <name> prints it." },
+            channel: { type: "string", short: "c", help: "Only this channel, by YouTube channel id (UC...)." },
+            ...dateOptions,
             ...limit(100, "Rows to return, 1 to 100. Default 10."),
             ...cursor,
         },
         run: async ({ client, values: v }) => {
-            if (!str(v.entity)) throw new UsageError("mentions needs --entity (an ent_ id or a name)", "missing_entity");
-            const page = await client.mentions.list({
-                entity_id: await entityId(client, str(v.entity)!),
-                channel_id: str(v.channel) ? await channelId(client, str(v.channel)!) : undefined,
-                date_from: str(v.after),
-                date_to: str(v.before),
-                limit: num(v.limit),
-                cursor: str(v.cursor),
-            });
+            if (!str(v.entity)) throw new UsageError("mentions needs --entity, an ent_ id", "missing_entity", "arcmira resolve <name>");
+            const page = await client.mentions.list({ entity_id: str(v.entity)!, channel_id: str(v.channel), after: str(v.after), before: str(v.before), limit: num(v.limit), cursor: str(v.cursor) });
             return page.response;
         },
-        print: (r: Arcmira.MentionListResponse) => {
-            if (r.data.length === 0) console.log("No mentions in the index.");
-            for (const m of r.data) {
+        print: (r: Arcmira.MentionListResponse, { values: v }) => {
+            if (r.mentions.length === 0) console.log("No mentions in the index.");
+            for (const m of r.mentions) {
                 console.log(`${day(m.media.published_at)}  ${seconds(m.start_seconds).padStart(7)}  ${m.media.source_channel?.name ?? m.media.channel_id ?? "-"}  ${m.media.title ?? m.media.video_id}`);
             }
+            if (windowCut(r.window, str(v.before))) note(`Results stop at media published before ${day(r.window.before)}, where your plan's window ends.`);
             nextPage(r);
         },
     },
@@ -618,18 +611,16 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["get_entity_momentum"],
         summary: "Spoken-web heat for one to four entities: 7 and 30 day volume against the prior 30.",
-        usage: "momentum <ent_...|name> [ent_...|name ...]",
-        examples: ["arcmira momentum ent_14", "arcmira momentum Ramp Brex"],
+        usage: "momentum <ent_...> [ent_... up to 4]",
+        examples: ["arcmira momentum ent_14", "arcmira momentum ent_14 ent_258320"],
         positionals: "many",
         options: {},
         run: async ({ client, positionals }) => {
             if (positionals.length > 4) throw new UsageError("momentum takes one to four entities", "too_many_entities");
-            const ids = [];
-            for (const p of positionals) ids.push(await entityId(client, p));
-            return { data: await Promise.all(ids.map((id) => client.entities.momentum({ id }))) };
+            return { momentum: await Promise.all(positionals.map((id) => client.entities.momentum({ id }))) };
         },
-        print: ({ data }: { data: Arcmira.EntityMomentumResponse[] }) => {
-            for (const r of data) {
+        print: ({ momentum }: { momentum: Arcmira.EntityMomentumResponse[] }) => {
+            for (const r of momentum) {
                 const v = r.volume as unknown as Record<string, number>;
                 console.log(`${r.entity.name} (${r.entity.id}): ${r.verdict}  as of ${day(r.as_of)}  ${Object.entries(v).map(([k, n]) => `${k}=${n}`).join("  ")}`);
                 for (const s of r.top_shows.slice(0, 5)) console.log(`  ${String(s.mentions).padStart(5)}  ${s.channel_name ?? s.channel_id}`);
@@ -641,17 +632,17 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["list_channel_sponsors"],
         summary: "Recurring sponsors of a YouTube channel from the ad-read rollup.",
-        usage: "sponsors <UC...|@handle|name> [--min-ad-reads N] [--status active|lapsed|ended|uncertain] [--limit N]",
-        examples: ["arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira sponsors TBPN --status active --limit 20"],
+        usage: "sponsors <UC...> [--min-ad-reads N] [--status active|lapsed|ended|uncertain] [--limit N]",
+        examples: ["arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg --status active --limit 20"],
         positionals: "one",
         options: {
             "min-ad-reads": { type: "string", int: [1, 100], help: "Exclude sponsors with fewer ad reads. Default 3. Pro plans." },
             status: { type: "string", oneOf: ["active", "lapsed", "ended", "uncertain"], help: "Filter by curated sponsorship status. Pro plans." },
             ...limit(200, "Sponsors to return, 1 to 200. Pro plans past the free slice."),
         },
-        run: async ({ client, positionals: [channel], values: v }) =>
+        run: ({ client, positionals: [channel_id], values: v }) =>
             client.channels.sponsors.list({
-                channel_id: await channelId(client, channel),
+                channel_id,
                 min_ad_reads: num(v["min-ad-reads"]),
                 status: str(v.status) as Arcmira.channels.ListSponsorsRequestStatus | undefined,
                 limit: num(v.limit),
@@ -666,38 +657,38 @@ const COMMANDS: Record<string, Command> = {
     },
     recommendations: {
         section: "data",
-        operations: ["list_entity_recommendations"],
+        operations: ["list_recommendations"],
         summary: "Who recommends an entity on air, and whether they were paid.",
-        usage: "recommendations <ent_...|name> [--kind sponsored|organic|all] [--channel UC...|name] [--after DATE] [--limit N] [--cursor C]",
-        examples: ["arcmira recommendations ent_14 --kind organic", "arcmira recommendations Ramp --kind sponsored --after 2026-09-01"],
+        usage: "recommendations <ent_...> [--kind sponsored|organic|mention|all] [--channel UC...] [--after DATE] [--before DATE] [--limit N] [--cursor C]",
+        examples: ["arcmira recommendations ent_14 --kind organic", "arcmira recommendations ent_14 --kind sponsored --after 2026-09-01"],
         positionals: "one",
         options: {
-            kind: { type: "string", short: "k", oneOf: ["sponsored", "organic", "all"], help: "sponsored (paid ad reads), organic (unpaid) or all. Default all." },
-            channel: { type: "string", short: "c", help: "Only this channel: UC id, @handle or name." },
-            ...catalogDates,
+            kind: { type: "string", short: "k", oneOf: ["sponsored", "organic", "mention", "all"], help: "sponsored (paid ad reads), organic (unpaid), mention (neutral) or all. Default all." },
+            channel: { type: "string", short: "c", help: "Only this channel, by YouTube channel id (UC...)." },
+            ...dateOptions,
             ...limit(100, "Rows to return, 1 to 100, newest first. Default 10."),
             ...cursor,
         },
-        run: async ({ client, positionals: [entity], values: v }) => {
-            const kinds: Record<string, Arcmira.entities.ListRecommendationsRequestMentionClass> = { sponsored: "ad_read", organic: "endorsement", all: "all" };
-            const page = await client.entities.recommendations.list({
-                id: await entityId(client, entity),
-                mention_class: kinds[str(v.kind) ?? "all"],
-                channel_id: str(v.channel) ? await channelId(client, str(v.channel)!) : undefined,
-                date_from: str(v.after),
-                date_to: str(v.before),
+        run: async ({ client, positionals: [entity_id], values: v }) => {
+            const kind = str(v.kind) ?? "all";
+            const page = await client.recommendations.list({
+                entity_id,
+                class: kind === "all" ? undefined : (kind as Arcmira.ListRecommendationsRequestClass),
+                channel_id: str(v.channel),
+                after: str(v.after),
+                before: str(v.before),
                 limit: num(v.limit),
                 cursor: str(v.cursor),
             });
             return page.response;
         },
-        print: (r: Arcmira.RecommendationListResponse) => {
-            if (r.data.length === 0) console.log("No recommendations in the index.");
-            for (const x of r.data) {
-                const kind = x.mention_class === "ad_read" ? "sponsored" : x.mention_class === "endorsement" ? "organic" : x.mention_class;
-                console.log(`${day(x.media.published_at)}  ${kind.padEnd(9)}  ${x.media.source_channel?.name ?? x.media.channel_id ?? "-"}  ${x.media.title ?? x.media.video_id}${x.promo_code ? `  code ${x.promo_code}` : ""}`);
+        print: (r: Arcmira.RecommendationListResponse, { values: v }) => {
+            if (r.recommendations.length === 0) console.log("No recommendations in the index.");
+            for (const x of r.recommendations) {
+                console.log(`${day(x.media.published_at)}  ${x.class.padEnd(9)}  ${x.media.source_channel?.name ?? x.media.channel_id ?? "-"}  ${x.media.title ?? x.media.video_id}${x.promo_code ? `  code ${x.promo_code}` : ""}`);
                 if (x.verbatim_quote) console.log(`  "${x.verbatim_quote}"`);
             }
+            if (windowCut(r.window, str(v.before))) note(`Results stop at media published before ${day(r.window.before)}, where your plan's window ends.`);
             nextPage(r);
         },
     },
@@ -705,54 +696,61 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["list_channel_videos"],
         summary: "The newest indexed videos of a YouTube channel.",
-        usage: "episodes <UC...|@handle|name> [--after DATE] [--before DATE] [--limit N]",
-        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes @TBPNLive --after 2026-09-01", "arcmira api GET /v1/channels/UC-DRzaGnL_vtBUpCFH5M0tg/videos -F limit=1 --paginate"],
+        usage: "episodes <UC...> [--after DATE] [--before DATE] [--limit N] [--cursor C]",
+        examples: ["arcmira episodes UClWkDGXEzsh77GAhs90wpXw --limit 1", "arcmira episodes UC-DRzaGnL_vtBUpCFH5M0tg --after 2026-09-01", "arcmira api GET /v1/channels/UC-DRzaGnL_vtBUpCFH5M0tg/videos -F limit=1 --paginate"],
         positionals: "one",
-        options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10.") },
-        run: async ({ client, positionals: [channel], values: v }) =>
-            (await client.channels.videos.list({ channel_id: await channelId(client, channel), published_after: str(v.after), published_before: str(v.before), limit: num(v.limit) })).response,
+        options: { ...dateOptions, ...limit(25, "Episodes to return, 1 to 25. Default 10."), ...cursor },
+        run: async ({ client, positionals: [channel_id], values: v }) =>
+            (await client.channels.videos.list({ channel_id, after: str(v.after), before: str(v.before), limit: num(v.limit), cursor: str(v.cursor) })).response,
         print: (r: Arcmira.ChannelVideosResponse) => {
             if (r.episodes.length === 0) return console.log("Nothing indexed for this channel.");
             for (const e of r.episodes) console.log(`${day(e.published_at)}  ${e.video_id}  ${seconds(e.duration_seconds).padStart(7)}  ${e.title ?? ""}`);
             note(`indexed through ${day(r.indexed_through)}${r.index_age_days != null ? ` (${r.index_age_days} days ago)` : ""}`);
+            nextPage(r);
         },
     },
     "transcripts get": {
         section: "data",
         operations: ["get_transcript"],
         summary: "Full transcript of one YouTube video from its URL or id.",
-        usage: "transcripts get <video-url-or-id> [--quality captions|premium [--wait [--timeout S]]] [--language de,en] [--paragraphs] [--start S --end S]",
+        usage: "transcripts get <video-url-or-id> [--quality captions|premium] [--retry] [--language de,en] [--paragraphs] [--start S --end S]",
         examples: [
             "arcmira transcripts get https://www.youtube.com/watch?v=CusJwCsDHHM --start 0 --end 120",
             "arcmira transcript CusJwCsDHHM --json | jq -r '.lines[].text'",
-            "arcmira transcripts get CusJwCsDHHM --quality premium --wait --json | jq -r '.lines[].text'",
+            "arcmira transcripts get CusJwCsDHHM --quality premium --json | jq -r '.lines[].text'",
         ],
         positionals: "one",
         options: {
-            quality: { type: "string", oneOf: ["captions", "premium"], help: "captions (default) or premium (Arcmira's diarized transcript, paid plans)." },
+            quality: {
+                type: "string",
+                oneOf: ["captions", "premium"],
+                help: "captions (default) or premium, Arcmira's diarized transcript on paid plans. A premium read buys the transcript within your plan, included credits first and then your on-demand budget, and exits 4 while it transcribes.",
+            },
             language: { type: "string", short: "l", help: "Caption language priority list, like de,en." },
             paragraphs: { type: "boolean", help: "Paragraphs for reading instead of timestamped lines." },
             start: { type: "string", number: true, help: "Window start in seconds." },
             end: { type: "string", number: true, help: "Window end in seconds." },
-            wait: { type: "boolean", help: "With --quality premium: prepare from included credits if needed (no money moves) and wait until ready." },
-            timeout: { type: "string", number: true, help: "Seconds --wait waits before exiting 4 with the job still running. Default 300." },
+            retry: { type: "boolean", help: "Premium only. Buy the transcript again after the last purchase failed." },
         },
-        run: async ({ client, positionals: [video], values: v }) => {
-            const video_id = videoIdOf(video);
-            const window = { language: str(v.language), timestamps: v.paragraphs ? false : undefined, start: num(v.start), end: num(v.end) };
-            const quality = str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined;
-            if (!v.wait) return client.transcripts.get({ video_id, quality, ...window });
-            const ready = await client.transcripts.prepareAndWait({ video_id, timeoutSeconds: num(v.timeout) });
-            return Object.values(window).some((value) => value !== undefined) ? client.transcripts.get({ video_id, quality, ...window }) : ready;
-        },
+        run: ({ client, positionals: [video], values: v }) =>
+            client.transcripts.get({
+                video_id: videoIdOf(video),
+                quality: str(v.quality) as Arcmira.GetTranscriptsRequestQuality | undefined,
+                language: str(v.language),
+                timestamps: v.paragraphs ? false : undefined,
+                start: num(v.start),
+                end: num(v.end),
+                retry: v.retry ? true : undefined,
+            }),
         exitCode: (r: Arcmira.TranscriptResult) => {
             if (r.state === "ready") return 0;
-            if (r.state === "preparation_required") {
-                const charge = r.quote ? `: ${r.quote.charge.amount} credits from ${r.quote.charge.from}` : "";
-                note(`Premium is not prepared for ${r.video_id}${charge}. This read bought nothing.\nrun: ${waitCommand(r.video_id)}`);
-                return EXIT_PREPARATION_REQUIRED;
+            if (r.state === "failed") {
+                const next = r.last_attempt.status === "refund_pending" ? "Its refund is still settling; try again later." : "Run it again with --retry to buy it again.";
+                note(`The last Premium purchase for ${r.video_id} ${r.last_attempt.status === "failed" ? "failed" : "was refunded"} (${r.last_attempt.error.replace(/\.$/, "")}). ${next}`);
+                return 1;
             }
-            note(`Premium for ${r.video_id} is still ${r.job.status}; next poll in ${r.job.next_poll_seconds ?? "-"} s.\nrun: ${waitCommand(r.video_id)}`);
+            const eta = r.job.eta_seconds != null ? `, about ${Math.max(1, Math.round(r.job.eta_seconds / 60))} min left` : "";
+            note(`Premium for ${r.video_id} is still ${r.job.status}${eta}. Run the same command again later; it reads this job and never buys twice.`);
             return EXIT_PENDING;
         },
         print: (r: Arcmira.TranscriptResult) => {
@@ -767,7 +765,7 @@ const COMMANDS: Record<string, Command> = {
     "transcripts quote": {
         section: "data",
         operations: ["quote_transcription"],
-        summary: "Free whole-video Premium purchase quote.",
+        summary: "Free whole-video Premium price, in credits, before you read it.",
         usage: "transcripts quote <video-url-or-id>",
         examples: ["arcmira transcripts quote CusJwCsDHHM", "arcmira transcripts quote CusJwCsDHHM --json"],
         positionals: "one",
@@ -775,71 +773,16 @@ const COMMANDS: Record<string, Command> = {
         run: ({ client, positionals: [video] }) => client.transcripts.quote({ video_id: videoIdOf(video) }),
         print: (quote: Arcmira.TranscriptPurchaseQuote) => console.log(JSON.stringify(quote, null, 2)),
     },
-    "transcripts request": {
-        section: "data",
-        operations: ["submit_transcription"],
-        summary: "Prepare a whole Premium video from included credits; spending money needs a cents ceiling and a saved key.",
-        usage: "transcripts request <video-url-or-id> [--max-on-demand-cents N --max-rows N --idempotency-key KEY]",
-        examples: ["arcmira transcripts request CusJwCsDHHM", "arcmira transcripts request CusJwCsDHHM --max-on-demand-cents 25 --max-rows 300 --idempotency-key saved-order-1 --json"],
-        positionals: "one",
-        options: {
-            "max-on-demand-cents": { type: "string", int: [0, 1_000_000], help: "On-demand money you approve, in cents. Default 0: included credits only." },
-            "max-rows": { type: "string", int: [0, 3600], help: "Row ceiling. Required with --max-on-demand-cents above 0." },
-            "idempotency-key": { type: "string", help: "Persist before sending; retry an unknown outcome with it. Required with --max-on-demand-cents above 0." },
-        },
-        run: async ({ client, positionals: [video], values: v }) => {
-            const key = str(v["idempotency-key"]);
-            const maxRows = num(v["max-rows"]);
-            const cents = num(v["max-on-demand-cents"]) ?? 0;
-            const video_id = videoIdOf(video);
-            if (cents > 0 && (!key || maxRows === undefined)) throw new UsageError("--max-on-demand-cents above 0 needs --max-rows and a persisted --idempotency-key", "missing_purchase_intent");
-            try {
-                return await client.transcripts.request({
-                    video_id,
-                    ...(maxRows !== undefined ? { max_rows: maxRows } : {}),
-                    ...(cents > 0 ? { max_on_demand_cents: cents } : {}),
-                    ...(key ? { "Idempotency-Key": key } : {}),
-                });
-            } catch (error) {
-                if (error instanceof sdk().ArcmiraError && error.statusCode !== undefined) throw error;
-                throw new (sdk().ArcmiraError)({
-                    message: key
-                        ? "Preparation outcome is unknown. Retry with the same persisted idempotency key and identical ceilings; do not create a new key."
-                        : "Preparation outcome is unknown. Run the same command again: a keyless request joins the open job for this video.",
-                });
-            }
-        },
-        print: ({ job: r, existing }: Arcmira.TranscriptRequestSubmitResponse) => {
-            console.log(`${r.id}  ${r.video_id}  ${r.state}${r.charge ? `  ${r.charge.amount} credits` : ""}${existing ? "  (existing request)" : ""}`);
-            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
-            else if (r.state === "pending") note(`poll after ${r.next_poll_seconds ?? "-"} s: arcmira transcripts status ${r.id}`);
-        },
-    },
-    "transcripts status": {
-        section: "data",
-        operations: ["get_transcription"],
-        summary: "The state of a transcript request: queued, transcribing, analyzing, complete or refunded.",
-        usage: "transcripts status <request-id>",
-        examples: ["arcmira api GET /v1/transcriptions | jq -r '.requests[0].id' | xargs arcmira transcripts status", "arcmira transcripts status \"$(arcmira api GET /v1/transcriptions | jq -r '.requests[0].id')\" --json"],
-        positionals: "one",
-        options: {},
-        run: ({ client, positionals: [id] }) => client.transcripts.status({ id }),
-        print: (r: Arcmira.TranscriptJob) => {
-            const eta = r.eta_seconds != null ? `, about ${seconds(r.eta_seconds)} left, next poll in ${r.next_poll_seconds ?? "-"} s` : "";
-            console.log(`${r.id}  ${r.video_id}  ${r.state}${eta}${r.error ? `  ${r.error}` : ""}${r.refunded ? "  (credits refunded)" : ""}`);
-            if (r.state === "ready") note(`read it: arcmira transcripts get ${r.video_id} --quality premium`);
-        },
-    },
     occurrences: {
         section: "data",
         operations: ["count_mentions"],
         summary: "Ranked counts of which entities a set of channels or videos mention.",
-        usage: "occurrences --channel UC...|name [--channel ...] [--entity ent_...] [--video ID] [--type topic|person|organization|product|channel] [--mode mentions|appearances|both] [--after DATE] [--limit N]",
-        examples: ["arcmira occurrences --channel UC-DRzaGnL_vtBUpCFH5M0tg --type topic", "arcmira occurrences -c TBPN -c UClWkDGXEzsh77GAhs90wpXw -t organization -t product"],
+        usage: "occurrences --channel UC... [--channel ...] [--entity ent_...] [--video ID] [--type topic|person|organization|product|channel] [--mode mentions|appearances|both] [--after DATE] [--before DATE] [--limit N]",
+        examples: ["arcmira occurrences --channel UC-DRzaGnL_vtBUpCFH5M0tg --type topic", "arcmira occurrences -c UC-DRzaGnL_vtBUpCFH5M0tg -c UClWkDGXEzsh77GAhs90wpXw -t organization -t product"],
         positionals: "none",
         options: {
-            channel: { type: "string", multiple: true, short: "c", help: "Channel: UC id, @handle or name. Repeat for up to 8; two or more also return shared." },
-            entity: { type: "string", multiple: true, short: "e", help: "Entity to count: ent_ id or name. Repeat for up to 20." },
+            channel: { type: "string", multiple: true, short: "c", help: "Channel, by YouTube channel id (UC...). Repeat for up to 8; two or more also return shared." },
+            entity: { type: "string", multiple: true, short: "e", help: "Entity to count, by ent_ id. Repeat for up to 20." },
             video: { type: "string", multiple: true, help: "11-character YouTube video id. Repeat for up to 20." },
             type: { type: "string", multiple: true, short: "t", oneOf: ENTITY_TYPES, help: "Entity type to count. Repeat to combine." },
             mode: { type: "string", oneOf: ["mentions", "appearances", "both"], help: "mentions (default), appearances or both." },
@@ -849,16 +792,14 @@ const COMMANDS: Record<string, Command> = {
         run: async ({ client, values: v }) => {
             if (many(v.channel).length + many(v.entity).length + many(v.video).length === 0) throw new UsageError("occurrences needs at least one --channel, --entity or --video", "missing_scope");
             for (const video of many(v.video)) if (!VIDEO_ID.test(video)) throw new UsageError(`"${video}" is not an 11-character YouTube video id`, "invalid_video");
-            const channels = await Promise.all(many(v.channel).map((c) => channelId(client, c)));
-            const entities = await Promise.all(many(v.entity).map((e) => entityId(client, e)));
             return client.mentions.count({
-                channel_ids: channels.join(",") || undefined,
-                entity_ids: entities.join(",") || undefined,
+                channel_ids: many(v.channel).join(",") || undefined,
+                entity_ids: many(v.entity).join(",") || undefined,
                 video_ids: many(v.video).join(",") || undefined,
                 entity_types: many(v.type).join(",") || undefined,
                 mode: str(v.mode) as Arcmira.CountMentionsRequestMode | undefined,
-                published_after: str(v.after),
-                published_before: str(v.before),
+                after: str(v.after),
+                before: str(v.before),
                 limit: num(v.limit),
             });
         },
@@ -875,14 +816,11 @@ const COMMANDS: Record<string, Command> = {
         section: "data",
         operations: ["get_me", "get_channel_coverage"],
         summary: "Your key and plan, or what the index holds for a channel.",
-        usage: "status [UC...|@handle|name]",
+        usage: "status [UC...]",
         examples: ["arcmira status", "arcmira status UC-DRzaGnL_vtBUpCFH5M0tg"],
         positionals: "optional",
         options: {},
-        run: async ({ client, positionals: [id] }) => {
-            if (!id) return client.me.get();
-            return client.channels.coverage({ channel_id: await channelId(client, id) });
-        },
+        run: ({ client, positionals: [channel_id] }) => (channel_id ? client.channels.coverage({ channel_id }) : client.me.get()),
         print: (r: any) => {
             if (r.channel) {
                 const c = r.channel as Arcmira.ChannelCoverageResponse["channel"];
@@ -891,6 +829,160 @@ const COMMANDS: Record<string, Command> = {
             }
             const me = r as Arcmira.MeResponse;
             console.log(`plan ${me.tier}  rows used ${me.usage.rows_used}  remaining ${me.usage.rows_remaining}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
+        },
+    },
+    "trackers create": {
+        section: "follow",
+        operations: ["create_tracker", "add_monitor_trackers"],
+        summary: "Follow an exact name. Alerts fire when newly analyzed media mention it, even before Arcmira has indexed it.",
+        usage: "trackers create <exact name|UC...> --type person|organization|org|product|topic|channel [--monitor ID] [--display-name TEXT] [--person-match-mode mentions|appearances|both]",
+        examples: [
+            "arcmira follow Ramp --type org",
+            'arcmira follow "Sam Altman" --type person --person-match-mode both --monitor <monitor-id>',
+            "arcmira trackers create UC-DRzaGnL_vtBUpCFH5M0tg --type channel",
+        ],
+        positionals: "text",
+        options: {
+            type: { type: "string", short: "t", oneOf: FOLLOW_TYPES, help: "What the name is: person, organization (or org), product, topic or channel. Required. A channel is followed by its YouTube channel id." },
+            monitor: { type: "string", short: "m", help: "Attach the new tracker to this monitor, by the id arcmira monitors list prints." },
+            "display-name": { type: "string", help: "Label for alerts. Defaults to the name." },
+            "person-match-mode": { type: "string", oneOf: PERSON_MATCH_MODES, help: "For a person: mentions (default), appearances (on air) or both." },
+        },
+        run: async ({ client, positionals, values: v }) => {
+            const type = str(v.type)!;
+            const created = await client.trackers.create({
+                "Idempotency-Key": randomUUID(),
+                entity_name: positionals.join(" "),
+                entity_type: (type === "org" ? "organization" : type) as Arcmira.CreateTrackersRequest.EntityType,
+                display_name: str(v["display-name"]),
+                person_match_mode: str(v["person-match-mode"]) as Arcmira.CreateTrackersRequest.PersonMatchMode | undefined,
+            });
+            const monitor = str(v.monitor);
+            if (!monitor) return created;
+            return { ...created, attached: await client.monitors.trackers.add({ "Idempotency-Key": randomUUID(), id: monitor, tracker_ids: [created.tracker.id] }) };
+        },
+        print: (r: Arcmira.TrackerMutationResponse & { attached?: Arcmira.MonitorAddTrackersResponse }) => {
+            console.log(trackerLine(r.tracker));
+            note(r.attached ? `${r.message} Attached to monitor ${r.attached.monitor_id}.` : r.message);
+        },
+    },
+    "trackers list": {
+        section: "follow",
+        operations: ["list_trackers"],
+        summary: "Every name the account follows.",
+        usage: "trackers list",
+        examples: ["arcmira trackers list", "arcmira trackers list --json | jq -r '.trackers[].id'"],
+        positionals: "none",
+        options: {},
+        run: ({ client }) => client.trackers.list(),
+        print: (r: Arcmira.TrackerListResponse) => {
+            if (r.trackers.length === 0) return console.log("No trackers. Follow a name: arcmira follow Ramp --type org");
+            for (const t of r.trackers) console.log(trackerLine(t));
+        },
+    },
+    "monitors list": {
+        section: "follow",
+        operations: ["list_monitors"],
+        summary: "The account's monitors: groups of followed names that alert together.",
+        usage: "monitors list",
+        examples: ["arcmira monitors list", "arcmira monitors list --json | jq -r '.monitors[] | .id + \"  \" + .name'"],
+        positionals: "none",
+        options: {},
+        run: ({ client }) => client.monitors.list(),
+        print: (r: Arcmira.MonitorListResponse) => {
+            if (r.monitors.length === 0) return console.log('No monitors. Create one: arcmira monitors create "Fintech" --frequency daily');
+            for (const m of r.monitors) console.log(`${m.id}  ${m.name}  ${m.notify_frequency ?? "-"}  ${m.tracker_count} trackers  ${m.alerts_this_month} alerts this month${m.paused ? "  paused" : ""}`);
+        },
+    },
+    "monitors create": {
+        section: "follow",
+        operations: ["create_monitor"],
+        summary: "Create a monitor and choose how it alerts: email, webhook or Slack.",
+        usage: "monitors create <name> --frequency realtime|hourly|daily [--email ADDRESS ...] [--webhook-url URL] [--slack-integration ID --slack-channel ID]",
+        examples: ['arcmira monitors create "Fintech" --frequency daily', 'arcmira monitors create "Launches" --frequency realtime --webhook-url https://example.com/hook'],
+        positionals: "text",
+        options: { ...monitorOptions },
+        run: ({ client, positionals, values: v }) => {
+            if (!str(v.frequency)) throw new UsageError("monitors create needs --frequency: realtime (as it happens), hourly or daily (a digest)", "missing_frequency");
+            return client.monitors.create({ "Idempotency-Key": randomUUID(), name: positionals.join(" "), ...monitorFields(v) });
+        },
+        print: (r: Arcmira.MonitorMutationResponse) => printMonitor(r),
+    },
+    "monitors update": {
+        section: "follow",
+        operations: ["update_monitor"],
+        summary: "Rename, pause, resume or change how a monitor alerts.",
+        usage: "monitors update <monitor-id> [--name TEXT] [--frequency F] [--email ADDRESS ...] [--webhook-url URL] [--slack-integration ID --slack-channel ID] [--pause|--resume]",
+        examples: ["arcmira monitors update <monitor-id> --pause", "arcmira monitors update <monitor-id> --frequency hourly --email you@example.com"],
+        positionals: "one",
+        options: {
+            name: { type: "string", help: "New name, 1 to 100 characters." },
+            ...monitorOptions,
+            pause: { type: "boolean", help: "Stop alerts until --resume." },
+            resume: { type: "boolean", help: "Alert again." },
+        },
+        run: ({ client, positionals: [id], values: v }) => {
+            if (v.pause && v.resume) throw new UsageError("pass --pause or --resume, not both", "invalid_option");
+            const fields = { name: str(v.name), ...monitorFields(v), paused: v.pause ? true : v.resume ? false : undefined };
+            if (Object.values(fields).every((value) => value === undefined)) throw new UsageError("monitors update needs a field to change, like --pause", "missing_field");
+            return client.monitors.update({ "Idempotency-Key": randomUUID(), id, ...fields });
+        },
+        print: (r: Arcmira.MonitorMutationResponse) => printMonitor(r),
+    },
+    "monitors trackers": {
+        section: "follow",
+        operations: ["list_monitor_trackers"],
+        summary: "The names one monitor follows.",
+        usage: "monitors trackers <monitor-id>",
+        examples: ["arcmira monitors trackers <monitor-id>", "arcmira monitors trackers <monitor-id> --json | jq -r '.trackers[].entity_name'"],
+        positionals: "one",
+        options: {},
+        run: ({ client, positionals: [id] }) => client.monitors.trackers.list({ id }),
+        print: (r: Arcmira.MonitorTrackersResponse) => {
+            if (r.trackers.length === 0) return console.log("This monitor follows nothing yet. Add entities: arcmira monitors add <monitor-id> ent_14");
+            for (const t of r.trackers) console.log(trackerLine(t));
+        },
+    },
+    "monitors add": {
+        section: "follow",
+        operations: ["add_monitor_entities"],
+        summary: "Follow indexed entities by id on a monitor, creating a tracker for each.",
+        usage: "monitors add <monitor-id> <ent_...> [ent_... up to 90] [--person-match-mode mentions|appearances|both]",
+        examples: ["arcmira monitors add <monitor-id> ent_14 ent_258320", "arcmira monitors add <monitor-id> ent_91 --person-match-mode both"],
+        positionals: "many",
+        options: { "person-match-mode": { type: "string", oneOf: PERSON_MATCH_MODES, help: "For people: mentions (default), appearances (on air) or both." } },
+        run: ({ client, positionals: [id, ...entity_ids], values: v }) =>
+            client.monitors.entities.add({ "Idempotency-Key": randomUUID(), id, entity_ids: [...new Set(entity_ids)], person_match_mode: str(v["person-match-mode"]) as Arcmira.monitors.AddEntitiesRequest.PersonMatchMode | undefined }),
+        print: (r: Arcmira.MonitorAddEntitiesResponse) => {
+            for (const x of r.results) console.log(`${x.entity_id}  ${x.tracker_id ?? "-"}  ${x.attached ? (x.created ? "followed" : "attached") : `not added: ${x.reason ?? "unknown"}${x.current_monitor_id ? ` (monitor ${x.current_monitor_id})` : ""}`}`);
+        },
+    },
+    "monitors attach": {
+        section: "follow",
+        operations: ["add_monitor_trackers"],
+        summary: "Move existing trackers onto a monitor.",
+        usage: "monitors attach <monitor-id> <trk_...> [trk_... up to 90]",
+        examples: ["arcmira monitors attach <monitor-id> trk_123", "arcmira trackers list --json | jq -r '.trackers[].id' | xargs arcmira monitors attach <monitor-id>"],
+        positionals: "many",
+        options: {},
+        run: ({ client, positionals: [id, ...tracker_ids] }) => client.monitors.trackers.add({ "Idempotency-Key": randomUUID(), id, tracker_ids: [...new Set(tracker_ids)] }),
+        print: (r: Arcmira.MonitorAddTrackersResponse) => console.log(`${r.attached_count} attached to ${r.monitor_id}. ${r.message}`),
+    },
+    "integrations slack": {
+        section: "follow",
+        operations: ["list_slack_integrations"],
+        summary: "Connected Slack workspaces and their channels, for monitors create --slack-integration.",
+        usage: "integrations slack",
+        examples: ["arcmira integrations slack", "arcmira integrations slack --json"],
+        positionals: "none",
+        options: {},
+        run: ({ client }) => client.integrations.slack.list(),
+        print: (r: Arcmira.SlackIntegrationListResponse) => {
+            if (r.integrations.length === 0) return console.log("No Slack workspace connected. Connect one at https://arcmira.com/dashboard");
+            for (const i of r.integrations) {
+                console.log(`${i.id}  ${i.team_name}`);
+                for (const c of i.channels) console.log(`  ${c.id}  ${c.name ?? ""}${c.id === i.default_channel_id ? "  (default)" : ""}`);
+            }
         },
     },
     login: {
@@ -1006,7 +1098,7 @@ const COMMANDS: Record<string, Command> = {
         examples: [
             "arcmira api GET /v1/me",
             "arcmira api GET /v1/mentions -f entity_id=ent_14 -F limit=100 --paginate",
-            "arcmira api POST /v1/monitors -f name=Launches -F notifyWebhook=false --verbose",
+            "arcmira api POST /v1/monitors -f name=Launches -f notify_frequency=daily --verbose",
             "arcmira api PATCH /v1/monitors/<id> --body @monitor.json",
         ],
         positionals: "any",
@@ -1016,7 +1108,7 @@ const COMMANDS: Record<string, Command> = {
             field: { type: "string", short: "F", multiple: true, help: "Typed parameter key=value: true, false, null and numbers become JSON, @file reads a file, @- stdin; key[]=value appends." },
             header: { type: "string", short: "H", multiple: true, help: "Extra request header, 'Name: value'." },
             body: { type: "string", help: "Request body from @file, or - for stdin. -f and -F then go to the query string." },
-            paginate: { type: "boolean", help: "GET only: follow next_cursor and combine the response collection, including requests or episodes." },
+            paginate: { type: "boolean", help: "GET only: follow next_cursor and combine the response collection (mentions, recommendations, episodes or requests)." },
             verbose: { type: "boolean", help: "Print the request, its Idempotency-Key, the status and request_id on stderr." },
         },
         run: runApi,
@@ -1028,7 +1120,7 @@ const COMMANDS: Record<string, Command> = {
         section: "any",
         summary: "Method, path, parameters and body fields of a command or endpoint, from the OpenAPI bundled in this version.",
         usage: "schema [command|operationId|path group]",
-        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema transcripts request", "arcmira schema monitors --json"],
+        examples: ["arcmira schema", "arcmira schema sponsors", "arcmira schema trackers create", "arcmira schema monitors --json"],
         positionals: "any",
         needsKey: false,
         options: {},
@@ -1098,7 +1190,12 @@ function help(name?: string): string {
         lines.push("", `Each command: arcmira ${name} <command> --help`);
         return lines.join("\n");
     }
-    const sections: [Command["section"], string][] = [["data", "Data commands (they mirror the Arcmira MCP tools):"], ["account", "Account:"], ["any", "Any endpoint:"]];
+    const sections: [Command["section"], string][] = [
+        ["data", "Data commands (they mirror the Arcmira MCP client; filters take ids, arcmira resolve finds them):"],
+        ["follow", "Follow and alert (these change the account):"],
+        ["account", "Account:"],
+        ["any", "Any endpoint:"],
+    ];
     lines.push("arcmira <command> [options]", "", "Search the spoken web from the command line.");
     for (const [section, title] of sections) {
         lines.push("", title);
@@ -1116,15 +1213,17 @@ function help(name?: string): string {
         "  arcmira setup                          connect the MCP server and skills to your coding agents, updates on",
         "  arcmira login you@example.com          email a code, then: arcmira login you@example.com --code 123456",
         "  arcmira resolve Ramp                   names to ent_ ids; filter with the id: arcmira mentions --entity ent_14",
-        "  arcmira sponsors TBPN",
-        "  arcmira mentions --entity Ramp --after 2026-09-01 --json",
+        "  arcmira resolve TBPN --type channel    shows to UC ids: arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg",
+        "  arcmira mentions --entity ent_14 --after 2026-09-01 --before 2026-10-01 --json",
+        "  arcmira follow Ramp --type org         alerts on a name, even before it is indexed",
         "  arcmira api GET /v1/monitors           any endpoint; arcmira schema lists them",
         "",
         "Key: --key, then ARCMIRA_API_KEY, then the key saved by `arcmira login`.",
         "Output: data on stdout, messages on stderr; --json prints the API response, and errors as JSON on stderr.",
         "Errors: every API error line carries the request_id to quote to support.",
-        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, no key, unresolved name),",
-        "  3 Premium needs preparing (run the printed --wait command), 4 Premium still pending (the job keeps running).",
+        "Dates: --after is inclusive and --before exclusive, in UTC, on every dated command.",
+        "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, a name where an id belongs, no key),",
+        "  4 Premium still transcribing (run the same command again later; it never buys twice).",
         "Telemetry: none. The CLI sends only the API requests you ask for.",
         "Docs: https://arcmira.com/docs   Worked examples: arcmira examples   Each command: arcmira <command> --help",
     );
@@ -1149,15 +1248,20 @@ function validate(name: string, command: Command, values: Values, positionals: s
             if (spec.date && (!ISO_DATE.test(value) || Number.isNaN(Date.parse(value)) || new Date(value.slice(0, 10)).toISOString().slice(0, 10) !== value.slice(0, 10))) throw new UsageError(`--${key} must be a date like 2026-09-01, got "${value}"`, "invalid_date");
         }
     }
-    for (const key of ["entity", "channel"] as const) if (key in command.options) for (const value of many(values[key])) checkIdShape(value, key);
-    for (const key of ["about", "by"]) if (key in command.options) for (const value of many(values[key])) checkIdShape(value, "entity");
-    if (name === "momentum" || name === "recommendations") for (const p of positionals) checkIdShape(p, "entity");
-    if (name === "status" && positionals[0] && UUID.test(positionals[0])) {
-        throw new UsageError(`transcript requests moved: arcmira transcripts status ${positionals[0]}`, "command_moved", undefined, true);
+    for (const key of ["entity", "about", "by"]) if (key in command.options) for (const value of many(values[key])) needId(value, "entity", `--${key}`);
+    if ("channel" in command.options) for (const value of many(values.channel)) needId(value, "channel", "--channel");
+    if (name === "momentum" || name === "recommendations") for (const p of positionals) needId(p, "entity", name);
+    if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0])) needId(positionals[0], "channel", name);
+    if (name === "trackers create") {
+        if (!values.type) throw new UsageError("trackers create needs --type: person, organization (or org), product, topic or channel", "missing_type");
+        if (values.type === "channel") needId(positionals.join(" "), "channel", "a channel follow");
     }
-    if (name === "transcripts get" && values.wait && values.quality !== "premium") throw new UsageError("--wait prepares Premium; add --quality premium", "invalid_option");
-    if (name === "transcripts status" && !UUID.test(positionals[0])) throw new UsageError(`"${positionals[0]}" is not a request id (the UUID transcripts request printed)`, "invalid_request_id");
-    if (name === "sponsors" || name === "episodes" || (name === "status" && positionals[0])) checkIdShape(positionals[0], "channel");
+    if (name === "monitors add" || name === "monitors attach") {
+        const [, ...ids] = positionals;
+        if (ids.length === 0 || ids.length > 90) throw new UsageError(`${name} takes a monitor id and 1 to 90 ${name === "monitors add" ? "entity" : "tracker"} ids`, "missing_argument");
+        if (name === "monitors add") for (const id of ids) needId(id, "entity", name);
+        else for (const id of ids) if (!/^trk_\S+$/.test(id)) throw new UsageError(`monitors attach takes tracker ids like trk_..., got "${id}"`, "id_required", "arcmira trackers list");
+    }
 }
 
 function parse(name: string | undefined, argv: string[]) {
@@ -1182,24 +1286,6 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         else console.error(error.oneLine ? error.message : `error: ${error.message}${hint ? `\n${hint}` : ""}\n${more}`);
         return 2;
     }
-    if (error instanceof sdk().PreparationTimeoutError) {
-        const message = `Premium job ${error.job.id} for ${error.job.video_id} is still ${error.job.status}; it keeps running`;
-        if (json) console.error(JSON.stringify({ error: { type: "pending", code: "preparation_pending", message, job: error.job } }));
-        else console.error(`${message}\nrun: ${waitCommand(error.job.video_id)}`);
-        return EXIT_PENDING;
-    }
-    if (error instanceof sdk().PreparationFailedError) {
-        const message = `Premium job ${error.job.id} for ${error.job.video_id} ended ${error.job.state}: ${error.job.error ?? error.job.status}`;
-        if (json) console.error(JSON.stringify({ error: { type: "preparation_failed", code: `job_${error.job.state}`, message, job: error.job } }));
-        else console.error(`error: ${message}`);
-        return 1;
-    }
-    if (error instanceof sdk().PremiumUnavailableError) {
-        const message = `Premium is not available on this plan; the read returned ${error.transcript.quality}`;
-        if (json) console.error(JSON.stringify({ error: { type: "permission_error", code: "premium_unavailable", message } }));
-        else console.error(`error: ${message}\nplans: https://arcmira.com/pricing`);
-        return 1;
-    }
     if (error instanceof sdk().ArcmiraError && error.statusCode === undefined) {
         const message = `could not reach ${baseUrl}: ${error.message.replace(/^.*?:\s*/, "")}`;
         if (json) console.error(JSON.stringify({ error: { type: "network_error", code: "request_failed", message } }));
@@ -1215,6 +1301,9 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
             return 1;
         }
         const lines = [detail ? `error ${error.statusCode} ${detail.type} ${detail.code}: ${detail.message}` : `error ${error.statusCode ?? ""}: ${error.message.split("\n")[0]}`];
+        const quote = detail?.details?.quote;
+        if (quote) lines.push(`quote: ${quote.rows} rows${quote.charge ? `, ${quote.charge.amount} ${quote.charge.unit} from ${quote.charge.from}` : ""}`);
+        if (detail?.details?.existing_id) lines.push(`existing: ${detail.details.existing_id}`);
         if (detail?.unlock?.url) lines.push(`unlock: ${detail.unlock.url}`);
         else if (detail?.doc_url) lines.push(`docs: ${detail.doc_url}`);
         if (requestId) lines.push(`request_id: ${requestId}`);
@@ -1240,6 +1329,7 @@ function commandAt(words: string[]): { key: string; depth: number } | { group: s
     if (!GROUPS[first]) return undefined;
     if (!second || second.startsWith("-")) return { group: first };
     if (GROUPS[first][second]) return { key: GROUPS[first][second], depth: 2 };
+    if (RETIRED[`${first} ${second}`]) throw new UsageError(`arcmira ${first} ${second} is gone since 0.4.0; ${RETIRED[`${first} ${second}`]}`, "command_retired", undefined, true);
     throw new UsageError(`unknown command "${first} ${second}"`, "unknown_command", closest(second, Object.keys(GROUPS[first])));
 }
 

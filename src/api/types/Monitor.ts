@@ -5,46 +5,48 @@ export interface Monitor {
     id: string;
     /** Monitor name. */
     name: string;
-    /** True when the monitor is collapsed in the dashboard UI. */
-    isCollapsed: boolean;
     /** True when delivery is paused for all trackers in this monitor. New alerts are not queued, and queued email delivery checks the pause state again before sending. Use PATCH /v1/trackers/{id} with paused: true to pause one tracker. */
-    isPaused: boolean;
-    /** Dashboard sort position. */
-    sortOrder: number;
+    paused: boolean;
     /** Configured email recipients. External recipients must confirm before delivery. Free includes one additional recipient per monitor. */
-    notifyEmails: string[];
-    /** Recipient consent and invitation state. An account is not required to accept. */
-    emailRecipients?: Monitor.EmailRecipients.Item[] | undefined;
+    notify_emails: string[];
+    /** Every address the monitor reaches, with consent and invitation state. An account is not required to accept. */
+    email_recipients?: Monitor.EmailRecipients.Item[] | undefined;
     /** Delivery cadence. Values: realtime (deliver immediately), hourly (hourly digest), daily (daily digest). Free tier is limited to daily. */
-    notifyFrequency?: string | undefined;
+    notify_frequency?: string | undefined;
     /** Day of week for digest delivery. */
-    digestDay?: string | undefined;
+    digest_day?: string | undefined;
     /** Time of day (HH:MM) for digest delivery. */
-    digestTime?: string | undefined;
+    digest_time?: string | undefined;
     /** True when webhook delivery is enabled. */
-    notifyWebhook: boolean;
-    /** Webhook destination URL. Null when no webhook is configured. */
-    webhookUrl: string | null;
-    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; enablement and rotation responses support recovery with the original Idempotency-Key during the valid recovery window. */
-    webhookSecretSet: boolean;
-    /** Last 4 characters of the current signing secret, for identifying which secret you hold. Null until a secret exists. */
-    webhookSecretHint: string | null;
-    /** Consecutive webhook delivery failures recorded for this monitor. Reset by a secret rotation or PATCHing notifyWebhook: true; 10 consecutive failures auto-disable a webhook. Note: the delivery pipeline currently accrues failures on the tracker that fired, so this monitor-level counter can lag. */
-    webhookFailures?: number | undefined;
-    /** When the webhook was auto-disabled after repeated failures. Null while delivery is enabled. Re-enable by PATCHing notifyWebhook: true; rotation alone never re-enables. */
-    webhookDisabledAt: string | null;
+    notify_webhook: boolean;
+    /** Webhook destination URL. Null when no webhook is configured. Absent when access is member: only the team owner sees the webhook. */
+    webhook_url?: (string | null) | undefined;
+    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; enablement and rotation responses support recovery with the original Idempotency-Key during the valid recovery window. Absent when access is member. */
+    webhook_secret_set?: boolean | undefined;
+    /** Last 4 characters of the current signing secret, for identifying which secret you hold. Null until a secret exists. Absent when access is member. */
+    webhook_secret_hint?: (string | null) | undefined;
+    /** Consecutive webhook delivery failures recorded for this monitor. Reset by a secret rotation or PATCHing notify_webhook: true; 10 consecutive failures auto-disable a webhook. Note: the delivery pipeline currently accrues failures on the tracker that fired, so this monitor-level counter can lag. */
+    webhook_failures?: number | undefined;
+    /** When the webhook was auto-disabled after repeated failures. Null while delivery is enabled. Re-enable by PATCHing notify_webhook: true; rotation alone never re-enables. */
+    webhook_disabled_at: string | null;
     /** Why the webhook was auto-disabled. Null while delivery is enabled. */
-    webhookDisabledReason: string | null;
+    webhook_disabled_reason: string | null;
     /** True when Slack delivery is enabled. */
-    notifySlack: boolean;
+    notify_slack: boolean;
     /** Slack integration used for delivery. Null when Slack is not configured. */
-    slackIntegrationId: string | null;
+    slack_integration_id: string | null;
     /** Slack channel to deliver to. Null when Slack is not configured. */
-    slackChannelId: string | null;
+    slack_channel_id: string | null;
     /** When the monitor was created. */
-    createdAt: string;
+    created_at: string;
     /** When the monitor was last updated. */
-    updatedAt: string;
+    updated_at: string;
+    /** The team the monitor is shared with. Null for a personal monitor. */
+    team: Monitor.Team | null;
+    /** account: the caller pays for the monitor, as its personal owner or the team owner. member: the caller is another member of its team, who may edit it but not its webhook, and may not delete it. */
+    access: Monitor.Access;
+    /** True when the caller muted this team monitor for themselves. Always false on a personal monitor. */
+    muted: boolean;
 }
 
 export namespace Monitor {
@@ -53,11 +55,24 @@ export namespace Monitor {
     export namespace EmailRecipients {
         export interface Item {
             email: string;
+            /** owner: the paying account. member: a member of the monitor's team, who receives its alerts without an invitation and does not count toward the recipient limits. external: anyone else, who must confirm first. */
+            role: Item.Role;
+            /** The Arcmira user behind an owner or member address. Null for external recipients. */
+            user_id: string | null;
+            /** muted: a team member muted this monitor for themselves. */
             status: Item.Status;
-            invitationStatus?: Item.InvitationStatus | undefined;
+            invitation_status?: Item.InvitationStatus | undefined;
         }
 
         export namespace Item {
+            /** owner: the paying account. member: a member of the monitor's team, who receives its alerts without an invitation and does not count toward the recipient limits. external: anyone else, who must confirm first. */
+            export const Role = {
+                Owner: "owner",
+                Member: "member",
+                External: "external",
+            } as const;
+            export type Role = (typeof Role)[keyof typeof Role];
+            /** muted: a team member muted this monitor for themselves. */
             export const Status = {
                 Active: "active",
                 Pending: "pending",
@@ -66,6 +81,7 @@ export namespace Monitor {
                 Removed: "removed",
                 OwnerUnverified: "owner_unverified",
                 PlanLimited: "plan_limited",
+                Muted: "muted",
             } as const;
             export type Status = (typeof Status)[keyof typeof Status];
             export const InvitationStatus = {
@@ -77,4 +93,21 @@ export namespace Monitor {
             export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus];
         }
     }
+
+    /**
+     * The team the monitor is shared with. Null for a personal monitor.
+     */
+    export interface Team {
+        /** Team id. */
+        id: string;
+        /** Team name. */
+        name: string;
+    }
+
+    /** account: the caller pays for the monitor, as its personal owner or the team owner. member: the caller is another member of its team, who may edit it but not its webhook, and may not delete it. */
+    export const Access = {
+        Account: "account",
+        Member: "member",
+    } as const;
+    export type Access = (typeof Access)[keyof typeof Access];
 }

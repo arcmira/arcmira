@@ -4,20 +4,24 @@ import type * as Arcmira from "../../../../index.js";
 
 /**
  * @example
- *     {}
+ *     {
+ *         entity_id: "entity_id"
+ *     }
  */
 export interface ListRecommendationsRequest {
     limit?: number;
     /** Signed continuation from next_cursor. Bound to this route, normalized query, caller and visibility; invalid or old tokens return invalid_cursor. */
     cursor?: string;
-    entity_id?: string;
-    entity_name?: string;
-    entity_type?: Arcmira.ListRecommendationsRequestEntityType;
+    /** The entity, as an id like ent_14. Required. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
+    entity_id: string;
+    /** Only media from this YouTube channel id (UC plus 22 characters). Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
     channel_id?: string;
-    channel_name?: string;
-    mention_class?: Arcmira.ListRecommendationsRequestMentionClass;
+    /** The commercial class to return. Omit for all three. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+    class?: Arcmira.ListRecommendationsRequestClass;
     min_confidence?: number | null;
-    date_from?: string;
-    date_to?: string;
+    /** Only media published at or after this instant. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    after?: string;
+    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    before?: string;
     include_disputed?: boolean;
 }

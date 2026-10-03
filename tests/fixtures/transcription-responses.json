@@ -146,7 +146,6 @@
       "credits_per_row": 4,
       "max_on_demand_cents": 0,
       "on_demand_cents_per_unit": 0.4,
-      "prepare_url": "/v1/transcriptions",
       "refund_policy": "Failed generation is refunded. Delivered unlocks are permanent."
     },
     "responses": {
@@ -170,29 +169,9 @@
           "credits_per_row": 4,
           "max_on_demand_cents": 0,
           "on_demand_cents_per_unit": 0.4,
-          "prepare_url": "/v1/transcriptions",
           "refund_policy": "Failed generation is refunded. Delivered unlocks are permanent."
         }
       }
-    }
-  },
-  "get_transcription": {
-    "status": 200,
-    "body": {
-      "id": "00000000-0000-4000-8000-000000000001",
-      "video_id": "dQw4w9WgXcQ",
-      "state": "pending",
-      "status": "queued",
-      "stage": "queued",
-      "charge": {
-        "unit": "credits",
-        "amount": 1200,
-        "from": "included"
-      },
-      "eta_seconds": 172,
-      "next_poll_seconds": 29,
-      "created_at": "2026-10-01 00:00:00",
-      "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
     }
   },
   "list_transcriptions": {
@@ -221,37 +200,8 @@
       "next_cursor": null
     }
   },
-  "preparation_required": {
-    "status": 200,
-    "body": {
-      "state": "preparation_required",
-      "quality": "premium",
-      "video_id": "dQw4w9WgXcQ",
-      "quote": {
-        "rows": 300,
-        "charge": {
-          "unit": "credits",
-          "amount": 1200,
-          "from": "included"
-        },
-        "eligible": true,
-        "max_on_demand_cents": 0
-      },
-      "action": {
-        "method": "POST",
-        "url": "https://api.arcmira.com/v1/transcriptions",
-        "body": {
-          "video_id": "dQw4w9WgXcQ"
-        }
-      },
-      "last_attempt": {
-        "status": "refunded",
-        "error": "Transcription timed out."
-      }
-    }
-  },
   "pending_premium": {
-    "status": 200,
+    "status": 202,
     "body": {
       "state": "pending",
       "quality": "premium",
@@ -274,47 +224,55 @@
       }
     }
   },
-  "submit_pending": {
+  "premium_ready": {
     "status": 200,
     "body": {
-      "job": {
-        "id": "00000000-0000-4000-8000-000000000001",
-        "video_id": "dQw4w9WgXcQ",
-        "state": "pending",
-        "status": "queued",
-        "stage": "queued",
-        "charge": {
-          "unit": "credits",
-          "amount": 1200,
-          "from": "included"
-        },
-        "eta_seconds": 172,
-        "next_poll_seconds": 29,
-        "created_at": "2026-10-01 00:00:00",
-        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
+      "state": "ready",
+      "video": {
+        "id": "dQw4w9WgXcQ",
+        "title": "TBPN | Tuesday, August 4",
+        "channel_id": "UC-DRzaGnL_vtBUpCFH5M0tg",
+        "channel_name": "TBPN",
+        "published_at": "2026-08-04T17:00:00.000Z",
+        "duration_seconds": 3600,
+        "watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
       },
-      "existing": false
-    }
-  },
-  "submit_ready": {
-    "status": 200,
-    "body": {
-      "job": {
-        "id": "00000000-0000-4000-8000-000000000001",
-        "video_id": "dQw4w9WgXcQ",
-        "state": "ready",
-        "status": "complete",
-        "stage": null,
-        "charge": {
-          "unit": "credits",
-          "amount": 1200,
-          "from": "included"
+      "quality": "premium",
+      "source": "arcmira_premium",
+      "language": "en",
+      "languages": [],
+      "lines": [
+        {
+          "start": 0,
+          "end": 20,
+          "text": "Ramp has been on the show for a while now.",
+          "speaker": 0
         },
-        "created_at": "2026-10-01 00:00:00",
-        "completed_at": "2026-10-01 00:04:10",
-        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001"
-      },
-      "existing": true
+        {
+          "start": 20,
+          "end": 45,
+          "text": "The pitch is still the same, spend less time on expenses.",
+          "speaker": 1
+        }
+      ],
+      "speakers": [
+        {
+          "id": 0,
+          "name": "John Coogan",
+          "entity_id": "ent_91",
+          "confidence": "high"
+        },
+        {
+          "id": 1,
+          "name": "Speaker 1",
+          "entity_id": null,
+          "confidence": null
+        }
+      ],
+      "revision": "rev_1",
+      "rows_billed": 0,
+      "as_of": "2026-08-05T00:00:00.000Z",
+      "note": "Premium transcripts are Arcmira's own. Every Premium transcript is diarized: each line carries a speaker. We identify each speaker from the audio, the video, and internal and community review. We are right most of the time and wrong sometimes, so when a name matters, say it came from Arcmira's speaker identification and cite the line."
     }
   },
   "job_ready": {
@@ -355,55 +313,94 @@
       "completed_at": "2026-10-01 00:04:10"
     }
   },
-  "premium_ready": {
+  "refused_quota": {
+    "status": 402,
+    "body": {
+      "error": {
+        "type": "quota_exceeded",
+        "code": "quota_exceeded",
+        "message": "This transcript needs 75 rows and the account has 10 left this month, past the on-demand budget. Raise the budget in settings or upgrade.",
+        "gate": "rows",
+        "unlock": {
+          "tier": "Pro",
+          "url": "https://arcmira.com/pricing?src=api",
+          "offer": null
+        },
+        "doc_url": "https://arcmira.com/docs/errors#quota_exceeded",
+        "request_id": "req_fixture",
+        "details": {
+          "quote": {
+            "quarters": 1,
+            "rows": 75,
+            "charge": {
+              "unit": "credits",
+              "amount": 300,
+              "from": "mixed"
+            },
+            "max_on_demand_cents": 104
+          }
+        }
+      }
+    }
+  },
+  "paid_plan_required": {
+    "status": 403,
+    "body": {
+      "error": {
+        "type": "permission_error",
+        "code": "paid_plan_required",
+        "message": "Premium transcripts need a paid plan. Captions stay free: read again without quality=premium.",
+        "gate": "plan",
+        "unlock": {
+          "tier": "Pro",
+          "url": "https://arcmira.com/pricing?src=api",
+          "offer": null
+        },
+        "doc_url": "https://arcmira.com/docs/errors#paid_plan_required",
+        "request_id": "req_fixture",
+        "details": {
+          "quote": {
+            "quarters": 1,
+            "rows": 75,
+            "charge": {
+              "unit": "credits",
+              "amount": 300,
+              "from": "mixed"
+            },
+            "max_on_demand_cents": 104
+          }
+        }
+      }
+    }
+  },
+  "premium_failed": {
     "status": 200,
     "body": {
-      "state": "ready",
-      "video": {
-        "id": "dQw4w9WgXcQ",
-        "title": "TBPN | Tuesday, August 4",
-        "channel_id": "UC-DRzaGnL_vtBUpCFH5M0tg",
-        "channel_name": "TBPN",
-        "published_at": "2026-08-04T17:00:00.000Z",
-        "duration_seconds": 3600,
-        "watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-      },
+      "state": "failed",
       "quality": "premium",
-      "source": "arcmira_premium",
-      "language": "en",
-      "languages": [],
-      "lines": [
-        {
-          "start": 0,
-          "end": 20,
-          "text": "Ramp has been on the show for a while now.",
-          "speaker": 0
+      "video_id": "dQw4w9WgXcQ",
+      "job": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "video_id": "dQw4w9WgXcQ",
+        "state": "refunded",
+        "status": "refunded",
+        "stage": null,
+        "charge": {
+          "unit": "credits",
+          "amount": 1200,
+          "from": "included"
         },
-        {
-          "start": 20,
-          "end": 45,
-          "text": "The pitch is still the same, spend less time on expenses.",
-          "speaker": 1
-        }
-      ],
-      "speakers": [
-        {
-          "id": 0,
-          "name": "John Coogan",
-          "entity_id": 91,
-          "confidence": "high"
-        },
-        {
-          "id": 1,
-          "name": "Speaker 1",
-          "entity_id": null,
-          "confidence": null
-        }
-      ],
-      "revision": "rev_1",
-      "rows_billed": 0,
-      "as_of": "2026-08-05T00:00:00.000Z",
-      "note": "Premium transcripts are Arcmira's own. Every Premium transcript is diarized: each line carries a speaker. We identify each speaker from the audio, the video, and internal and community review. We are right most of the time and wrong sometimes, so when a name matters, say it came from Arcmira's speaker identification and cite the line."
+        "created_at": "2026-10-01 00:00:00",
+        "status_url": "https://api.arcmira.com/v1/transcriptions/00000000-0000-4000-8000-000000000001",
+        "error": "Transcription timed out.",
+        "refunded": true,
+        "completed_at": "2026-10-01 00:04:10"
+      },
+      "last_attempt": {
+        "status": "refunded",
+        "error": "Transcription timed out."
+      },
+      "note": "The last Premium purchase for this video failed, and this read bought nothing. Read again with retry=true to buy it again at the current quote."
     }
   }
 }

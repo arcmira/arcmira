@@ -6,33 +6,31 @@ export interface TranscriptSearchChunk {
     /** Search index chunk id. Opaque. */
     id: string;
     /** YouTube video id (11 characters). */
-    videoId: string;
+    video_id: string;
     /** YouTube channel id of the source channel. */
-    channelId: string | null;
+    channel_id: string | null;
     /** Source channel name. */
-    channelName?: (string | null) | undefined;
+    channel_name?: (string | null) | undefined;
     /** The channel's page on arcmira.com, absolute. Null when no channel is known. */
-    channelPage?: (string | null) | undefined;
+    channel_page?: (string | null) | undefined;
     /** Video title. */
-    videoTitle?: (string | null) | undefined;
+    video_title?: (string | null) | undefined;
     /** Speaker names identified on this slice, when known. */
     speakers?: string[] | undefined;
     /** Transcript source class: arcmira_premium, creator_captions, or third_party_quick. */
     source: string | null;
     /** Human label for source. */
-    sourceLabel?: (string | null) | undefined;
+    source_label?: (string | null) | undefined;
     /** Video publish timestamp. Cite it as the date of the quote. */
-    publishedAt: string | null;
+    published_at: string | null;
     /** The spoken slice. Search results include text on every plan within the permitted publication-date window. */
     text: string;
-    /** Legacy field, no longer set. Since 2026-09-10, transcript search includes spoken text on every plan and limits results by publication date. */
-    textWithheld?: boolean | undefined;
     /** Offset of the slice in the video, in seconds. */
-    startSeconds: number | null;
+    start_seconds: number | null;
     /** Site-relative watch URL with the timestamp, e.g. /watch?v=...&t=4787. */
-    watchUrl: string;
+    watch_url: string;
     /** A ready citation line: title, clock, channel, date. */
-    citeLine?: (string | null) | undefined;
+    cite_line?: (string | null) | undefined;
     /** Retrieval score. Higher is a closer match. Not comparable across calls. */
     score: number;
     /** Entities the passage is tagged about (excerpt pins, exact-name mentions, ad verdicts). Present on passages served from the spoken index. */
