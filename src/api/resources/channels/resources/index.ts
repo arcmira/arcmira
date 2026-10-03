@@ -1,9 +1,3 @@
-export * from "./guests/client/requests/index.js";
-export * as guests from "./guests/index.js";
-export * from "./guests/types/index.js";
-export * from "./related/client/requests/index.js";
-export * as related from "./related/index.js";
-export * from "./related/types/index.js";
 export * from "./sponsors/client/requests/index.js";
 export * as sponsors from "./sponsors/index.js";
 export * from "./sponsors/types/index.js";

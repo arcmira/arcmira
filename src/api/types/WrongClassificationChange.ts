@@ -4,18 +4,18 @@
  * For issue_type wrong_classification: the commercial class the row should carry.
  */
 export interface WrongClassificationChange {
-    /** The correct commercial classification. Values: ad_read (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), endorsement (an unpaid personal recommendation), mention (a neutral commercial mention). */
-    mention_class?: WrongClassificationChange.MentionClass | undefined;
+    /** The correct commercial class. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+    class?: WrongClassificationChange.Class | undefined;
     /** Accepts any additional properties */
     [key: string]: any;
 }
 
 export namespace WrongClassificationChange {
-    /** The correct commercial classification. Values: ad_read (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), endorsement (an unpaid personal recommendation), mention (a neutral commercial mention). */
-    export const MentionClass = {
-        AdRead: "ad_read",
-        Endorsement: "endorsement",
+    /** The correct commercial class. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+    export const Class = {
+        Sponsored: "sponsored",
+        Organic: "organic",
         Mention: "mention",
     } as const;
-    export type MentionClass = (typeof MentionClass)[keyof typeof MentionClass];
+    export type Class = (typeof Class)[keyof typeof Class];
 }

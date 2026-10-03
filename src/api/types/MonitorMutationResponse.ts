@@ -11,8 +11,8 @@ export interface MonitorMutationResponse {
 export namespace MonitorMutationResponse {
     export interface Monitor extends Arcmira.Monitor {
         /** Number of trackers in the monitor. Always 0 in the create response. */
-        trackerCount: number;
-        /** The webhook signing secret ("whsec_..."). Only present when this request NEWLY enabled webhook signing: a create with notifyWebhook: true and a webhookUrl, or a PATCH that turns the webhook on (or sets a URL) where no secret existed before. Store it securely. The same Idempotency-Key can recover it for up to 24 hours while it remains the current or valid previous secret. A displaced or expired secret returns idempotency_result_expired without rotating again. */
-        webhookSecret?: string | undefined;
+        tracker_count: number;
+        /** The webhook signing secret ("whsec_..."). Only present when this request NEWLY enabled webhook signing: a create with notify_webhook: true and a webhook_url, or a PATCH that turns the webhook on (or sets a URL) where no secret existed before. Store it securely. The same Idempotency-Key can recover it for up to 24 hours while it remains the current or valid previous secret. A displaced or expired secret returns idempotency_result_expired without rotating again. */
+        webhook_secret?: string | undefined;
     }
 }

@@ -13,8 +13,8 @@ export interface ListVideosRequest {
     limit?: number;
     /** Opaque continuation from next_cursor. Bound to the channel, filters, caller, and visibility; limit may change between pages. Invalid or old tokens return invalid_cursor. */
     cursor?: string;
-    /** ISO date. Only videos published on or after this day. */
-    published_after?: string;
-    /** ISO date. Only videos published before this day. */
-    published_before?: string;
+    /** Only media published at or after this instant. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    after?: string;
+    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    before?: string;
 }

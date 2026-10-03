@@ -5,15 +5,15 @@
  */
 export interface MergeSuggestionChange {
     /** Public id ("ent_{n}") of the duplicate/variant entity to merge away. */
-    sourceEntityId?: string | undefined;
+    source_entity_id?: string | undefined;
     /** Public id ("ent_{n}") of the canonical entity to merge into. */
-    targetEntityId?: string | undefined;
+    target_entity_id?: string | undefined;
     /** Name of the duplicate entity when you do not have its id. */
-    sourceName?: string | undefined;
-    /** Name or public id of the canonical entity when you do not have targetEntityId. */
+    source_name?: string | undefined;
+    /** Name or public id of the canonical entity when you do not have target_entity_id. */
     merge_into?: string | undefined;
     /** Scope of the merge rule, e.g. "global". */
-    scopeType?: string | undefined;
+    scope_type?: string | undefined;
     /** Accepts any additional properties */
     [key: string]: any;
 }

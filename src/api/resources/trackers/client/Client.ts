@@ -112,7 +112,7 @@ export class TrackersClient {
     }
 
     /**
-     * Creates a standalone tracker watching one entity (name + type, resolved with the same entity resolution Search uses). Attach it to a monitor afterwards via POST /v1/monitors/{id}/trackers. Creating a duplicate (same entity name + type) returns 409 with the existingId.
+     * Creates a standalone tracker watching one exact name and type, matched case-insensitively against entities in newly analyzed media, so a tracker can exist before the entity is indexed. To follow an entity you already have an id for, use POST /v1/monitors/{id}/entities. A channel is followed by its YouTube channel id (UC plus 22 characters); a channel name answers 400 id_required. Attach it to a monitor afterwards via POST /v1/monitors/{id}/trackers. Creating a duplicate (same entity name + type) returns 409 tracker_already_exists with the existing tracker id in error.details.existing_id.
      *
      * @param {Arcmira.CreateTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -130,8 +130,8 @@ export class TrackersClient {
      * @example
      *     await client.trackers.create({
      *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
-     *         entityName: "entityName",
-     *         entityType: "person"
+     *         entity_name: "entity_name",
+     *         entity_type: "person"
      *     })
      */
     public create(
@@ -306,7 +306,7 @@ export class TrackersClient {
     }
 
     /**
-     * Partial update: send only the fields to change. The tracked entity itself (entityName/entityType) is immutable; delete and recreate to watch a different entity.
+     * Partial update: send only the fields to change. The tracked entity itself (entity_name/entity_type) is immutable; delete and recreate to watch a different entity.
      *
      * @param {Arcmira.UpdateTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.

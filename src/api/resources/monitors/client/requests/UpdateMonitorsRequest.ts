@@ -15,29 +15,25 @@ export interface UpdateMonitorsRequest {
     /** Display name (1-100 characters). Required on create. */
     name?: string;
     /** Desired email recipients. External recipients must confirm before delivery. Free includes one additional recipient per monitor; paid plans allow up to 20 total. Default []. */
-    notifyEmails?: string[];
+    notify_emails?: string[];
     /** Delivery cadence. Default realtime. Values: realtime (as analysis completes), hourly (hourly digest), daily (daily digest). Free-tier email delivery is coerced to daily regardless of the value sent. */
-    notifyFrequency?: UpdateMonitorsRequest.NotifyFrequency;
+    notify_frequency?: UpdateMonitorsRequest.NotifyFrequency;
     /** Digest day of week. Default "monday". Consulted only by weekly digests, which are dashboard-configured today; inert for API-set frequencies. */
-    digestDay?: string;
+    digest_day?: string;
     /** Digest send hour as HH:MM (account timezone). Default "09:00". Applies to daily digests. */
-    digestTime?: string;
-    /** Enable HMAC-signed webhook delivery (paid plans). When enabled together with webhookUrl, the response returns the signing secret (monitor.webhookSecret), recoverable with the original Idempotency-Key during the valid recovery window. PATCHing true also re-enables an auto-disabled webhook and resets its failure counter. */
-    notifyWebhook?: boolean;
+    digest_time?: string;
+    /** Enable HMAC-signed webhook delivery (paid plans). When enabled together with webhook_url, the response returns the signing secret (monitor.webhook_secret), recoverable with the original Idempotency-Key during the valid recovery window. PATCHing true also re-enables an auto-disabled webhook and resets its failure counter. */
+    notify_webhook?: boolean;
     /** Destination URL for webhook alert deliveries. */
-    webhookUrl?: string;
+    webhook_url?: string;
     /** Enable Slack delivery. Requires a Slack integration connected in the dashboard. */
-    notifySlack?: boolean;
+    notify_slack?: boolean;
     /** Slack integration id from the dashboard OAuth flow. */
-    slackIntegrationId?: string;
+    slack_integration_id?: string;
     /** Slack channel id to deliver to. */
-    slackChannelId?: string;
+    slack_channel_id?: string;
     /** Paused monitors accept config changes but do not deliver; alerts that would have fired are not queued. */
-    isPaused?: boolean;
-    /** Dashboard display state. */
-    isCollapsed?: boolean;
-    /** Dashboard sort position. */
-    sortOrder?: number;
+    paused?: boolean;
 }
 
 export namespace UpdateMonitorsRequest {

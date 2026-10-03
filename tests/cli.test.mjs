@@ -29,10 +29,16 @@ const COMMANDS = {
     episodes: ["episodes", "UC-DRzaGnL_vtBUpCFH5M0tg", "-n", "2"],
     "transcripts get": ["transcripts", "get", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
     "transcripts quote": ["transcripts", "quote", "dQw4w9WgXcQ"],
-    "transcripts request": ["transcripts", "request", "dQw4w9WgXcQ"],
-    "transcripts status": ["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"],
     occurrences: ["occurrences", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "topic"],
     status: ["status", "UC-DRzaGnL_vtBUpCFH5M0tg"],
+    "trackers list": ["trackers", "list"],
+    "monitors list": ["monitors", "list"],
+    "monitors create": ["monitors", "create", "Fintech", "--frequency", "daily"],
+    "monitors update": ["monitors", "update", "mon_1", "--pause"],
+    "monitors trackers": ["monitors", "trackers", "mon_1"],
+    "monitors add": ["monitors", "add", "mon_1", "ent_14", "ent_258320"],
+    "monitors attach": ["monitors", "attach", "mon_1", "trk_1"],
+    "integrations slack": ["integrations", "slack"],
     whoami: ["whoami"],
     api: ["api", "GET", "/v1/me"],
 };
@@ -64,88 +70,127 @@ test("transcript is an alias of transcripts get, listed as an alias", async () =
     assert.equal(alias.stdout, full.stdout);
     const top = await arcmira(["--help"], {});
     assert.doesNotMatch(top.stdout, /^  transcript /m);
-    assert.match(top.stdout, /^Aliases: transcript is transcripts get\.$/m);
+    assert.match(top.stdout, /^Aliases: transcript is transcripts get, follow is trackers create\.$/m);
 });
 
-test("transcripts request is one keyless POST at zero dollars; spending needs a saved key and a row ceiling", async () => {
-    const free = await arcmira(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ"]);
-    assert.equal(free.code, 0, free.stderr);
-    assert.deepEqual(fake.requests.at(-1).body, { video_id: "dQw4w9WgXcQ" });
-    assert.equal(fake.requests.at(-1).headers["idempotency-key"], undefined);
-    assert.match(free.stderr, /transcripts status 2f2b4a3e/);
+test("a Premium read is one GET: 202 exits 4 with the eta, the next read prints the transcript", async () => {
+    const first = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
+    assert.equal(first.code, 4);
+    assert.equal(first.stdout, "");
+    assert.match(first.stderr, /Premium for premiumVid1 is still queued, about 3 min left\. Run the same command again later; it reads this job and never buys twice\./);
+    const second = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
+    assert.equal(second.code, 0, second.stderr);
+    assert.match(second.stdout, /John Coogan: Ramp has been on the show/);
+    assert.equal(fake.requests.filter((r) => r.method !== "GET" && r.path.startsWith("/v1/transcri")).length, 0, "no purchase POST");
+    const json = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--json"]);
+    assert.equal(json.code, 4);
+    assert.equal(JSON.parse(json.stdout).state, "pending");
+});
+
+test("a refused Premium read exits 1 with the quote and the unlock", async () => {
+    const quota = await arcmira(["transcripts", "get", "brokeVid001", "--quality", "premium"]);
+    assert.equal(quota.code, 1);
+    assert.match(quota.stderr, /^error 402 quota_exceeded quota_exceeded: /m);
+    assert.match(quota.stderr, /^quote: 75 rows, 300 credits from mixed$/m);
+    const plan = await arcmira(["transcripts", "get", "freeVid0001", "--quality", "premium", "--json"]);
+    assert.equal(plan.code, 1);
+    assert.equal(JSON.parse(plan.stderr).error.details.quote.rows, 75);
+});
+
+test("retired commands and flags say what replaced them, exit 2, no call", async () => {
     const before = fake.requests.length;
-    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25"])).code, 2);
-    assert.equal((await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25", "--max-rows", "300"])).code, 2);
-    assert.equal(fake.requests.length, before);
-    const paid = await arcmira(["transcripts", "request", "dQw4w9WgXcQ", "--max-on-demand-cents", "25", "--max-rows", "300", "--idempotency-key", "order-1"]);
-    assert.equal(paid.code, 0, paid.stderr);
-    assert.deepEqual(fake.requests.at(-1).body, { video_id: "dQw4w9WgXcQ", max_rows: 300, max_on_demand_cents: 25 });
-    assert.equal(fake.requests.at(-1).headers["idempotency-key"], "order-1");
-});
-
-test("plain get on preparation_required exits 3 and prints the --wait command on stderr", async () => {
-    const human = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
-    assert.equal(human.code, 3);
-    assert.equal(human.stdout, "");
-    assert.match(human.stderr, /^run: arcmira transcripts get premiumVid1 --quality premium --wait$/m);
-    const json = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium", "--json"]);
-    assert.equal(json.code, 3);
-    assert.equal(JSON.parse(json.stdout).state, "preparation_required");
-    assert.match(json.stderr, /arcmira transcripts get premiumVid1 --quality premium --wait/);
-    assert.equal(fake.requests.filter((r) => r.method === "POST" && r.body?.video_id === "premiumVid1").length, 0, "a read never buys");
-});
-
-test("get --wait prepares with one keyless POST, polls, and prints the Premium transcript", async () => {
-    const out = await arcmira(["transcripts", "get", "premiumVid2", "--quality", "premium", "--wait", "--json"]);
-    assert.equal(out.code, 0, out.stderr);
-    const transcript = JSON.parse(out.stdout);
-    assert.deepEqual([transcript.state, transcript.quality], ["ready", "premium"]);
-    const posts = fake.requests.filter((r) => r.method === "POST" && r.path === "/v1/transcriptions" && r.body?.video_id === "premiumVid2");
-    assert.equal(posts.length, 1);
-    assert.deepEqual(posts[0].body, { video_id: "premiumVid2" });
-    assert.equal(posts[0].headers["idempotency-key"], undefined);
-    const human = await arcmira(["transcripts", "get", "premiumVid2", "--quality", "premium", "--wait"]);
-    assert.equal(human.code, 0, human.stderr);
-    assert.match(human.stdout, /John Coogan: Ramp has been on the show/);
-});
-
-test("a result still pending exits 4 with nothing on stdout, with or without --wait", async () => {
-    const waited = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--wait", "--timeout", "0.2"]);
-    assert.equal(waited.code, 4);
-    assert.equal(waited.stdout, "");
-    assert.match(waited.stderr, /still queued/);
-    assert.match(waited.stderr, /arcmira transcripts get pendingVid1 --quality premium --wait/);
-    const waitedJson = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--wait", "--timeout", "0.2", "--json"]);
-    assert.equal(waitedJson.code, 4);
-    assert.equal(waitedJson.stdout, "");
-    assert.equal(JSON.parse(waitedJson.stderr).error.job.state, "pending");
-    const plain = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium"]);
-    assert.equal(plain.code, 4);
-    assert.equal(plain.stdout, "");
-    assert.match(plain.stderr, /arcmira transcripts get pendingVid1 --quality premium --wait/);
-});
-
-test("--wait needs --quality premium", async () => {
-    const before = fake.requests.length;
-    const out = await arcmira(["transcripts", "get", "premiumVid3", "--wait"]);
-    assert.equal(out.code, 2);
-    assert.match(out.stderr, /--quality premium/);
+    const request = await arcmira(["transcripts", "request", "dQw4w9WgXcQ"]);
+    assert.equal(request.code, 2);
+    assert.match(request.stderr, /^arcmira transcripts request is gone since 0\.4\.0; a Premium read buys its own transcript now/);
+    assert.equal((await arcmira(["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"])).code, 2);
+    const wait = await arcmira(["transcripts", "get", "premiumVid3", "--quality", "premium", "--wait"]);
+    assert.equal(wait.code, 2);
+    assert.match(wait.stderr, /Unknown option '--wait'/);
     assert.equal(fake.requests.length, before);
 });
 
-test("status with a request id points at transcripts status, exit 2, no call", async () => {
+test("reads take ids: a name where an id belongs exits 2 naming the resolve call, before any request", async () => {
     const before = fake.requests.length;
-    const out = await arcmira(["status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"]);
-    assert.equal(out.code, 2);
-    assert.equal(out.stderr.trim(), "transcript requests moved: arcmira transcripts status 2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60");
+    const cases = [
+        [["mentions", "--entity", "Ramp"], /--entity takes an entity id like ent_14, got "Ramp"\ntry: arcmira resolve "Ramp"/],
+        [["mentions", "--entity", "ent_14", "--channel", "TBPN"], /--channel takes a YouTube channel id \(UC and 22 characters\), got "TBPN"\ntry: arcmira resolve "TBPN" --type channel/],
+        [["sponsors", "@TBPNLive"], /try: arcmira resolve "TBPNLive" --type channel/],
+        [["recommendations", "Ramp"], /recommendations takes an entity id/],
+        [["momentum", "ent_14", "Brex"], /momentum takes an entity id like ent_14, got "Brex"/],
+        [["search", "cards", "--by", "Eric Glyman"], /--by takes an entity id/],
+        [["occurrences", "--channel", "TBPN"], /--channel takes a YouTube channel id/],
+    ];
+    for (const [args, message] of cases) {
+        const out = await arcmira(args);
+        assert.equal(out.code, 2, args.join(" "));
+        assert.match(out.stderr, message);
+    }
+    const json = await arcmira(["mentions", "--entity", "Ramp", "--json"]);
+    assert.equal(JSON.parse(json.stderr).error.code, "id_required");
     assert.equal(fake.requests.length, before);
-    assert.equal((await arcmira(["transcriptions", "list"])).code, 2);
 });
 
-test("kind maps to the API's mention_class", async () => {
+test("dated commands send after and before as given", async () => {
+    await arcmira(["mentions", "--entity", "ent_14", "--after", "2026-09-01", "--before", "2026-10-01"]);
+    assert.deepEqual(fake.requests.at(-1).query, { entity_id: "ent_14", after: "2026-09-01", before: "2026-10-01" });
+    await arcmira(["occurrences", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg", "--after", "2026-09-01T00:00:00Z"]);
+    assert.equal(fake.requests.at(-1).query.after, "2026-09-01T00:00:00Z");
+    for (const path of ["/v1/search", "/v1/mentions", "/v1/mentions/counts"]) {
+        for (const q of fake.requests.filter((r) => r.path === path)) assert.deepEqual(Object.keys(q.query).filter((k) => /date_|published_/.test(k)), [], path);
+    }
+});
+
+test("kind maps to the API's class; all sends none", async () => {
     await arcmira(["recommendations", "ent_14", "--kind", "sponsored", "--json"]);
-    const req = fake.requests[fake.requests.length - 1];
-    assert.equal(req.query.mention_class, "ad_read");
+    assert.equal(fake.requests.at(-1).path, "/v1/recommendations");
+    assert.deepEqual(fake.requests.at(-1).query, { entity_id: "ent_14", class: "sponsored" });
+    await arcmira(["recommendations", "ent_14"]);
+    assert.equal(fake.requests.at(-1).query.class, undefined);
+});
+
+test("follow creates a tracker by exact name and type, maps org, and attaches to a monitor", async () => {
+    const json = await arcmira(["follow", "Ramp", "--type", "org", "--monitor", "mon_1", "--json"]);
+    assert.equal(json.code, 0, json.stderr);
+    const { tracker, attached } = JSON.parse(json.stdout);
+    const create = fake.requests.findLast((r) => r.method === "POST" && r.path === "/v1/trackers");
+    assert.deepEqual(create.body, { entity_name: "Ramp", entity_type: "organization" });
+    assert.ok(create.headers["idempotency-key"], "writes carry an Idempotency-Key");
+    assert.deepEqual([fake.requests.at(-1).path, fake.requests.at(-1).body], ["/v1/monitors/mon_1/trackers", { tracker_ids: [tracker.id] }]);
+    assert.equal(attached.monitor_id, "mon_1");
+    const human = await arcmira(["follow", "Sam Altman", "--type", "person", "--monitor", "mon_1"]);
+    assert.equal(human.code, 0, human.stderr);
+    assert.match(human.stdout, /^trk_\d+  person        Sam Altman/m);
+    assert.match(human.stderr, /Attached to monitor mon_1\./);
+    const dup = await arcmira(["follow", "brex", "--type", "org"]);
+    assert.equal(dup.code, 1);
+    assert.match(dup.stderr, /tracker_already_exists/);
+    assert.match(dup.stderr, /^existing: trk_9$/m);
+});
+
+test("follow checks its type and takes a channel by UC id only", async () => {
+    const before = fake.requests.length;
+    assert.match((await arcmira(["follow", "Ramp"])).stderr, /trackers create needs --type/);
+    const show = await arcmira(["follow", "TBPN", "--type", "channel"]);
+    assert.equal(show.code, 2);
+    assert.match(show.stderr, /try: arcmira resolve "TBPN" --type channel/);
+    assert.equal(fake.requests.length, before);
+    const byId = await arcmira(["trackers", "create", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "channel", "--json"]);
+    assert.equal(byId.code, 0, byId.stderr);
+    assert.deepEqual(fake.requests.at(-1).body, { entity_name: "UC-DRzaGnL_vtBUpCFH5M0tg", entity_type: "channel" });
+});
+
+test("monitors create and update send snake_case fields; a webhook prints its secret once", async () => {
+    const created = await arcmira(["monitors", "create", "Launches", "--frequency", "realtime", "--email", "a@example.com", "--email", "b@example.com", "--webhook-url", "https://example.com/hook"]);
+    assert.equal(created.code, 0, created.stderr);
+    assert.deepEqual(fake.requests.at(-1).body, { name: "Launches", notify_frequency: "realtime", notify_emails: ["a@example.com", "b@example.com"], notify_webhook: true, webhook_url: "https://example.com/hook" });
+    assert.match(created.stdout, /^webhook secret \(shown once\): whsec_once$/m);
+    assert.equal((await arcmira(["monitors", "create", "Launches"])).code, 2);
+    await arcmira(["monitors", "update", "mon_1", "--resume", "--name", "Fintech daily"]);
+    assert.deepEqual(fake.requests.at(-1).body, { name: "Fintech daily", paused: false });
+    assert.equal((await arcmira(["monitors", "update", "mon_1"])).code, 2);
+    assert.equal((await arcmira(["monitors", "update", "mon_1", "--pause", "--resume"])).code, 2);
+    assert.equal((await arcmira(["monitors", "add", "mon_1", "Ramp"])).code, 2);
+    assert.equal((await arcmira(["monitors", "attach", "mon_1", "ent_14"])).code, 2);
 });
 
 test("a plan gate exits 1 with the unlock link", async () => {
@@ -157,6 +202,7 @@ test("a plan gate exits 1 with the unlock link", async () => {
 
 test("usage errors exit 2", async () => {
     assert.equal((await arcmira(["sponsors", "UC-DRzaGnL_vtBUpCFH5M0t"])).code, 2);
+    assert.equal((await arcmira(["recommendations", "ent_14", "--kind", "ad_read"])).code, 2);
     assert.equal((await arcmira(["nonsense"])).code, 2);
     assert.equal((await arcmira(["search", "x"], {})).code, 2);
 });
@@ -189,20 +235,15 @@ test("examples resolve a name before filtering by its id", async () => {
     assert.ok(r.stdout.indexOf("arcmira resolve Ramp") < r.stdout.indexOf("arcmira mentions --entity ent_14"));
 });
 
-test("search sends about, by and kind as ids; names resolve first, by as a person", async () => {
-    const r = await arcmira(["search", "corporate cards", "--about", "ent_14", "--by", "Eric Glyman", "--kind", "recommendation_organic", "--kind", "mention"]);
+test("search sends ids and the class vocabulary to GET /v1/search", async () => {
+    const r = await arcmira(["search", "corporate cards", "--about", "ent_14", "--by", "ent_91", "--kind", "organic", "--kind", "mention", "--channel", "UC-DRzaGnL_vtBUpCFH5M0tg"]);
     assert.equal(r.code, 0, r.stderr);
-    const resolve = fake.requests.findLast((q) => q.path === "/v1/entities/resolve");
-    assert.equal(resolve.query.type, "person");
-    const sent = fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query;
-    assert.equal(sent.about, "ent_14");
-    assert.equal(sent.by, "ent_14");
-    assert.equal(sent.kind, "recommendation_organic,mention");
-    const plain = await arcmira(["search", "corporate cards"]);
-    assert.equal(plain.code, 0, plain.stderr);
-    assert.deepEqual(Object.keys(fake.requests.findLast((q) => q.path === "/v1/transcripts/search").query).filter((k) => ["about", "by", "kind"].includes(k)), []);
-    const bad = await arcmira(["search", "x y", "--about", "ent_abc"]);
-    assert.equal(bad.code, 2);
+    const sent = fake.requests.at(-1);
+    assert.equal(sent.path, "/v1/search");
+    assert.deepEqual(sent.query, { q: "corporate cards", channel_ids: "UC-DRzaGnL_vtBUpCFH5M0tg", about: "ent_14", by: "ent_91", kind: "organic,mention" });
+    assert.match(r.stdout, /https:\/\/arcmira\.com\/watch\?v=dQw4w9WgXcQ&t=1/);
+    assert.equal((await arcmira(["search", "x y", "--kind", "recommendation_organic"])).code, 2);
+    assert.equal((await arcmira(["search", "x y", "--about", "ent_abc"])).code, 2);
 });
 
 test("resolve prints best, states an assumed suggestion, and lists ask options plainly", async () => {
@@ -215,10 +256,4 @@ test("resolve prints best, states an assumed suggestion, and lists ask options p
     const ask = await arcmira(["resolve", "Jordan"]);
     assert.equal(ask.code, 0, ask.stderr);
     assert.match(ask.stdout, /Which Jordan do you mean\?\n  ent_7  Jordan \(organization\), sneaker brand\n  ent_8  Michael Jordan \(person\), basketball player/);
-    const filtered = await arcmira(["mentions", "--entity", "Jordan"]);
-    assert.equal(filtered.code, 2);
-    assert.match(filtered.stderr, /ent_8  Michael Jordan/);
-    const guessed = await arcmira(["mentions", "--entity", "Sam"]);
-    assert.equal(guessed.code, 0, guessed.stderr);
-    assert.match(guessed.stderr, /assumed "Sam" is ent_14  person  Sam Altman, because it has 4,401 appearances/);
 });

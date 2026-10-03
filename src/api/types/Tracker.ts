@@ -4,41 +4,41 @@ export interface Tracker {
     /** Tracker id in the form "trk_{hex}". */
     id: string;
     /** The tracked entity name, as submitted. */
-    entityName: string;
+    entity_name: string;
     /** The tracked entity type. Values: person, organization, product, topic, channel. */
-    entityType: string;
-    /** User-facing display name. Falls back to entityName when not customized. */
-    displayName: string;
+    entity_type: string;
+    /** User-facing display name. Falls back to entity_name when not customized. */
+    display_name: string;
     /** True when this tracker delivers by email (default true at creation). */
-    notifyEmail: boolean;
+    notify_email: boolean;
     /** True when this tracker has a per-tracker webhook override enabled. */
-    notifyWebhook: boolean;
+    notify_webhook: boolean;
     /** True when this tracker has a per-tracker Slack override enabled. */
-    notifySlack: boolean;
-    /** Per-tracker webhook destination override. Null when the tracker uses its monitor's delivery settings. */
-    webhookUrl: string | null;
+    notify_slack: boolean;
+    /** Per-tracker webhook destination override. Null when the tracker uses its monitor's delivery settings. Absent when the tracker is in a team monitor the caller does not own. */
+    webhook_url?: (string | null) | undefined;
     /** Per-tracker Slack channel override. Null when not set. */
-    slackChannelId: string | null;
+    slack_channel_id: string | null;
     /** Per-tracker Slack integration override. Null when not set. */
-    slackIntegrationId: string | null;
+    slack_integration_id: string | null;
     /** Optional matching filters as submitted. Null when none were set. */
     filters: Record<string, unknown> | null;
     /** True when the tracker is paused. */
-    isPaused: boolean;
+    paused: boolean;
     /** When the tracker was paused. Null unless paused. */
-    pausedAt: string | null;
+    paused_at: string | null;
     /** When the tracker last produced an alert. Null until the first alert. */
-    lastNotifiedAt: string | null;
+    last_notified_at: string | null;
     /** When the tracker was created. */
-    createdAt: string;
+    created_at: string;
     /** When the tracker was last updated. */
-    updatedAt: string | null;
+    updated_at: string | null;
     /** The monitor this tracker belongs to. Absent for standalone trackers. */
-    monitorId?: string | undefined;
+    monitor_id?: string | undefined;
     /** Email deliveries in the current billing period. */
-    emailDeliveryCount: number;
+    email_delivery_count: number;
     /** Webhook deliveries in the current billing period. */
-    webhookDeliveryCount: number;
+    webhook_delivery_count: number;
     /** Slack deliveries in the current billing period. */
-    slackDeliveryCount: number;
+    slack_delivery_count: number;
 }

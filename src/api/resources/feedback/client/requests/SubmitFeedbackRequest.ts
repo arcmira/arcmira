@@ -6,30 +6,33 @@ import type * as Arcmira from "../../../../index.js";
  * @example
  *     {
  *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
- *         type: "recommendations",
- *         query: {
- *             "key": "value"
- *         }
+ *         type: "recommendations"
  *     }
  */
 export interface SubmitFeedbackRequest {
     /** 1 to 255 printable ASCII characters (0x21 to 0x7E); anything else is 400 invalid_idempotency_key. Persist a unique key and the exact request before sending a logical mutation. A retry returns its stored response with Idempotency-Replayed: true. A changed intent under a finalized key returns 409 idempotency_conflict. Keys belong to the authenticated owner, credential and mutation domain. Current authorization still applies. Receipts have no general 24-hour expiry; signing-secret recovery alone expires after 24 hours or when the secret is displaced. */
     "Idempotency-Key"?: string;
-    /** The surface being reviewed. Values: recommendations (/v1/recommendations rows by com_* id; requires a Pro+ plan), channel_sponsors (sponsor entities on a channel; requires a Pro+ plan), mentions (/v1/mentions rows by men_* id), entities_search (/v1/entities/search hits), entities (/v1/entities/lookup and /v1/entities/{id} payloads), channels (/v1/channels/{slug} payloads), monitor_alert (fired alert rows from /v1/monitors/{id}/alerts or /v1/trackers/{id}/alerts; corrections target the alert row id), appearances (person appearance rows), search (rows from /v1/search or /v1/entities/search). */
+    /** The surface being reviewed. Values: recommendations (/v1/recommendations rows by com_* id; requires a Pro+ plan), channel_sponsors (sponsor entities on a channel; requires a Pro+ plan), mentions (/v1/mentions rows by men_* id), entities_search (/v1/entities/resolve candidates), entities (/v1/entities/{id} payloads), channels (/v1/channels/{channel_id}/videos rows), monitor_alert (fired alert rows from /v1/monitors/{id}/alerts or /v1/trackers/{id}/alerts; corrections target the alert row id), appearances (person appearance rows from /v1/mentions with is_appearance=true), search (/v1/search passages), experience (how a task went as a whole, not one row: requires category and notes, takes no corrections, and query is optional). */
     type: SubmitFeedbackRequest.Type;
     /** The query object that produced the result you are reviewing, echoed back verbatim so reviewers can replay it. For monitor_alert feedback, carry monitor_id and/or tracker_id and/or alert_id. */
-    query: Record<string, unknown>;
+    query?: Record<string, unknown>;
     endpoint?: string;
     method?: SubmitFeedbackRequest.Method;
     request_id?: string;
     result_url?: string;
     source_url?: string;
+    /** Free text for the reviewer. Required when type is experience: say what the user asked for and what went wrong, slow, or missing. */
     notes?: string;
+    /** Per-row corrections. Not allowed when type is experience. */
     corrections?: SubmitFeedbackRequest.Corrections.Item[];
+    /** What kind of problem this is. Values: wrong_entity (a name resolved to the wrong person, company or thing), bad_data (a row or field is wrong), missing (something that should exist was not found), slow (the task took too long), confusing (the answer or an error was hard to act on), other (anything else; say what in notes). Required when type is experience. */
+    category?: SubmitFeedbackRequest.Category;
+    /** The MCP tool call this feedback is about, as the Arcmira MCP server names it (mcpc_ and 32 hex digits). Joins the feedback to that call in product analytics. */
+    mcp_call_id?: string;
 }
 
 export namespace SubmitFeedbackRequest {
-    /** The surface being reviewed. Values: recommendations (/v1/recommendations rows by com_* id; requires a Pro+ plan), channel_sponsors (sponsor entities on a channel; requires a Pro+ plan), mentions (/v1/mentions rows by men_* id), entities_search (/v1/entities/search hits), entities (/v1/entities/lookup and /v1/entities/{id} payloads), channels (/v1/channels/{slug} payloads), monitor_alert (fired alert rows from /v1/monitors/{id}/alerts or /v1/trackers/{id}/alerts; corrections target the alert row id), appearances (person appearance rows), search (rows from /v1/search or /v1/entities/search). */
+    /** The surface being reviewed. Values: recommendations (/v1/recommendations rows by com_* id; requires a Pro+ plan), channel_sponsors (sponsor entities on a channel; requires a Pro+ plan), mentions (/v1/mentions rows by men_* id), entities_search (/v1/entities/resolve candidates), entities (/v1/entities/{id} payloads), channels (/v1/channels/{channel_id}/videos rows), monitor_alert (fired alert rows from /v1/monitors/{id}/alerts or /v1/trackers/{id}/alerts; corrections target the alert row id), appearances (person appearance rows from /v1/mentions with is_appearance=true), search (/v1/search passages), experience (how a task went as a whole, not one row: requires category and notes, takes no corrections, and query is optional). */
     export const Type = {
         Recommendations: "recommendations",
         ChannelSponsors: "channel_sponsors",
@@ -40,6 +43,7 @@ export namespace SubmitFeedbackRequest {
         MonitorAlert: "monitor_alert",
         Appearances: "appearances",
         Search: "search",
+        Experience: "experience",
     } as const;
     export type Type = (typeof Type)[keyof typeof Type];
     export const Method = {
@@ -56,7 +60,8 @@ export namespace SubmitFeedbackRequest {
         export interface Item {
             /** Public id of the row being corrected, from the response you received: men_* (mentions, appearances), com_* (recommendations), ent_* (entities, sponsors), or the alert row id (monitor_alert). Omit for missed_alert and missing_result corrections, which have no row to target. */
             id?: string | undefined;
-            mention_class?: Item.MentionClass | undefined;
+            /** On recommendations feedback, the class the row should carry. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+            class?: Item.Class | undefined;
             reason?: Item.Reason | undefined;
             /** Issue classification for the correction. Entity-family values: wrong_entity_type (right entity, wrong type), wrong_entity (the row points at the wrong canonical entity), duplicate_entity (results split across variants of the same entity), merge_suggestion (propose the canonical merge for split variants), missing_result (a result you know should exist is absent), stale_metadata (name/website/channel metadata is outdated), wrong_classification (class-level error on a commercial row), bad_ranking (duplicates or aliases ranking above the canonical entity). monitor_alert values: false_positive_alert (the alert should not have fired), wrong_media (fired against the wrong video), wrong_timestamp (fired at the wrong position in the video), duplicate_alert (the same occurrence fired more than once), missed_alert (an expectation: an alert that should have fired but did not; no row to target), delivery_issue (the delivery itself was wrong: wrong channel, not received). appearances values: person_not_present (the person does not appear in the media), wrong_person (the appearance is attributed to the wrong person), wrong_appearance_role (right person, wrong role, e.g. guest vs host). other (escape hatch; detail in notes). */
             issue_type?: Item.IssueType | undefined;
@@ -66,12 +71,13 @@ export namespace SubmitFeedbackRequest {
         }
 
         export namespace Item {
-            export const MentionClass = {
-                AdRead: "ad_read",
-                Endorsement: "endorsement",
+            /** On recommendations feedback, the class the row should carry. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+            export const Class = {
+                Sponsored: "sponsored",
+                Organic: "organic",
                 Mention: "mention",
             } as const;
-            export type MentionClass = (typeof MentionClass)[keyof typeof MentionClass];
+            export type Class = (typeof Class)[keyof typeof Class];
             export const Reason = {
                 FalsePositiveAdRead: "false_positive_ad_read",
                 FalsePositiveEndorsement: "false_positive_endorsement",
@@ -120,4 +126,15 @@ export namespace SubmitFeedbackRequest {
                 | Arcmira.FreeformSuggestedChange;
         }
     }
+
+    /** What kind of problem this is. Values: wrong_entity (a name resolved to the wrong person, company or thing), bad_data (a row or field is wrong), missing (something that should exist was not found), slow (the task took too long), confusing (the answer or an error was hard to act on), other (anything else; say what in notes). Required when type is experience. */
+    export const Category = {
+        WrongEntity: "wrong_entity",
+        BadData: "bad_data",
+        Missing: "missing",
+        Slow: "slow",
+        Confusing: "confusing",
+        Other: "other",
+    } as const;
+    export type Category = (typeof Category)[keyof typeof Category];
 }

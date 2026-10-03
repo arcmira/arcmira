@@ -11,7 +11,7 @@ import type * as Arcmira from "../../../../index.js";
 export interface GetTranscriptsRequest {
     /** YouTube video id, 11 characters. */
     video_id: string;
-    /** captions reads creator or automatic captions at 1 row per started 15 minutes. premium is read-only: an owned transcript returns 200 state ready at zero rows, an active purchase returns 202 state pending with its job, and an unowned transcript on a plan with Premium returns 200 state preparation_required with the quote and the POST /v1/transcriptions action. It never purchases or substitutes captions. Default captions unless changed in account settings. */
+    /** captions reads creator or automatic captions at 1 row per started 15 minutes. premium is one read: an owned transcript returns 200 state ready at zero rows; otherwise the read buys the whole video within the account's plan and on-demand budget (included credits first, then on-demand money up to the account limit) and returns 202 state pending with the job until it is ready. 402 quota_exceeded or spend_limit_exceeded and 403 paid_plan_required carry the price in quote. It never substitutes captions. Default captions unless changed in account settings. */
     quality?: Arcmira.GetTranscriptsRequestQuality;
     /** Comma-separated caption language priority list, at most 5, tried in order (e.g. "de,en"). Use asr for the first automatic track and asr-<code> for a specific one. Default en. languages[] in the response lists every track the video offers. */
     language?: string;

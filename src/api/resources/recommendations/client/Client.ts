@@ -23,7 +23,7 @@ export class RecommendationsClient {
     }
 
     /**
-     * Cursor-paginated commercial mentions (ad reads, endorsements, neutral mentions) filtered by entity (entity_id or entity_name is required), channel, mention_class, confidence, and date range. The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Read timestamps from start_seconds / end_seconds (integer seconds); the MM:SS string fields are deprecated.
+     * Cursor-paginated commercial mentions (sponsored, organic and neutral mentions) filtered by entity (entity_id is required; resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter), channel (channel_id), class, confidence, and publication window [after, before). The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Requires a Pro+ plan. Positions are start_seconds and end_seconds (integer seconds).
      *
      * @param {Arcmira.ListRecommendationsRequest} request
      * @param {RecommendationsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -39,10 +39,12 @@ export class RecommendationsClient {
      * @throws {@link errors.ArcmiraTimeoutError}
      *
      * @example
-     *     await client.recommendations.list()
+     *     await client.recommendations.list({
+     *         entity_id: "entity_id"
+     *     })
      */
     public async list(
-        request: Arcmira.ListRecommendationsRequest = {},
+        request: Arcmira.ListRecommendationsRequest,
         requestOptions?: RecommendationsClient.RequestOptions,
     ): Promise<core.Page<Arcmira.Recommendation, Arcmira.RecommendationListResponse>> {
         const list = core.HttpResponsePromise.interceptFunction(
@@ -53,28 +55,22 @@ export class RecommendationsClient {
                     limit,
                     cursor,
                     entity_id: entityId,
-                    entity_name: entityName,
-                    entity_type: entityType,
                     channel_id: channelId,
-                    channel_name: channelName,
-                    mention_class: mentionClass,
+                    class: class_,
                     min_confidence: minConfidence,
-                    date_from: dateFrom,
-                    date_to: dateTo,
+                    after,
+                    before,
                     include_disputed: includeDisputed,
                 } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
                     entity_id: entityId,
-                    entity_name: entityName,
-                    entity_type: entityType != null ? entityType : undefined,
                     channel_id: channelId,
-                    channel_name: channelName,
-                    mention_class: mentionClass != null ? mentionClass : undefined,
+                    class: class_ != null ? class_ : undefined,
                     min_confidence: minConfidence,
-                    date_from: dateFrom,
-                    date_to: dateTo,
+                    after,
+                    before,
                     include_disputed: includeDisputed,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -164,7 +160,7 @@ export class RecommendationsClient {
             hasNextPage: (response) =>
                 response?.next_cursor != null &&
                 !(typeof response?.next_cursor === "string" && response?.next_cursor === ""),
-            getItems: (response) => response?.data ?? [],
+            getItems: (response) => response?.recommendations ?? [],
             loadPage: (response) => {
                 return list(core.setObjectProperty(request, "cursor", response?.next_cursor));
             },

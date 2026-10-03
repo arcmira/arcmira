@@ -23,7 +23,6 @@ const bin = resolve(opts.bin ?? join(root, "dist/cli/main.js"));
 
 const TBPN = "UC-DRzaGnL_vtBUpCFH5M0tg";
 const BIG_VIDEO = "bigBigBig01";
-const JOB = "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60";
 const ENTITIES = {
     ramp: [{ id: "ent_14", name: "Ramp", type: "organization", suggested: true }],
     mercury: [{ id: "ent_20", name: "Mercury", type: "organization", suggested: true }],
@@ -66,12 +65,6 @@ const front = createServer((req, res) => {
             const best = rows.length === 1 ? rows[0] : null;
             const ask = rows.length > 1 ? { question: `Which ${q} do you mean?`, options: rows.map((r) => ({ id: r.id, name: r.name, type: r.type, label: `${r.name} (${r.type})` })) } : null;
             return send(200, { query: q, context: url.searchParams.get("context"), confidence: best ? "exact" : ask ? "ambiguous" : "none", best, suggested: null, ask, candidates: rows, note: "x" });
-        }
-        if (url.pathname === "/v1/entities/search") {
-            const rows = ENTITIES[(url.searchParams.get("q") ?? "").toLowerCase()] ?? [];
-            const type = url.searchParams.get("type");
-            const data = rows.filter((r) => !type || r.type === type).map((r) => ({ numeric_id: 1, slug: r.name.toLowerCase(), page: `https://arcmira.com/x/${r.id}`, youtube_channel_id: null, ...r }));
-            return send(200, { data, query: url.searchParams.get("q"), has_more: false });
         }
         if (url.pathname === `/v1/transcripts/${BIG_VIDEO}`) {
             const lines = Array.from({ length: 20000 }, (_, i) => ({ start: i, end: i + 1, text: `line ${i} of a long transcript that fills the pipe buffer many times over` }));
@@ -120,39 +113,39 @@ const parses = (text) => {
 const errorCodeIn = (text) => parses(text)?.error?.code;
 
 const COMMANDS = {
-    search: { ok: ["search", "agent payments"], bad: [["search"], ["search", "x", "--limit", "abc"], ["search", "x", "--limit", "99"], ["search", "x", "--after", "yesterday"]], typo: [["search", "x", "--limt", "3"], "--limit"], names: [["search", "agents", "--entity", "Ramp"], (r) => r.some((q) => q.path === "/v1/transcripts/search" && q.query.entity_ids === "ent_14")] },
+    search: { ok: ["search", "agent payments"], bad: [["search"], ["search", "x", "--limit", "abc"], ["search", "x", "--limit", "99"], ["search", "x", "--after", "yesterday"]], typo: [["search", "x", "--limt", "3"], "--limit"], ids: ["search", "agents", "--entity", "Ramp"] },
     resolve: { ok: ["resolve", "Ramp"], bad: [["resolve"], ["resolve", "Ramp", "--type", "company"], ["resolve", "Ramp", "--limit", "0"]], typo: [["resolve", "Ramp", "--tpye", "person"], "--type"] },
     mentions: {
         ok: ["mentions", "--entity", "ent_14"],
         bad: [["mentions"], ["mentions", "--entity", "ent_14", "--limit", "0"], ["mentions", "--entity", "ent_abc"], ["mentions", "--entity", "ent_14", "--before", "soon"]],
         typo: [["mentions", "--entiy", "ent_14"], "--entity"],
-        names: [["mentions", "--entity", "Ramp"], (r) => r.some((q) => q.path === "/v1/mentions" && q.query.entity_id === "ent_14")],
+        ids: ["mentions", "--entity", "Ramp"],
         cursor: [["mentions", "--entity", "ent_14", "--cursor", "c2"], (r) => r.some((q) => q.path === "/v1/mentions" && q.query.cursor === "c2")],
     },
     momentum: {
         ok: ["momentum", "ent_14"],
         bad: [["momentum"], ["momentum", "ent_1", "ent_2", "ent_3", "ent_4", "ent_5"]],
         typo: [["momentum", "ent_14", "--jsn"], "--json"],
-        names: [["momentum", "Ramp", "Mercury"], (r) => r.some((q) => q.path === "/v1/entities/ent_14/momentum") && r.some((q) => q.path === "/v1/entities/ent_20/momentum")],
+        ids: ["momentum", "Ramp", "Mercury"],
     },
     sponsors: {
         ok: ["sponsors", TBPN],
         bad: [["sponsors"], ["sponsors", TBPN, "--status", "paused"], ["sponsors", TBPN, "--min-ad-reads", "x"]],
         typo: [["sponsors", TBPN, "--stauts", "active"], "--status"],
-        names: [["sponsors", "@tbpn"], (r) => r.some((q) => q.path === `/v1/channels/${TBPN}/sponsors`)],
+        ids: ["sponsors", "@tbpn"],
     },
     recommendations: {
         ok: ["recommendations", "ent_14", "--kind", "organic"],
         bad: [["recommendations"], ["recommendations", "ent_14", "--kind", "paid"], ["recommendations", "ent_14", "--limit", "101"]],
         typo: [["recommendations", "ent_14", "--knd", "organic"], "--kind"],
-        names: [["recommendations", "Ramp"], (r) => r.some((q) => q.path === "/v1/entities/ent_14/recommendations")],
-        cursor: [["recommendations", "ent_14", "--cursor", "c2"], (r) => r.some((q) => q.path === "/v1/entities/ent_14/recommendations" && q.query.cursor === "c2"), "single page in the fake"],
+        ids: ["recommendations", "Ramp"],
+        cursor: [["recommendations", "ent_14", "--cursor", "c2"], (r) => r.some((q) => q.path === "/v1/recommendations" && q.query.cursor === "c2"), "single page in the fake"],
     },
     episodes: {
         ok: ["episodes", TBPN, "-n", "2"],
         bad: [["episodes"], ["episodes", TBPN, "--limit", "26"], ["episodes", TBPN, "--after", "2026-13-40"]],
         typo: [["episodes", TBPN, "--limt", "2"], "--limit"],
-        names: [["episodes", "TBPN"], (r) => r.some((q) => q.path === `/v1/channels/${TBPN}/videos`)],
+        ids: ["episodes", "TBPN"],
     },
     "transcripts get": {
         ok: ["transcripts", "get", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
@@ -164,21 +157,11 @@ const COMMANDS = {
         bad: [["transcripts", "quote"], ["transcripts", "quote", "invalid"]],
         typo: [["transcripts", "quote", "dQw4w9WgXcQ", "--jsn"], "--json"],
     },
-    "transcripts request": {
-        ok: ["transcripts", "request", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-audit-intent"],
-        bad: [["transcripts", "request"], ["transcripts", "request", "not a video"], ["transcripts", "request", "dQw4w9WgXcQ", "extra"]],
-        typo: [["transcripts", "request", "dQw4w9WgXcQ", "--idempotency-kye", "k"], "--idempotency-key"],
-    },
-    "transcripts status": {
-        ok: ["transcripts", "status", JOB],
-        bad: [["transcripts", "status"], ["transcripts", "status", "job-1"], ["transcripts", "status", JOB, "extra"]],
-        typo: [["transcripts", "status", JOB, "--jsn"], "--json"],
-    },
     occurrences: {
         ok: ["occurrences", "--channel", TBPN, "--type", "topic"],
         bad: [["occurrences", TBPN, "UClWkDGXEzsh77GAhs90wpXw"], ["occurrences"], ["occurrences", "--channel", TBPN, "--mode", "all"], ["occurrences", "--channel", TBPN, "--limit", "41"], ["occurrences", "--channel", TBPN, "--type", "company"]],
         typo: [["occurrences", "--chanel", TBPN], "--channel"],
-        names: [["occurrences", "--channel", "TBPN"], (r) => r.some((q) => q.path === "/v1/mentions/counts" && q.query.channel_ids === TBPN)],
+        ids: ["occurrences", "--channel", "TBPN"],
     },
     whoami: {
         ok: ["whoami"],
@@ -191,11 +174,42 @@ const COMMANDS = {
         typo: [["api", "GET", "/v1/me", "--paginat"], "--paginate"],
         noKeyNeeded: true,
     },
+    "trackers create": {
+        ok: ["trackers", "create", "Ramp", "--type", "org"],
+        bad: [["trackers", "create"], ["trackers", "create", "Ramp"], ["trackers", "create", "Ramp", "--type", "company"], ["trackers", "create", "TBPN", "--type", "channel"]],
+        typo: [["trackers", "create", "Ramp", "--tpye", "org"], "--type"],
+        ids: ["trackers", "create", "TBPN", "--type", "channel"],
+    },
+    "trackers list": { ok: ["trackers", "list"], bad: [["trackers", "list", "extra"]], typo: [["trackers", "list", "--jsn"], "--json"] },
+    "monitors list": { ok: ["monitors", "list"], bad: [["monitors", "list", "extra"]], typo: [["monitors", "list", "--jsn"], "--json"] },
+    "monitors create": {
+        ok: ["monitors", "create", "Fintech", "--frequency", "daily"],
+        bad: [["monitors", "create"], ["monitors", "create", "Fintech"], ["monitors", "create", "Fintech", "--frequency", "weekly"]],
+        typo: [["monitors", "create", "Fintech", "--frequncy", "daily"], "--frequency"],
+    },
+    "monitors update": {
+        ok: ["monitors", "update", "mon_1", "--pause"],
+        bad: [["monitors", "update"], ["monitors", "update", "mon_1"], ["monitors", "update", "mon_1", "--pause", "--resume"]],
+        typo: [["monitors", "update", "mon_1", "--paus"], "--pause"],
+    },
+    "monitors trackers": { ok: ["monitors", "trackers", "mon_1"], bad: [["monitors", "trackers"], ["monitors", "trackers", "mon_1", "extra"]], typo: [["monitors", "trackers", "mon_1", "--jsn"], "--json"] },
+    "monitors add": {
+        ok: ["monitors", "add", "mon_1", "ent_14"],
+        bad: [["monitors", "add", "mon_1"], ["monitors", "add", "mon_1", "ent_14", "--person-match-mode", "always"]],
+        typo: [["monitors", "add", "mon_1", "ent_14", "--person-match-mod", "both"], "--person-match-mode"],
+        ids: ["monitors", "add", "mon_1", "Ramp"],
+    },
+    "monitors attach": {
+        ok: ["monitors", "attach", "mon_1", "trk_1"],
+        bad: [["monitors", "attach", "mon_1"], ["monitors", "attach", "mon_1", "ent_14"]],
+        typo: [["monitors", "attach", "mon_1", "trk_1", "--jsn"], "--json"],
+    },
+    "integrations slack": { ok: ["integrations", "slack"], bad: [["integrations", "slack", "extra"]], typo: [["integrations", "slack", "--jsn"], "--json"] },
     status: {
         ok: ["status", TBPN],
         bad: [["status", "UC-DRzaGnL_vtBUpCFH5M0t"], ["status", TBPN, "extra"]],
         typo: [["status", TBPN, "--jsn"], "--json"],
-        names: [["status", "TBPN"], (r) => r.some((q) => q.path === `/v1/channels/${TBPN}/coverage`)],
+        ids: ["status", "TBPN"],
     },
 };
 
@@ -210,7 +224,7 @@ const CHECKS = {
     typo_flag: "a misspelled flag exits 2 and suggests the right one",
     no_key: "no key anywhere: exit 2, no network call, stderr names an in-CLI way to get a key",
     no_ansi: "piped output carries no ANSI escapes",
-    names: "accepts a name or @handle where it takes an ent_ or UC id, resolving it before the call",
+    ids: "a name or @handle where an ent_ or UC id belongs exits 2 with id_required and the resolve command, before any call",
     pagination: "cursor exposed: --cursor passes through and the first page names the next cursor",
 };
 
@@ -247,10 +261,11 @@ for (const [name, spec] of Object.entries(COMMANDS)) {
         row.no_key = nokey.code === 2 && nokey.requests.length === 0 && /arcmira (login|signup)/.test(nokey.stderr);
     }
 
-    if (spec.names) {
-        const n = await run(spec.names[0]);
-        row.names = n.code === 0 && spec.names[1](n.requests);
-    } else row.names = null;
+    if (spec.ids) {
+        const human = await run(spec.ids);
+        const json = await run([...spec.ids, "--json"]);
+        row.ids = human.code === 2 && human.requests.length === 0 && /try: arcmira resolve /.test(human.stderr) && json.code === 2 && errorCodeIn(json.stderr) === "id_required";
+    } else row.ids = null;
     if (spec.cursor) {
         const c = await run(spec.cursor[0]);
         const first = await run(spec.ok);
@@ -353,17 +368,17 @@ g.user_agent = { pass: cliUa(uaData) && cliUa(uaApi) && cliUa(uaLogin), rule: "e
 
 const apiQuery = await run(["api", "GET", "/v1/mentions", "-f", "entity_id=ent_14", "-F", "limit=2", "-H", "X-Test: yes"]);
 g.api_get = {
-    pass: apiQuery.code === 0 && apiQuery.requests[0]?.query.entity_id === "ent_14" && apiQuery.requests[0]?.query.limit === "2" && apiQuery.requests[0]?.headers["x-test"] === "yes" && Array.isArray(parses(apiQuery.stdout)?.data),
+    pass: apiQuery.code === 0 && apiQuery.requests[0]?.query.entity_id === "ent_14" && apiQuery.requests[0]?.query.limit === "2" && apiQuery.requests[0]?.headers["x-test"] === "yes" && Array.isArray(parses(apiQuery.stdout)?.mentions),
     rule: "api GET: -f and -F go to the query string, -H is sent, stdout is the JSON body",
 };
-const apiPost = await run(["api", "post", "v1/monitors", "-f", "name=Launches", "-F", "notifyWebhook=false", "-F", "sortOrder=3", "-F", "notifyEmails[]=a@example.com", "--verbose"]);
+const apiPost = await run(["api", "post", "v1/monitors", "-f", "name=Launches", "-F", "notify_webhook=false", "-F", "digest_day=3", "-F", "notify_emails[]=a@example.com", "--verbose"]);
 const postReq = apiPost.requests[0];
 const postBody = parses(postReq?.body ?? "");
 const idem = postReq?.headers["idempotency-key"] ?? "";
 g.api_post = {
     pass:
-        apiPost.code === 0 && postReq?.method === "POST" && postReq.path === "/v1/monitors" && postBody?.name === "Launches" && postBody?.notifyWebhook === false && postBody?.sortOrder === 3 &&
-        postBody?.notifyEmails?.[0] === "a@example.com" && /^[0-9a-f-]{36}$/.test(idem) && apiPost.stderr.includes(`idempotency-key: ${idem}`) && /request_id req_fake/.test(apiPost.stderr),
+        apiPost.code === 0 && postReq?.method === "POST" && postReq.path === "/v1/monitors" && postBody?.name === "Launches" && postBody?.notify_webhook === false && postBody?.digest_day === 3 &&
+        postBody?.notify_emails?.[0] === "a@example.com" && /^[0-9a-f-]{36}$/.test(idem) && apiPost.stderr.includes(`idempotency-key: ${idem}`) && /request_id req_fake/.test(apiPost.stderr),
     rule: "api POST: fields become a typed JSON body, an Idempotency-Key is sent automatically and --verbose prints it with the request_id",
 };
 const bodyDir = freshHome();
@@ -376,7 +391,7 @@ g.api_body = {
 };
 const apiPages = await run(["api", "GET", "/v1/mentions", "-f", "entity_id=ent_14", "--paginate"]);
 g.api_paginate = {
-    pass: apiPages.code === 0 && apiPages.requests.length === 2 && apiPages.requests[1].query.cursor === "c2" && parses(apiPages.stdout)?.data?.length === 3 && parses(apiPages.stdout)?.has_more === false,
+    pass: apiPages.code === 0 && apiPages.requests.length === 2 && apiPages.requests[1].query.cursor === "c2" && parses(apiPages.stdout)?.mentions?.length === 3 && parses(apiPages.stdout)?.has_more === false,
     rule: "api --paginate follows next_cursor and prints every page's rows as one list",
 };
 const apiGate = await run(["api", "GET", "/v1/entities/ent_14/momentum"], { key: "gate" });
@@ -393,28 +408,31 @@ const groupBare = await run(["transcripts"], { key: null });
 g.transcripts_group = {
     pass:
         alias.code === 0 && alias.stdout === aliasFull.stdout && alias.requests[0]?.path === "/v1/transcripts/dQw4w9WgXcQ" && /arcmira transcripts get/.test(aliasHelp.stdout) &&
-        !/^  transcript /m.test(top.stdout) && /^Aliases: transcript is transcripts get/m.test(top.stdout) && ["get", "request", "status"].every((sub) => new RegExp(`^  transcripts ${sub} `, "m").test(top.stdout)) &&
-        groupBare.code === 0 && /transcripts request/.test(groupBare.stdout) && !/transcriptions/.test(top.stdout),
-    rule: "transcripts get|request|status; transcript is an alias of transcripts get, listed under Aliases, not as a command",
+        !/^  transcript /m.test(top.stdout) && /^Aliases: transcript is transcripts get/m.test(top.stdout) && ["get", "quote"].every((sub) => new RegExp(`^  transcripts ${sub} `, "m").test(top.stdout)) &&
+        groupBare.code === 0 && /transcripts quote/.test(groupBare.stdout) && !/transcriptions/.test(top.stdout),
+    rule: "transcripts get|quote; transcript is an alias of transcripts get, listed under Aliases, not as a command",
 };
-const order = await run(["transcripts", "request", "https://youtu.be/dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "saved-audit-intent"]);
-const orderKey = order.requests[0]?.headers["idempotency-key"] ?? "";
-const orderOwn = await run(["transcripts", "request", "dQw4w9WgXcQ", "--max-rows", "300", "--idempotency-key", "order-1", "--json"]);
-g.transcripts_request = {
+const premiumFirst = await run(["transcripts", "get", "premiumVidR", "--quality", "premium"]);
+const premiumAgain = await run(["transcripts", "get", "premiumVidR", "--quality", "premium"]);
+g.premium_one_read = {
     pass:
-        order.code === 0 && order.requests.length === 1 && order.requests[0].method === "POST" && order.requests[0].path === "/v1/transcriptions" && parses(order.requests[0].body)?.video_id === "dQw4w9WgXcQ" &&
-        orderKey === "saved-audit-intent" && parses(order.requests[0].body)?.max_rows === 300 && new RegExp(`transcripts status ${JOB}`).test(order.stderr) &&
-        orderOwn.code === 0 && orderOwn.requests[0]?.headers["idempotency-key"] === "order-1" && parses(orderOwn.stdout)?.job?.id === JOB,
-    rule: "transcripts request POSTs /v1/transcriptions with video_id, cost ceilings and the supplied persisted Idempotency-Key, then names the poll command",
+        premiumFirst.code === 4 && premiumFirst.stdout === "" && /never buys twice/.test(premiumFirst.stderr) && premiumAgain.code === 0 && premiumAgain.stdout.trim().length > 0 &&
+        [...premiumFirst.requests, ...premiumAgain.requests].every((q) => q.method === "GET" && q.path === "/v1/transcripts/premiumVidR"),
+    rule: "a Premium read is one GET: 202 pending exits 4 and says to read again, the next read prints the transcript, nothing posts a purchase",
 };
-const moved = await run(["status", JOB]);
-const movedJson = await run(["status", JOB, "--json"]);
-g.status_job_moved = {
-    pass: moved.code === 2 && moved.requests.length === 0 && moved.stderr.trim() === `transcript requests moved: arcmira transcripts status ${JOB}` && errorCodeIn(movedJson.stderr) === "command_moved",
-    rule: "status with a request id prints a one-line pointer to transcripts status and exits 2 before any call",
+const retired = await run(["transcripts", "request", "dQw4w9WgXcQ"]);
+const retiredJson = await run(["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", "--json"]);
+g.retired_commands = {
+    pass: retired.code === 2 && retired.requests.length === 0 && retired.stderr.trim().split("\n").length === 1 && /is gone since 0\.4\.0; /.test(retired.stderr) && retiredJson.code === 2 && errorCodeIn(retiredJson.stderr) === "command_retired",
+    rule: "retired commands (transcripts request, transcripts status): exit 2, no call, one line naming what replaced them",
+};
+const follow = await run(["follow", "Mercury", "--type", "org", "--json"]);
+g.follow_alias = {
+    pass: follow.code === 0 && follow.requests.length === 1 && parses(follow.requests[0].body)?.entity_type === "organization" && /^Aliases: .*follow is trackers create/m.test(top.stdout),
+    rule: "follow is an alias of trackers create, listed under Aliases; --type org sends organization",
 };
 
-const RESERVED = ["monitors", "trackers", "corrections", "feedback", "keys"];
+const RESERVED = ["feedback", "keys"];
 const reservedRuns = [];
 for (const name of RESERVED) reservedRuns.push(await run([name, "list"]));
 g.reserved_commands = {
@@ -446,7 +464,7 @@ g.docs = {
     rule: "docs prints the docs address; docs <query> searches the docs site and prints titles and links",
 };
 const readme = readFileSync(join(root, "README.md"), "utf8");
-const treeNames = [...Object.keys(COMMANDS), "transcript", "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
+const treeNames = [...Object.keys(COMMANDS), "transcript", "follow", "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
 g.readme = { pass: /telemetry/i.test(readme) && treeNames.every((n) => readme.includes(`arcmira ${n}`)), rule: "README states the telemetry policy and lists the full command tree" };
 
 const times = [];

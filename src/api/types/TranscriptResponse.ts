@@ -82,8 +82,8 @@ export namespace TranscriptResponse {
             id: number;
             /** The identified person, or Speaker 1, Speaker 2 and so on for a voice nobody has identified yet. */
             name: string;
-            /** Raw entity id of the identified person. Null when the speaker is unidentified. */
-            entity_id: number | null;
+            /** Public entity id ("ent_{n}") of the identified person. Null when the speaker is unidentified. */
+            entity_id: string | null;
             /** high when the name was reviewed, low when it is your own identification still awaiting review, null when nobody is identified. */
             confidence: string | null;
         }
@@ -122,6 +122,8 @@ export namespace TranscriptResponse {
         current_revision?: string | undefined;
         /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
         expected_seq?: number | undefined;
+        /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
+        details?: Access.Details | undefined;
         doc_url: string;
         request_id: string;
     }
@@ -183,6 +185,57 @@ export namespace TranscriptResponse {
                 method: string;
                 /** Absolute endpoint carrying its ?src= attribution. Call it verbatim. */
                 url: string;
+            }
+        }
+
+        /**
+         * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
+         */
+        export interface Details {
+            /** The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required. */
+            quote?: Details.Quote | undefined;
+            /** On max_charge_exceeded: the accepted purchase for this video that holds a higher money ceiling. Poll it at /v1/transcriptions/{id} instead of starting another. */
+            existing_request_id?: string | undefined;
+            /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
+            existing_id?: string | undefined;
+        }
+
+        export namespace Details {
+            /**
+             * The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required.
+             */
+            export interface Quote extends Arcmira.TranscriptQuote {
+                /** What the purchase would charge at the current balance. Absent when no current price could be read. */
+                charge?: Quote.Charge | undefined;
+                /** The money ceiling the current quote needs, in whole cents. Send at least this as max_on_demand_cents with a new intent. */
+                max_on_demand_cents?: number | undefined;
+            }
+
+            export namespace Quote {
+                /**
+                 * What the purchase would charge at the current balance. Absent when no current price could be read.
+                 */
+                export interface Charge {
+                    unit: Charge.Unit;
+                    amount: number;
+                    /** Where the charge would come from at the current balance. */
+                    from: Charge.From;
+                }
+
+                export namespace Charge {
+                    export const Unit = {
+                        Rows: "rows",
+                        Credits: "credits",
+                    } as const;
+                    export type Unit = (typeof Unit)[keyof typeof Unit];
+                    /** Where the charge would come from at the current balance. */
+                    export const From = {
+                        Included: "included",
+                        OnDemand: "on_demand",
+                        Mixed: "mixed",
+                    } as const;
+                    export type From = (typeof From)[keyof typeof From];
+                }
             }
         }
     }

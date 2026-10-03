@@ -23,7 +23,7 @@ export class MentionsClient {
     }
 
     /**
-     * Cursor-paginated mentions filtered by entity (entity_id or entity_name is required), channel, text query, sentiment, appearance flag, and date range. The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Read timestamps from start_seconds / end_seconds (integer seconds; 0 means full episode); the MM:SS (or HH:MM:SS) string fields are deprecated. is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
+     * Cursor-paginated mentions filtered by entity (entity_id is required; resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter), channel (channel_id), text query, sentiment, appearance flag, and publication window [after, before). The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing rows remain live. Positions are start_seconds and end_seconds (integer seconds; 0 means full episode). is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.
      *
      * @param {Arcmira.ListMentionsRequest} request
      * @param {MentionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -39,10 +39,12 @@ export class MentionsClient {
      * @throws {@link errors.ArcmiraTimeoutError}
      *
      * @example
-     *     await client.mentions.list()
+     *     await client.mentions.list({
+     *         entity_id: "entity_id"
+     *     })
      */
     public async list(
-        request: Arcmira.ListMentionsRequest = {},
+        request: Arcmira.ListMentionsRequest,
         requestOptions?: MentionsClient.RequestOptions,
     ): Promise<core.Page<Arcmira.Mention, Arcmira.MentionListResponse>> {
         const list = core.HttpResponsePromise.interceptFunction(
@@ -53,30 +55,24 @@ export class MentionsClient {
                     limit,
                     cursor,
                     entity_id: entityId,
-                    entity_name: entityName,
-                    entity_type: entityType,
                     channel_id: channelId,
-                    channel_name: channelName,
                     q,
                     sentiment,
                     is_appearance: isAppearance,
-                    date_from: dateFrom,
-                    date_to: dateTo,
+                    after,
+                    before,
                     details,
                 } = request;
                 const _queryParams: Record<string, unknown> = {
                     limit,
                     cursor,
                     entity_id: entityId,
-                    entity_name: entityName,
-                    entity_type: entityType != null ? entityType : undefined,
                     channel_id: channelId,
-                    channel_name: channelName,
                     q,
                     sentiment: sentiment != null ? sentiment : undefined,
                     is_appearance: isAppearance,
-                    date_from: dateFrom,
-                    date_to: dateTo,
+                    after,
+                    before,
                     details: details != null ? details : undefined,
                 };
                 const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -163,7 +159,7 @@ export class MentionsClient {
             hasNextPage: (response) =>
                 response?.next_cursor != null &&
                 !(typeof response?.next_cursor === "string" && response?.next_cursor === ""),
-            getItems: (response) => response?.data ?? [],
+            getItems: (response) => response?.mentions ?? [],
             loadPage: (response) => {
                 return list(core.setObjectProperty(request, "cursor", response?.next_cursor));
             },
@@ -171,7 +167,7 @@ export class MentionsClient {
     }
 
     /**
-     * A small ranked table of entity and channel counts, all-time unless published_after is set. Pass channel_ids for what shows talk about and entity_types to match the question (topic for subjects, person for guests, organization,product for brands). Pass video_ids with one id from GET /v1/channels/{channel_id}/videos for what a single episode mentions. Two or more channel_ids also return shared, the entities on more than one of them ranked by the smallest per-channel count, which is true overlap. A published_after narrower than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per table row returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+     * A small ranked table of entity and channel counts, all-time unless after is set. Pass channel_ids for what shows talk about and entity_types to match the question (topic for subjects, person for guests, organization,product for brands). Pass video_ids with one id from GET /v1/channels/{channel_id}/videos for what a single episode mentions. Two or more channel_ids also return shared, the entities on more than one of them ranked by the smallest per-channel count, which is true overlap. An after later than the plan's freshness gate is refused with freshness_requires_paid rather than widened. Bills one row per table row returned. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
      *
      * @param {Arcmira.CountMentionsRequest} request
      * @param {MentionsClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -206,8 +202,8 @@ export class MentionsClient {
             video_ids: videoIds,
             entity_types: entityTypes,
             mode,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
+            after,
+            before,
             limit,
         } = request;
         const _queryParams: Record<string, unknown> = {
@@ -216,8 +212,8 @@ export class MentionsClient {
             video_ids: videoIds,
             entity_types: entityTypes,
             mode: mode != null ? mode : undefined,
-            published_after: publishedAfter,
-            published_before: publishedBefore,
+            after,
+            before,
             limit,
         };
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();

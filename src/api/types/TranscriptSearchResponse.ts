@@ -6,22 +6,25 @@ export interface TranscriptSearchResponse {
     /** The q parameter echoed back. */
     query: string;
     /** The limit applied. */
-    requestedK: number;
+    limit: number;
     /** Chunks returned. */
-    returnedN: number;
+    returned: number;
     filters: TranscriptSearchResponse.Filters;
+    window: Arcmira.PublicationWindow;
     /** Ranked slices. Empty means no hit in the shows we index; say so, never search the open web. */
     chunks: Arcmira.TranscriptSearchChunk[];
     /** True when some retrieval batches failed and these chunks are what survived. */
     partial?: boolean | undefined;
     /** How many batches failed when partial is true. */
-    failedBatches?: number | undefined;
-    /** Newest publishedAt among the chunks. Null when there are none. */
+    failed_batches?: number | undefined;
+    /** Newest published_at among the chunks. Null when there are none. */
     as_of: string | null;
     /** Health of the search index behind these results. Catalog routes are unaffected by it. */
     search_index: TranscriptSearchResponse.SearchIndex;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptSearchResponse.Access | undefined;
+    /** Present when your plan's freshness gate cut the window and nothing older matched; note says so. */
+    unlock?: TranscriptSearchResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
 }
@@ -29,17 +32,28 @@ export interface TranscriptSearchResponse {
 export namespace TranscriptSearchResponse {
     export interface Filters {
         /** Channel ids the search was scoped to, after entity_ids were expanded. */
-        channelIds: string[];
+        channel_ids: string[];
         /** Exact explicit entity_ids accepted for this search. Every id was resolved; an unknown id is refused. */
-        entityIds: string[];
-        publishedAfter: string | null;
-        publishedBefore: string | null;
+        entity_ids: string[];
         /** The about ids, each with its name and type. */
         about: Arcmira.NamedEntityRef[];
         /** The by ids, each with its name and type. */
         by: Arcmira.NamedEntityRef[];
-        /** The kind values applied. */
-        kind: string[];
+        /** The passage classes applied. */
+        kind: Filters.Kind.Item[];
+    }
+
+    export namespace Filters {
+        export type Kind = Kind.Item[];
+
+        export namespace Kind {
+            export const Item = {
+                Sponsored: "sponsored",
+                Organic: "organic",
+                Mention: "mention",
+            } as const;
+            export type Item = (typeof Item)[keyof typeof Item];
+        }
     }
 
     /**
@@ -87,6 +101,8 @@ export namespace TranscriptSearchResponse {
         current_revision?: string | undefined;
         /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
         expected_seq?: number | undefined;
+        /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
+        details?: Access.Details | undefined;
         doc_url: string;
         request_id: string;
     }
@@ -150,5 +166,66 @@ export namespace TranscriptSearchResponse {
                 url: string;
             }
         }
+
+        /**
+         * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
+         */
+        export interface Details {
+            /** The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required. */
+            quote?: Details.Quote | undefined;
+            /** On max_charge_exceeded: the accepted purchase for this video that holds a higher money ceiling. Poll it at /v1/transcriptions/{id} instead of starting another. */
+            existing_request_id?: string | undefined;
+            /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
+            existing_id?: string | undefined;
+        }
+
+        export namespace Details {
+            /**
+             * The refused price, on a priced refusal: quota_exceeded, max_rows_exceeded, max_charge_exceeded, spend_limit_exceeded, purchase_authority_changed and paid_plan_required.
+             */
+            export interface Quote extends Arcmira.TranscriptQuote {
+                /** What the purchase would charge at the current balance. Absent when no current price could be read. */
+                charge?: Quote.Charge | undefined;
+                /** The money ceiling the current quote needs, in whole cents. Send at least this as max_on_demand_cents with a new intent. */
+                max_on_demand_cents?: number | undefined;
+            }
+
+            export namespace Quote {
+                /**
+                 * What the purchase would charge at the current balance. Absent when no current price could be read.
+                 */
+                export interface Charge {
+                    unit: Charge.Unit;
+                    amount: number;
+                    /** Where the charge would come from at the current balance. */
+                    from: Charge.From;
+                }
+
+                export namespace Charge {
+                    export const Unit = {
+                        Rows: "rows",
+                        Credits: "credits",
+                    } as const;
+                    export type Unit = (typeof Unit)[keyof typeof Unit];
+                    /** Where the charge would come from at the current balance. */
+                    export const From = {
+                        Included: "included",
+                        OnDemand: "on_demand",
+                        Mixed: "mixed",
+                    } as const;
+                    export type From = (typeof From)[keyof typeof From];
+                }
+            }
+        }
+    }
+
+    /**
+     * Present when your plan's freshness gate cut the window and nothing older matched; note says so.
+     */
+    export interface Unlock {
+        /** The plan that lifts the freshness gate. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

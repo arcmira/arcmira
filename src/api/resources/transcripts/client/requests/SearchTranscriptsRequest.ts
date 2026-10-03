@@ -21,12 +21,12 @@ export interface SearchTranscriptsRequest {
     about?: string;
     /** Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people says the query words (each line of a chunk is labeled with its speaker); a non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve. */
     by?: string;
-    /** Comma-separated passage kinds: mention, recommendation_sponsored, recommendation_organic. Combine with about to read what was said about a brand in ad reads or in organic talk. */
+    /** Comma-separated passage classes: sponsored, organic, mention. Combine with about to read what was said about a brand in ad reads or in organic talk. */
     kind?: string;
-    /** ISO date. Only media published on or after this day. A window narrower than your plan's freshness gate is refused with freshness_requires_paid rather than widened. */
-    published_after?: string;
-    /** ISO date. Only media published before this day. */
-    published_before?: string;
+    /** Only media published at or after this instant. An after later than your plan's freshness gate is refused with freshness_requires_paid rather than widened. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    after?: string;
+    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    before?: string;
     /** Restrict to one transcript source class. arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. */
     source?: Arcmira.SearchTranscriptsRequestSource;
     /** Chunks to return, 1 to 20. Default 5. */

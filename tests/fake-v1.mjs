@@ -1,28 +1,32 @@
 // A local fake of api.arcmira.com/v1 for the SDK and CLI tests. Bodies come from fixtures/v1.json,
-// which the private monorepo derives from the OpenAPI document; the mutations below are the
-// cases the tests assert on (ids, paging, a plan gate, a 404, an echoed write).
+// which the private monorepo derives from the OpenAPI document, and fixtures/transcription-responses.json
+// for Premium; the mutations below are the cases the tests assert on (ids, paging, a plan gate, a 404,
+// an echoed write, a duplicate follow).
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures/v1.json", import.meta.url), "utf8"));
 const body = (id) => JSON.parse(JSON.stringify(fixtures[id].body));
 const premium = JSON.parse(readFileSync(new URL("./fixtures/transcription-responses.json", import.meta.url), "utf8"));
+/** A Premium body for one video: the fixture with its ids rewritten. */
 const premiumBody = (id, videoId) => {
     const b = JSON.parse(JSON.stringify(premium[id].body));
-    const job = b.job ?? (b.status_url ? b : null);
     if ("video_id" in b) b.video_id = videoId;
-    if (b.action) b.action.body.video_id = videoId;
     if (b.video) b.video.id = videoId;
-    if (job) Object.assign(job, { video_id: videoId, id: JOBS[videoId], status_url: `https://api.arcmira.com/v1/transcriptions/${JOBS[videoId]}` });
+    if (b.job) Object.assign(b.job, { video_id: videoId, status_url: `https://api.arcmira.com/v1/transcriptions/${b.job.id}` });
     return b;
 };
-/** Premium videos: premiumVid* needs preparation until a POST buys it (then its job is ready); pendingVid* stays pending. */
-const PREMIUM_VIDEO = /^premiumVid/;
-const PENDING_VIDEO = /^pendingVid/;
-const JOBS = {};
-const jobFor = (videoId) => (JOBS[videoId] ??= `00000000-0000-4000-8000-${String(Object.keys(JOBS).length + 1).padStart(12, "0")}`);
-const videoOfJob = (id) => Object.keys(JOBS).find((videoId) => JOBS[videoId] === id);
-const purchased = new Set();
+/** Premium reads by video id: premiumVid* buys on the first read (202) and is ready after; pendingVid* stays pending; brokeVid* is refused 402; freeVid* is refused 403. */
+const PREMIUM = [
+    [/^premiumVid/, (videoId) => (bought.has(videoId) ? [200, premiumBody("premium_ready", videoId)] : (bought.add(videoId), [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }]))],
+    [/^pendingVid/, (videoId) => [202, premiumBody("pending_premium", videoId), { "retry-after": "1" }]],
+    [/^brokeVid/, () => [402, premiumBody("refused_quota")]],
+    [/^freeVid/, () => [403, premiumBody("paid_plan_required")]],
+];
+const bought = new Set();
+/** The account already follows Brex, so a follow of brex answers 409 with the existing tracker id. */
+const EXISTING_TRACKERS = new Map([["organization:brex", "trk_9"]]);
+let createdTrackers = 0;
 
 export function gateBody() {
     const e = JSON.parse(JSON.stringify(fixtures.error));
@@ -47,11 +51,12 @@ export function notFoundBody(code, message) {
 const ROUTES = [
     ["GET", /^\/v1\/health$/, () => [200, body("get_health")]],
     ["GET", /^\/v1\/me$/, () => [200, body("get_me")]],
-    ["GET", /^\/v1\/transcripts\/search$/, (_m, url) => {
-        const b = body("search_transcripts");
+    ["GET", /^\/v1\/search$/, (_m, url) => {
+        const b = body("search");
         b.query = url.searchParams.get("q");
         b.chunks[0].text = `${b.query} on air`;
-        b.chunks[0].watchUrl = "https://arcmira.com/watch?v=dQw4w9WgXcQ&t=1";
+        b.chunks[0].watch_url = "https://arcmira.com/watch?v=dQw4w9WgXcQ&t=1";
+        b.window = { after: url.searchParams.get("after"), before: url.searchParams.get("before") };
         return [200, b];
     }],
     ["GET", /^\/v1\/entities\/resolve$/, (_m, url) => {
@@ -64,72 +69,89 @@ const ROUTES = [
         else b.best = row;
         return [200, b];
     }],
-    ["GET", /^\/v1\/entities\/search$/, (_m, url) => {
-        const b = body("search_entities");
-        Object.assign(b.data[0], { id: "ent_14", name: url.searchParams.get("q"), type: "organization", suggested: true, page: "https://arcmira.com/org/ramp" });
-        return [200, b];
-    }],
     ["GET", /^\/v1\/mentions$/, (_m, url) => {
         const b = body("list_mentions");
         const second = url.searchParams.get("cursor") === "c2";
-        const row = b.data[0];
-        b.data = (second ? ["men_3"] : ["men_1", "men_2"]).map((id) => ({ ...JSON.parse(JSON.stringify(row)), id }));
+        const row = b.mentions[0];
+        b.mentions = (second ? ["men_3"] : ["men_1", "men_2"]).map((id) => ({ ...JSON.parse(JSON.stringify(row)), id }));
         b.has_more = !second;
         b.next_cursor = second ? null : "c2";
+        b.window = { after: url.searchParams.get("after"), before: url.searchParams.get("before") };
         return [200, b];
     }],
     ["GET", /^\/v1\/mentions\/counts$/, () => [200, body("count_mentions")]],
     ["GET", /^\/v1\/entities\/([^/]+)\/momentum$/, (m) => (m[1] === "ent_402" ? [402, gateBody()] : [200, body("get_entity_momentum")])],
-    ["GET", /^\/v1\/entities\/([^/]+)\/recommendations$/, (m, url) => {
-        if (m[1] === "ent_402") return [402, gateBody()];
-        const b = body("list_entity_recommendations");
-        const cls = url.searchParams.get("mention_class");
-        b.data[0].mention_class = cls && cls !== "all" ? cls : "endorsement";
-        b.data[0].verbatim_quote = "I think Ramp does this brilliantly.";
+    ["GET", /^\/v1\/recommendations$/, (_m, url) => {
+        if (url.searchParams.get("entity_id") === "ent_402") return [402, gateBody()];
+        const b = body("list_recommendations");
+        b.recommendations[0].class = url.searchParams.get("class") ?? "organic";
+        b.recommendations[0].verbatim_quote = "I think Ramp does this brilliantly.";
+        b.has_more = false;
+        b.next_cursor = null;
+        b.window = { after: null, before: null };
+        return [200, b];
+    }],
+    ["GET", /^\/v1\/channels\/([^/]+)\/sponsors$/, () => [200, body("list_channel_sponsors")]],
+    ["GET", /^\/v1\/channels\/([^/]+)\/videos$/, () => {
+        const b = body("list_channel_videos");
         b.has_more = false;
         b.next_cursor = null;
         return [200, b];
     }],
-    ["GET", /^\/v1\/channels\/([^/]+)\/sponsors$/, () => [200, body("list_channel_sponsors")]],
-    ["GET", /^\/v1\/channels\/([^/]+)\/videos$/, () => [200, body("list_channel_videos")]],
     ["GET", /^\/v1\/channels\/([^/]+)\/coverage$/, () => [200, body("get_channel_coverage")]],
     ["GET", /^\/v1\/transcripts\/([^/]+)\/quote$/, () => [200, body("quote_transcription")]],
     ["GET", /^\/v1\/transcripts\/([^/]+)$/, (m, url) => {
         if (m[1] === "missingvid0") return [404, notFoundBody("transcript_unavailable", "No transcript for this video.")];
-        if (url.searchParams.get("quality") === "premium" && (PREMIUM_VIDEO.test(m[1]) || PENDING_VIDEO.test(m[1]))) {
-            jobFor(m[1]);
-            if (PENDING_VIDEO.test(m[1])) return [202, premiumBody("pending_premium", m[1]), { "retry-after": "1" }];
-            return [200, premiumBody(purchased.has(m[1]) ? "premium_ready" : "preparation_required", m[1])];
-        }
+        const premiumRead = url.searchParams.get("quality") === "premium" && PREMIUM.find(([pattern]) => pattern.test(m[1]));
+        if (premiumRead) return premiumRead[1](m[1]);
         const b = body("get_transcript");
         b.lines = [{ start: 0, end: 4, text: "Welcome back to the show." }, { start: 4, end: 9, text: "Today we talk about agent payments." }];
         return [200, b];
     }],
-    ["POST", /^\/v1\/transcriptions$/, (_m, _url, json) => {
-        if (PREMIUM_VIDEO.test(json?.video_id ?? "")) {
-            jobFor(json.video_id);
-            purchased.add(json.video_id);
-            return [202, premiumBody("submit_pending", json.video_id), { "retry-after": "0" }];
-        }
-        const b = body("submit_transcription");
-        const id = "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60";
-        Object.assign(b.job, { id, video_id: json?.video_id ?? "", eta_seconds: 540, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${id}` });
-        return [fixtures.submit_transcription.status, b];
-    }],
-    ["GET", /^\/v1\/transcriptions\/([^/]+)$/, (m) => {
-        const videoId = videoOfJob(m[1]);
-        if (videoId && PENDING_VIDEO.test(videoId)) return [200, premiumBody("get_transcription", videoId), { "retry-after": "1" }];
-        if (videoId) return [200, premiumBody("job_ready", videoId)];
-        const b = body("get_transcription");
-        Object.assign(b, { id: m[1], status: "transcribing", stage: "transcribing", eta_seconds: 300, next_poll_seconds: 30, status_url: `https://api.arcmira.com/v1/transcriptions/${m[1]}` });
+    ["GET", /^\/v1\/monitors$/, () => {
+        const b = body("list_monitors");
+        Object.assign(b.monitors[0], { id: "mon_1", name: "Fintech", notify_frequency: "daily", tracker_count: 2, alerts_this_month: 5, paused: false });
         return [200, b];
     }],
     ["POST", /^\/v1\/monitors$/, (_m, _url, json) => {
         const b = body("create_monitor");
-        b.monitor.name = json?.name ?? "";
+        Object.assign(b.monitor, { id: "mon_2", name: json?.name ?? "", notify_frequency: json?.notify_frequency, webhook_secret: json?.webhook_url ? "whsec_once" : undefined });
         return [fixtures.create_monitor.status, b];
     }],
-    ["GET", /^\/v1\/people\/([^/]+)\/topics$/, (m) => (m[1] === "nobody" ? [404, notFoundBody("entity_not_found", "Entity not found")] : [200, body("list_person_topics")])],
+    ["PATCH", /^\/v1\/monitors\/([^/]+)$/, (m, _url, json) => {
+        const b = body("update_monitor");
+        Object.assign(b.monitor, { id: m[1], ...json });
+        return [200, b];
+    }],
+    ["GET", /^\/v1\/monitors\/([^/]+)\/trackers$/, (m) => {
+        const b = body("list_monitor_trackers");
+        Object.assign(b.trackers[0], { id: "trk_1", entity_name: "Ramp", entity_type: "organization", monitor_id: m[1], paused: false });
+        return [200, b];
+    }],
+    ["POST", /^\/v1\/monitors\/([^/]+)\/trackers$/, (m, _url, json) => [200, { monitor_id: m[1], attached_count: json.tracker_ids.length, message: "Attached." }]],
+    ["POST", /^\/v1\/monitors\/([^/]+)\/entities$/, (m, _url, json) => [200, {
+        monitor_id: m[1],
+        results: json.entity_ids.map((entity_id, index) => ({ entity_id, tracker_id: `trk_${100 + index}`, created: true, attached: true })),
+    }]],
+    ["GET", /^\/v1\/integrations\/slack$/, () => [200, { integrations: [{ id: "slk_1", team_name: "Arcmira", default_channel_id: "C1", channels: [{ id: "C1", name: "alerts" }] }] }]],
+    ["GET", /^\/v1\/trackers$/, () => {
+        const b = body("list_trackers");
+        Object.assign(b.trackers[0], { id: "trk_1", entity_name: "Ramp", entity_type: "organization", paused: false });
+        return [200, b];
+    }],
+    ["POST", /^\/v1\/trackers$/, (_m, _url, json) => {
+        const existing = EXISTING_TRACKERS.get(`${json.entity_type}:${json.entity_name.toLowerCase()}`);
+        if (existing) {
+            const e = JSON.parse(JSON.stringify(fixtures.error));
+            Object.assign(e.error, { type: "conflict_error", code: "tracker_already_exists", message: "You already follow this name.", details: { existing_id: existing }, doc_url: "https://arcmira.com/docs/errors#tracker_already_exists", request_id: "req_409" });
+            return [409, e];
+        }
+        const id = `trk_${(createdTrackers += 1) + 10}`;
+        const b = body("create_tracker");
+        Object.assign(b.tracker, { id, entity_name: json.entity_name, entity_type: json.entity_type, display_name: json.display_name ?? json.entity_name, paused: false });
+        b.message = "Following.";
+        return [201, b];
+    }],
 ];
 
 export async function startFake() {

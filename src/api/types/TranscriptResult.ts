@@ -2,18 +2,11 @@
 
 import type * as Arcmira from "../index.js";
 
-export type TranscriptResult =
-    | Arcmira.TranscriptResult.Ready
-    | Arcmira.TranscriptResult.PreparationRequired
-    | Arcmira.TranscriptResult.Pending;
+export type TranscriptResult = Arcmira.TranscriptResult.Ready | Arcmira.TranscriptResult.Pending;
 
 export namespace TranscriptResult {
     export interface Ready extends Arcmira.TranscriptResponse {
         state: "ready";
-    }
-
-    export interface PreparationRequired extends Arcmira.TranscriptPreparationRequired {
-        state: "preparation_required";
     }
 
     export interface Pending extends Arcmira.TranscriptPending {

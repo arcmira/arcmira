@@ -1,40 +1,39 @@
-import { ArcmiraClient, PreparationTimeoutError, type Arcmira } from '../src/index.js';
+import { ArcmiraClient, type Arcmira } from '../src/index.js';
 const client = new ArcmiraClient({ apiKey: 'compile-only' });
 async function consumer() {
     for await (const job of await client.transcripts.listRequests()) {
         const row: Arcmira.TranscriptJob = job;
         void row;
     }
-    const submitted: Arcmira.TranscriptRequestSubmitResponse = await client.transcripts.request({ video_id: 'dQw4w9WgXcQ' });
-    const job: Arcmira.TranscriptJob = submitted.job;
-    const polled: Arcmira.TranscriptJob = await client.transcripts.status({ id: job.id });
-    void polled;
     const result = await client.transcripts.get({ video_id: 'dQw4w9WgXcQ', quality: 'premium' });
     if (result.state === 'ready') {
         result.lines?.map(line => line.text);
+        const speaker: string | null | undefined = result.speakers?.[0]?.entity_id;
+        void speaker;
         // @ts-expect-error the ready variant carries no job
         result.job;
-    } else if (result.state === 'preparation_required') {
-        const action: 'POST' = result.action.method;
-        result.quote?.charge.amount.toFixed();
-        // @ts-expect-error preparation_required has no transcript lines
-        result.lines;
-        void action;
     } else {
         const state: 'pending' = result.state;
-        result.job.status_url.toUpperCase();
+        const job: Arcmira.TranscriptJob = result.job;
+        job.status_url.toUpperCase();
+        // @ts-expect-error pending has no transcript lines
+        result.lines;
         void state;
     }
-    await client.transcripts.request({ video_id: 'dQw4w9WgXcQ', max_rows: 300, max_on_demand_cents: 50, 'Idempotency-Key': 'saved' });
-    try {
-        const premium: Arcmira.TranscriptResult.Ready = await client.transcripts.prepareAndWait({ video_id: 'dQw4w9WgXcQ', maxOnDemandCents: 25, timeoutSeconds: 60 });
-        premium.lines?.map(line => line.speaker);
-    } catch (error) {
-        if (error instanceof PreparationTimeoutError) error.job.status_url.toUpperCase();
+    for await (const mention of await client.mentions.list({ entity_id: 'ent_14', after: '2026-09-01', before: '2026-10-01' })) void mention.start_seconds;
+    for await (const row of await client.recommendations.list({ entity_id: 'ent_14', class: 'organic' })) {
+        const kind: 'sponsored' | 'organic' | 'mention' = row.class;
+        void kind;
     }
-    // @ts-expect-error prepareAndWait needs the video id
-    await client.transcripts.prepareAndWait({});
-    // @ts-expect-error the deprecated videoId alias is not SDK input
-    await client.transcripts.request({ videoId: 'dQw4w9WgXcQ' });
+    await client.trackers.create({ entity_name: 'Ramp', entity_type: 'organization' });
+    await client.monitors.update({ id: 'mon_1', paused: true });
+    // @ts-expect-error reads take entity_id; names are not a filter
+    await client.mentions.list({ entity_name: 'Ramp' });
+    // @ts-expect-error the date pair is after and before
+    await client.mentions.list({ entity_id: 'ent_14', date_from: '2026-09-01' });
+    // @ts-expect-error a Premium read buys within the plan; the purchase POST is not SDK surface
+    await client.transcripts.request({ video_id: 'dQw4w9WgXcQ' });
+    // @ts-expect-error monitor bodies are snake_case
+    await client.monitors.create({ name: 'Ramp', notifyFrequency: 'daily' });
 }
 void consumer;

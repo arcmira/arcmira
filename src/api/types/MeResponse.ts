@@ -15,11 +15,11 @@ export interface MeResponse {
     email_masked: string | null;
     /** ISO 8601 time the monthly row pool resets: 00:00 UTC on the first of next month. Null on the free plan, whose rows are a lifetime pool. */
     period_resets_at: string | null;
-    /** Plan tier, e.g. free, hobby, pro, teams, enterprise. */
+    /** Plan tier, e.g. free, hobby, pro, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
     scopes: string[];
-    /** Requests allowed per 60-second window for this key: 600 for enterprise/teams, 240 for other paid tiers, 60 for free, unless a per-key override is set. */
+    /** Requests allowed per 60-second window for this key: 600 for enterprise, 240 for other paid tiers, 60 for free, unless a per-key override is set. */
     rate_limit: number;
     /** True when the plan includes the Recommendations API (commercial intelligence endpoints). */
     recommendations_api_enabled: boolean;

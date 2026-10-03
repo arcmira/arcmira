@@ -1,4 +1,5 @@
 """Install generated source. All generator fixes are exact checked patches."""
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -8,18 +9,26 @@ generated = root / '.generated/typescript'
 patch = root / 'scripts/generator-fixes/typescript-timeout.patch'
 subprocess.run(['git', 'apply', '--check', str(patch)], cwd=generated, check=True)
 subprocess.run(['git', 'apply', str(patch)], cwd=generated, check=True)
-# src/wrapper/ is maintained by hand (transcripts.prepareAndWait); everything else is replaced.
-wrapper = {path.relative_to(root / 'src'): path.read_bytes() for path in (root / 'src/wrapper').rglob('*') if path.is_file()}
 # Preserve no stale generated files, and install only after the checked fix succeeds.
 shutil.rmtree(root / 'src')
 shutil.copytree(generated, root / 'src')
-for relative, content in wrapper.items():
-    (root / 'src' / relative).parent.mkdir(parents=True, exist_ok=True)
-    (root / 'src' / relative).write_bytes(content)
-index = root / 'src/index.ts'
-generated_export = 'export { ArcmiraClient } from "./Client.js";\n'
-wrapped_export = 'export {\n    ArcmiraClient,\n    PreparationError,\n    PreparationFailedError,\n    PreparationTimeoutError,\n    PremiumUnavailableError,\n    type PrepareAndWaitRequest,\n    TranscriptsClient,\n} from "./wrapper/ArcmiraClient.js";\n'
-text = index.read_text()
-if generated_export not in text:
-    raise SystemExit(f'src/index.ts no longer exports ArcmiraClient as {generated_export.strip()!r}; update install-generated.py')
-index.write_text(text.replace(generated_export, wrapped_export))
+# package.json exports one subpath per generated resource, so the list follows the regeneration.
+package_path = root / 'package.json'
+package = json.loads(package_path.read_text())
+def entry(directory):
+    stem = f'api/resources/{directory}/exports' if directory else 'index'
+    return {
+        'import': {'types': f'./dist/esm/{stem}.d.mts', 'default': f'./dist/esm/{stem}.mjs'},
+        'require': {'types': f'./dist/cjs/{stem}.d.ts', 'default': f'./dist/cjs/{stem}.js'},
+        'default': f'./dist/cjs/{stem}.js',
+    }
+resources = sorted(
+    (str(path.parent.relative_to(root / 'src/api/resources')) for path in (root / 'src/api/resources').rglob('exports.ts')),
+    key=lambda directory: (directory.count('/'), directory),
+)
+exports = {'.': entry('')}
+for directory in resources:
+    exports['./' + directory.replace('/resources/', '/')] = entry(directory)
+exports['./package.json'] = './package.json'
+package['exports'] = exports
+package_path.write_text(json.dumps(package, indent=2, ensure_ascii=False) + '\n')
