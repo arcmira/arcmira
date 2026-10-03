@@ -1,6 +1,8 @@
-# Arcmira for TypeScript and JavaScript
+# Arcmira: YouTube Transcript Search
 
-The official `arcmira` package: a typed client for the [Arcmira API](https://arcmira.com/docs) and the `arcmira` command line. Arcmira is the search engine for the spoken web: it indexes YouTube and podcast transcripts and answers who said what, where, and when.
+The official TypeScript SDK and CLI for searching indexed YouTube transcripts. Find timestamped quotes, speaker appearances, mentions, sponsors and recommendations.
+
+[API docs](https://arcmira.com/docs) · [OpenAPI schema](https://api.arcmira.com/v1/openapi.json) · [MCP setup](https://arcmira.com/docs/mcp-server)
 
 - Zero runtime dependencies. Uses the global `fetch`, so it runs in Node 18 and later, Cloudflare Workers, Deno, Bun and browsers.
 - ESM and CommonJS builds with types.
