@@ -28,6 +28,7 @@ Breaking changes from 0.3.
 - List bodies name their collection. `MentionListResponse.data` is `mentions`, `RecommendationListResponse.data` is `recommendations`, and `AlertListResponse.data` is `alerts`. Iterating a `Page` is unchanged.
 - Integer ids and `MM:SS` strings are gone. `Mention` drops `appearance_id`, `start_timestamp` and `end_timestamp`, and its `media` drops `id`. `Recommendation` drops `recommendation_id`, `start_timestamp` and `end_timestamp`. Use `start_seconds`, `end_seconds` and `media.video_id`. `Alert` replaces `media_id` and `appearance_id` with `video_id`. `Entity.numeric_id` is gone. Premium `speakers[].entity_id` is an `ent_N` string. Feedback ids are `fbk_N`.
 - Monitor and tracker bodies are snake_case, request and response: `notifyFrequency` is `notify_frequency`, `notifyEmails` is `notify_emails`, `webhookUrl` is `webhook_url`, `entityName` is `entity_name`, `trackerIds` is `tracker_ids`, `trackerCount` is `tracker_count`, and so on. `isPaused` is `paused`; `isCollapsed` and `sortOrder` are gone. The keys inside a tracker's `filters` object are stored as you wrote them and stay unchanged.
+- `me.usage.hits` is gone. Monitor alerts cost credits now and count in `usage.credits`.
 - `MentionCountsResponse` replaces `publishedAfter`, `publishedBefore`, `channelIds` and `videoIds` with `window`, `channel_ids` and `video_ids`.
 - `feedback.submit` no longer requires `query`. `type` stays required.
 - `trackers.create` follows a channel by its YouTube channel id in `entity_name`. A channel name throws `id_required`.

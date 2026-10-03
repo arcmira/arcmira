@@ -47,8 +47,6 @@ export namespace MeResponse {
         current_spend_cents: number;
         /** The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access. */
         credits?: Usage.Credits | undefined;
-        /** Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access. */
-        hits?: Usage.Hits | undefined;
     }
 
     export namespace Usage {
@@ -84,18 +82,6 @@ export namespace MeResponse {
                 /** On-demand credits spent this month. */
                 used: number;
             }
-        }
-
-        /**
-         * Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access.
-         */
-        export interface Hits {
-            /** Monitor alerts delivered this month. */
-            used: number;
-            /** Monitor alerts the plan delivers a month. Null when the plan has no limit. */
-            allowance: number | null;
-            /** YYYY-MM-DD, the first day of next month (UTC), when the count resets. */
-            resets_at: string;
         }
     }
 }
