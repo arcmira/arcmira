@@ -4,7 +4,7 @@ import type * as Arcmira from "../index.js";
 
 export interface AlertListResponse {
     /** Newest alerts first. */
-    data: Arcmira.Alert[];
+    alerts: Arcmira.Alert[];
     /** True when older alerts exist past limit. The endpoint does not paginate: raise limit, up to 100, to read them. */
     has_more: boolean;
     /** Always null: this endpoint does not paginate. */

@@ -2,9 +2,9 @@
 
 export interface MonitorAddTrackersResponse {
     /** Number of unique requested trackers attached. */
-    attachedCount: number;
+    attached_count: number;
     /** Human-readable confirmation, e.g. "Added 3 tracker(s) to monitor". */
     message: string;
     /** The monitor id from the request path. */
-    monitorId: string;
+    monitor_id: string;
 }

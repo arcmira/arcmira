@@ -85,10 +85,8 @@ export namespace EntityMomentumResponse {
         unlock?: Access.Unlock | undefined;
         /** Present on rate gates. Mirrors the Retry-After header. */
         retry_after_seconds?: number | undefined;
-        /** On revision_mismatch and anchor_mismatch, the transcript revision to re-read before re-anchoring the correction. */
-        current_revision?: string | undefined;
-        /** On sequence_mismatch (HTTP 412), the seq the server expects next for this video. Rebase local counters onto it and resend under the same key. */
-        expected_seq?: number | undefined;
+        /** Machine data the refusal carries for you to act on. Present only on the codes that name a field here. */
+        details?: Access.Details | undefined;
         doc_url: string;
         request_id: string;
     }
@@ -151,6 +149,15 @@ export namespace EntityMomentumResponse {
                 /** Absolute endpoint carrying its ?src= attribution. Call it verbatim. */
                 url: string;
             }
+        }
+
+        /**
+         * Machine data the refusal carries for you to act on. Present only on the codes that name a field here.
+         */
+        export interface Details {
+            quote?: Arcmira.RefusedQuote | undefined;
+            /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
+            existing_id?: string | undefined;
         }
     }
 }

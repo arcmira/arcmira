@@ -4,5 +4,5 @@ export interface MonitorDeleteResponse {
     /** Human-readable confirmation. */
     message: string;
     /** Number of trackers that were deleted along with the monitor. */
-    trackersDeleted: number;
+    trackers_deleted: number;
 }

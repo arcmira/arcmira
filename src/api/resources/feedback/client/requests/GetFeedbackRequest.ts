@@ -7,6 +7,6 @@
  *     }
  */
 export interface GetFeedbackRequest {
-    /** The feedback submission id POST /v1/feedback returned. */
+    /** The feedback submission id POST /v1/feedback returned, fbk_ and digits. */
     feedback_id: string;
 }

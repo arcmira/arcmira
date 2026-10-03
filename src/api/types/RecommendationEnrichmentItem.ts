@@ -3,8 +3,8 @@
 export interface RecommendationEnrichmentItem {
     /** Public recommendation id in the form "com_{n}". */
     id: string;
-    /** Commercial mention classification. Values: ad_read (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), endorsement (an unpaid personal recommendation), mention (a neutral commercial mention). */
-    mention_class: string;
+    /** Commercial class. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+    class: RecommendationEnrichmentItem.Class;
     /** Verbatim quote from the transcript. Null when no quote was extracted. */
     verbatim_quote: string | null;
     /** Promo code read out in the mention. Null unless one was detected. */
@@ -13,12 +13,18 @@ export interface RecommendationEnrichmentItem {
     offer: string | null;
     /** Classifier confidence between 0 and 1. */
     confidence: number;
-    /** DEPRECATED: prefer the numeric sibling field. This "MM:SS" (or "HH:MM:SS") string remains until a dated, changelog-announced removal (see /requests#versioning-and-deprecation). Use start_seconds. */
-    start_timestamp: string;
-    /** DEPRECATED: prefer the numeric sibling field. This "MM:SS" (or "HH:MM:SS") string remains until a dated, changelog-announced removal (see /requests#versioning-and-deprecation). Use end_seconds. */
-    end_timestamp: string;
-    /** Start position in the video in integer SECONDS, parsed from start_timestamp. 0 means "full episode / no specific moment" (the string sentinel "00:00"). Null when the string timestamp is null or unparseable. */
+    /** Start position in the video in integer seconds. 0 means "full episode / no specific moment". Null when the analyzer could not place it in time. */
     start_seconds: number | null;
-    /** End position in the video in integer SECONDS, parsed from end_timestamp. 0 means "full episode / no specific moment" (the string sentinel "00:00"). Null when the string timestamp is null or unparseable. */
+    /** End position in the video in integer seconds. 0 means "full episode / no specific moment". Null when the analyzer could not place it in time. */
     end_seconds: number | null;
+}
+
+export namespace RecommendationEnrichmentItem {
+    /** Commercial class. Values: sponsored (an ad-style promotion heard at that moment: a paid sponsor read, promo code, affiliate plug, thanks for supplied goods or venue, or a show promoting its own product as an ad), organic (an unpaid personal recommendation), mention (a neutral commercial mention). */
+    export const Class = {
+        Sponsored: "sponsored",
+        Organic: "organic",
+        Mention: "mention",
+    } as const;
+    export type Class = (typeof Class)[keyof typeof Class];
 }

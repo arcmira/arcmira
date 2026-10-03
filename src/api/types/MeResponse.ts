@@ -15,11 +15,11 @@ export interface MeResponse {
     email_masked: string | null;
     /** ISO 8601 time the monthly row pool resets: 00:00 UTC on the first of next month. Null on the free plan, whose rows are a lifetime pool. */
     period_resets_at: string | null;
-    /** Plan tier, e.g. free, hobby, pro, teams, enterprise. */
+    /** Plan tier, e.g. free, hobby, pro, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
     scopes: string[];
-    /** Requests allowed per 60-second window for this key: 600 for enterprise/teams, 240 for other paid tiers, 60 for free, unless a per-key override is set. */
+    /** Requests allowed per 60-second window for this key: 600 for enterprise, 240 for other paid tiers, 60 for free, unless a per-key override is set. */
     rate_limit: number;
     /** True when the plan includes the Recommendations API (commercial intelligence endpoints). */
     recommendations_api_enabled: boolean;
@@ -47,8 +47,6 @@ export namespace MeResponse {
         current_spend_cents: number;
         /** The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access. */
         credits?: Usage.Credits | undefined;
-        /** Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access. */
-        hits?: Usage.Hits | undefined;
     }
 
     export namespace Usage {
@@ -84,18 +82,6 @@ export namespace MeResponse {
                 /** On-demand credits spent this month. */
                 used: number;
             }
-        }
-
-        /**
-         * Monitor alerts this month. Alerts cost no credits; once the allowance is used, monitors keep matching but deliver nothing until the reset. Present only when the credits ledger decides access.
-         */
-        export interface Hits {
-            /** Monitor alerts delivered this month. */
-            used: number;
-            /** Monitor alerts the plan delivers a month. Null when the plan has no limit. */
-            allowance: number | null;
-            /** YYYY-MM-DD, the first day of next month (UTC), when the count resets. */
-            resets_at: string;
         }
     }
 }

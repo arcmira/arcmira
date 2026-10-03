@@ -3,8 +3,6 @@
 export interface Entity {
     /** Public entity id in the form "ent_{n}". Always the canonical entity id. */
     id: string;
-    /** Raw integer database id of the canonical entity. Prefer the public "ent_{n}" id in requests. */
-    numeric_id: number;
     /** Public id of the canonical entity. Identical to id. */
     canonical_id: string;
     /** Canonical entity name. */

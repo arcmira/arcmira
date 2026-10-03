@@ -5,17 +5,11 @@ import type * as Arcmira from "../index.js";
 export interface Mention {
     /** Public mention id in the form "men_{n}". */
     id: string;
-    /** Raw integer id of the underlying appearance row. Same number as in the "men_{n}" public id. */
-    appearance_id: number;
     entity: Arcmira.EntityRef;
     media: Mention.Media;
-    /** DEPRECATED: prefer the numeric sibling field. This "MM:SS" (or "HH:MM:SS") string remains until a dated, changelog-announced removal (see /requests#versioning-and-deprecation). Use start_seconds. Null when the analyzer could not locate the mention in time. */
-    start_timestamp: string | null;
-    /** DEPRECATED: prefer the numeric sibling field. This "MM:SS" (or "HH:MM:SS") string remains until a dated, changelog-announced removal (see /requests#versioning-and-deprecation). Use end_seconds. Null when unknown. */
-    end_timestamp: string | null;
-    /** Start position in the video in integer SECONDS, parsed from start_timestamp. Prefer this over the deprecated string field. 0 means "full episode / no specific moment" (the string sentinel "00:00"). Null when the string timestamp is null or unparseable. */
+    /** Start position in the video in integer seconds. 0 means "full episode / no specific moment". Null when the analyzer could not place it in time. */
     start_seconds: number | null;
-    /** End position in the video in integer SECONDS, parsed from end_timestamp. 0 means "full episode / no specific moment" (the string sentinel "00:00"). Null when the string timestamp is null or unparseable. */
+    /** End position in the video in integer seconds. 0 means "full episode / no specific moment". Null when the analyzer could not place it in time. */
     end_seconds: number | null;
     /** True when the person physically appears/speaks in the media (person entities only). Always false for organization, product, topic, and channel entities. Filtering with is_appearance=true on a non-person entity returns a 400 (appearances_person_only). */
     is_appearance: boolean;
@@ -39,8 +33,6 @@ export interface Mention {
 
 export namespace Mention {
     export interface Media {
-        /** Raw integer media row id. */
-        id: number;
         /** YouTube video id (11 characters). */
         video_id: string;
         /** Video title. Null when the video was indexed without metadata. */
@@ -83,7 +75,7 @@ export namespace Mention {
      * Only present when the request used details=full (requires a Pro+ plan).
      */
     export interface Recommendations {
-        /** Commercial mentions (ad reads, endorsements) for the same entity in the same video. */
+        /** Commercial mentions (sponsored and organic) for the same entity in the same video. */
         items: Arcmira.RecommendationEnrichmentItem[];
     }
 }

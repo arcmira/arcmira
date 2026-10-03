@@ -3,9 +3,9 @@
 import type * as Arcmira from "../index.js";
 
 export interface FeedbackReadbackResponse {
-    /** Id of the feedback record. */
-    feedback_id: number;
-    /** The feedback type as submitted. Values: recommendations, channel_sponsors, mentions, entities_search, entities, channels, monitor_alert, appearances, search. */
+    /** Id of the feedback record, fbk_ and digits. */
+    feedback_id: string;
+    /** The feedback type as submitted. Values: recommendations, channel_sponsors, mentions, entities_search, entities, channels, monitor_alert, appearances, search, experience. */
     type: string;
     /** Submission-level rollup of the per-correction statuses. Review status in the public vocabulary. Values: pending_review (submitted; a reviewer has not finished with it), needs_information (a reviewer needs more detail from you; add context in a support thread quoting the feedback_id), accepted (the correction was accepted as submitted), accepted_with_changes (accepted, but the reviewer resolved it differently than proposed), rejected (reviewed and declined), withdrawn (withdrawn by the submitter before review), applied (the accepted change is live in the index; accepted does not imply applied), reverted (a previously applied change was rolled back). */
     status: FeedbackReadbackResponse.Status;

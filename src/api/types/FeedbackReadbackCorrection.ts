@@ -5,7 +5,7 @@ export interface FeedbackReadbackCorrection {
     item_id: string;
     /** Inferred kind of the target. Values include: recommendation, sponsor_entity, entity, entity_merge, mention, appearance, alert, alert_expectation, unknown. */
     item_kind: string;
-    /** The issue_type as submitted. Null when the correction carried only a reason or mention_class. */
+    /** The issue_type as submitted. Null when the correction carried only a reason or class. */
     issue_type: string | null;
     /** The commercial reason code as submitted. Null unless the correction was a commercial-class dispute. */
     reason: string | null;
