@@ -27,12 +27,19 @@ Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authenti
 
 ## Premium transcripts
 
+A Premium read can purchase the transcript using included credits and then your configured on-demand budget. Get a free price quote with `transcripts.quote({ video_id })` before reading.
+
 ```ts
 import { ArcmiraClient } from "arcmira";
 const arcmira = new ArcmiraClient();
 const read = await arcmira.transcripts.get({ video_id: "dQw4w9WgXcQ", quality: "premium" });
-if (read.state === "ready") for (const line of read.lines ?? []) console.log(line.speaker, line.text);
-else console.log(`transcribing, read again in ${read.job.next_poll_seconds ?? 30} s`);
+if (read.state === "ready") {
+	for (const line of read.lines ?? []) console.log(line.speaker, line.text);
+} else if (read.state === "failed") {
+	throw new Error(`${read.last_attempt.status}: ${read.last_attempt.error}`);
+} else {
+	console.log(`transcribing, read again in ${read.job.next_poll_seconds ?? 30} s`);
+}
 ```
 
 A Premium read is one GET. When your account does not own the transcript yet, the read buys it within your plan: included credits first, then your on-demand budget, which you set in the dashboard and which is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never buy twice. When the last purchase failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and buys nothing; read with `retry: true` to buy it again. `transcripts.quote({ video_id })` prices it first, free.
