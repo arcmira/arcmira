@@ -504,6 +504,17 @@ async function runSetup({ values: v, apiKey, baseUrl }: Context): Promise<SetupR
     return { dry_run: dryRun, auth: auth.kind, lines, next, updates, first_prompt: FIRST_PROMPT, cli_key: Boolean(key), failed };
 }
 
+
+/** Credits from the plan, then the on-demand budget; rows only when the account has no credits block. */
+function usageLine(me: Arcmira.MeResponse): string {
+    const c = me.usage.credits;
+    if (!c) return `rows used ${me.usage.rows_used} of ${me.usage.monthly_rows}${me.period_resets_at ? `, resets ${day(me.period_resets_at)}` : ""}`;
+    const n = (x: number) => x.toLocaleString("en-US");
+    const plan = c.plan.credits == null ? `${n(c.plan.used)} plan credits used` : `${n(c.plan.used)} of ${n(c.plan.credits)} plan credits used`;
+    const onDemand = c.on_demand.enabled ? `, on-demand ${n(c.on_demand.used)}${c.on_demand.cap_credits == null ? "" : ` of ${n(c.on_demand.cap_credits)}`}` : ", on-demand off";
+    return `${plan}${onDemand}${c.available == null ? "" : `, ${n(c.available)} available`}, resets ${day(c.plan.resets_at)}`;
+}
+
 const COMMANDS: Record<string, Command> = {
     search: {
         section: "data",
@@ -771,7 +782,7 @@ const COMMANDS: Record<string, Command> = {
         positionals: "one",
         options: {},
         run: ({ client, positionals: [video] }) => client.transcripts.quote({ video_id: videoIdOf(video) }),
-        print: (quote: Arcmira.TranscriptPurchaseQuote) => console.log(JSON.stringify(quote, null, 2)),
+        print: (quote: Arcmira.PremiumQuote) => console.log(JSON.stringify(quote, null, 2)),
     },
     occurrences: {
         section: "data",
@@ -828,7 +839,7 @@ const COMMANDS: Record<string, Command> = {
                 return note(r.note);
             }
             const me = r as Arcmira.MeResponse;
-            console.log(`plan ${me.tier}  rows used ${me.usage.rows_used}  remaining ${me.usage.rows_remaining}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
+            console.log(`plan ${me.tier}  ${usageLine(me)}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
         },
     },
     "trackers create": {
@@ -1031,7 +1042,7 @@ const COMMANDS: Record<string, Command> = {
     whoami: {
         section: "account",
         operations: ["get_me"],
-        summary: "The key in use: its id, label, account, plan, scopes, rate limit, row usage, and where it came from.",
+        summary: "The key in use: its id, label, account, plan, scopes, rate limit, credits, and where it came from.",
         usage: "whoami",
         examples: ["arcmira whoami", "arcmira whoami --json"],
         positionals: "none",
@@ -1039,7 +1050,7 @@ const COMMANDS: Record<string, Command> = {
         run: ({ client }) => client.me.get(),
         print: (me: Arcmira.MeResponse) => {
             console.log(`plan ${me.tier}  scopes ${me.scopes.join(",")}  rate limit ${me.rate_limit} a minute`);
-            console.log(`rows used ${me.usage.rows_used} of ${me.usage.monthly_rows}, ${me.usage.rows_remaining} left${me.period_resets_at ? `, resets ${day(me.period_resets_at)}` : ""}`);
+            console.log(usageLine(me));
             const credential = [me.credential_kind === "oauth" ? "oauth token" : "key", me.key_label ? `"${me.key_label}"` : "", me.key_id ?? ""].filter(Boolean).join(" ");
             console.log(`${credential}${me.email_masked ? `  account ${me.email_masked}` : ""}  from ${keySource}`);
         },

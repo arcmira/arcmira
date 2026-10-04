@@ -17,7 +17,7 @@ export interface FeedbackReadbackCorrection {
     status: FeedbackReadbackCorrection.Status;
     /** Reviewer-written public note about how the correction was resolved. Null until a reviewer leaves one. */
     resolution_note: string | null;
-    /** When the correction row was created. */
+    /** When the correction was created. */
     created_at: string | null;
 }
 

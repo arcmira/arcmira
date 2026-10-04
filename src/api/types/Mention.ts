@@ -15,7 +15,7 @@ export interface Mention {
     is_appearance: boolean;
     /** One-sentence description of the mention context. Null when not generated. */
     description: string | null;
-    /** Analyzer confidence between 0 and 1. Null for legacy rows analyzed before confidence scoring. */
+    /** Analyzer confidence between 0 and 1. Null for legacy mentions analyzed before confidence scoring. */
     confidence: number | null;
     /** Raw sentiment score between -1 and 1. Null when sentiment was not computed for this mention. */
     sentiment_score: number | null;

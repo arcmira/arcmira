@@ -4,7 +4,7 @@ import type * as Arcmira from "../index.js";
 
 export interface ChannelSponsor {
     entity: Arcmira.EntityRef;
-    /** Number of ad_read recommendation rows for this sponsor on the channel. */
+    /** Number of ad_read recommendations for this sponsor on the channel. */
     ad_reads: number;
     /** Number of distinct videos containing those ad reads. */
     videos: number;

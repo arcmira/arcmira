@@ -7,7 +7,7 @@ export interface Entity {
     canonical_id: string;
     /** Canonical entity name. */
     name: string;
-    /** Entity type. Values: person (an individual), organization (a company or institution; legacy rows may read company or brand), product (a product or service), topic (a subject or theme), channel (a media source such as a YouTube channel), unknown (type was never classified). */
+    /** Entity type. Values: person (an individual), organization (a company or institution; legacy entities may read company or brand), product (a product or service), topic (a subject or theme), channel (a media source such as a YouTube channel), unknown (type was never classified). */
     type: string;
     /** Source platform for channel entities, e.g. "youtube". Null unless the entity is platform-bound. */
     platform: string | null;
@@ -17,7 +17,7 @@ export interface Entity {
     image_url: string | null;
     /** Timestamp of the last image resolution attempt. Null until the image pipeline has visited this entity. */
     image_checked_at: string | null;
-    /** Number of indexed appearance/mention rows for this entity. 0 when never counted. */
+    /** Number of indexed appearances and mentions of this entity. 0 when never counted. */
     appearance_count?: number | undefined;
     /** Public id ("ent_{n}") of the owning entity, e.g. the organization behind a product. Null unless an ownership link exists. */
     owner_entity_id: string | null;

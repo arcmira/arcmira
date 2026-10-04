@@ -15,7 +15,7 @@ export interface FeedbackReadbackResponse {
     notes: string | null;
     /** When the submission was created. */
     created_at: string | null;
-    /** Per-correction rows with their individual review statuses, in submission order. */
+    /** The corrections, each with its own review status, in submission order. */
     corrections: Arcmira.FeedbackReadbackCorrection[];
 }
 

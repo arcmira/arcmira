@@ -2,23 +2,25 @@
 
 import type * as Arcmira from "../index.js";
 
-export interface TranscriptPurchaseQuote {
+export interface PremiumQuote {
     video_id: string;
     duration_seconds: number;
-    billing_scope: TranscriptPurchaseQuote.BillingScope;
+    billing_scope: PremiumQuote.BillingScope;
     owned: boolean;
     eligible: boolean;
     /** Present when eligible is false. Names the plan that includes Premium transcripts, as a button label and an absolute link to its checkout. */
-    upgrade?: TranscriptPurchaseQuote.Upgrade | undefined;
+    upgrade?: PremiumQuote.Upgrade | undefined;
     quote: Arcmira.TranscriptQuote;
-    charge: TranscriptPurchaseQuote.Charge;
+    charge: PremiumQuote.Charge;
+    /** Credits in a row: 4. */
     credits_per_row: number;
     max_on_demand_cents: number;
+    /** What one unit of charge.unit costs as on-demand usage, in US cents: 0.2 a credit ($0.002). */
     on_demand_cents_per_unit: number;
     refund_policy: string;
 }
 
-export namespace TranscriptPurchaseQuote {
+export namespace PremiumQuote {
     export const BillingScope = {
         FullVideo: "full_video",
     } as const;

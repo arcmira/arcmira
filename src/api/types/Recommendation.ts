@@ -21,13 +21,13 @@ export interface Recommendation {
     offer: string | null;
     /** DEPRECATED: use sentiment_score, which carries the same number. Removal will be announced in the changelog. Raw NUMERIC sentiment score between -1 and 1. Null when not computed. */
     sentiment: number | null;
-    /** Raw sentiment score between -1 and 1, same semantics as sentiment_score on mention rows. Null when not computed. */
+    /** Raw sentiment score between -1 and 1, same semantics as sentiment_score on mentions. Null when not computed. */
     sentiment_score: number | null;
-    /** Classifier confidence between 0 and 1. Rows below the min_confidence filter (default 0.7) are excluded from list responses. */
+    /** Classifier confidence between 0 and 1. Recommendations below the min_confidence filter (default 0.7) are excluded from list responses. */
     confidence: number;
     /** Role of the speaker delivering the mention, e.g. "host" or "guest". */
     speaker_role: string;
-    /** Set when community feedback disputes the classification (e.g. "disputed"). Null when undisputed. Disputed rows are excluded unless include_disputed=true. */
+    /** Set when community feedback disputes the classification (e.g. "disputed"). Null when undisputed. Disputed recommendations are excluded unless include_disputed=true. */
     conflict_status: string | null;
     /** How a disputed classification was resolved. Null until a dispute has been resolved. */
     resolution: string | null;
