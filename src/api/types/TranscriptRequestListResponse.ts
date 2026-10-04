@@ -15,6 +15,9 @@ export namespace TranscriptRequestListResponse {
     export type Requests = Requests.Item[];
 
     export namespace Requests {
+        /**
+         * A Premium transcript job with its processing state, charge and URL for reading the transcript again.
+         */
         export interface Item extends Arcmira.TranscriptJob {
             /** Video title for display. Null when unknown. */
             title: string | null;

@@ -15,7 +15,7 @@ export interface MeResponse {
     email_masked: string | null;
     /** ISO 8601 time the monthly row pool resets: 00:00 UTC on the first of next month. Null on the free plan, whose rows are a lifetime pool. */
     period_resets_at: string | null;
-    /** Plan tier, e.g. free, hobby, pro, enterprise. */
+    /** Plan tier, e.g. free, pro, pro_plus, ultra, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
     scopes: string[];

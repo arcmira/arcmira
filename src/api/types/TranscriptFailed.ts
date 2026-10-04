@@ -6,9 +6,9 @@ export interface TranscriptFailed {
     quality: TranscriptFailed.Quality;
     video_id: string;
     job: Arcmira.TranscriptJob;
-    /** The failed purchase in brief: job.status and job.error. */
+    /** The failed job in brief, as job.status and job.error. */
     last_attempt: TranscriptFailed.LastAttempt;
-    /** What to do next: read again with retry=true to buy the video again, or wait while the refund settles. */
+    /** The next step. Read again with retry=true to start a new Premium transcript, or wait while the refund settles. */
     note: string;
 }
 
@@ -19,17 +19,17 @@ export namespace TranscriptFailed {
     export type Quality = (typeof Quality)[keyof typeof Quality];
 
     /**
-     * The failed purchase in brief: job.status and job.error.
+     * The failed job in brief, as job.status and job.error.
      */
     export interface LastAttempt {
-        /** How the last purchase ended: failed, refunded (the charge was returned), or refund_pending (the refund is still settling). */
+        /** How the last job ended: failed, refunded (the charge was returned), or refund_pending (the refund is still settling). */
         status: LastAttempt.Status;
         /** Why it failed. */
         error: string;
     }
 
     export namespace LastAttempt {
-        /** How the last purchase ended: failed, refunded (the charge was returned), or refund_pending (the refund is still settling). */
+        /** How the last job ended: failed, refunded (the charge was returned), or refund_pending (the refund is still settling). */
         export const Status = {
             Failed: "failed",
             RefundPending: "refund_pending",

@@ -400,7 +400,7 @@
         "status": "refunded",
         "error": "Transcription timed out."
       },
-      "note": "The last Premium purchase for this video failed, and this read bought nothing. Read again with retry=true to buy it again at the current quote."
+      "note": "The last Premium transcript for this video failed, and this read charged nothing. Read again with retry=true to start a new one at the current quote."
     }
   }
 }
