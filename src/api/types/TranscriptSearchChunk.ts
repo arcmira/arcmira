@@ -27,7 +27,7 @@ export interface TranscriptSearchChunk {
     text: string;
     /** Offset of the slice in the video, in seconds. */
     start_seconds: number | null;
-    /** Site-relative watch URL with the timestamp, e.g. /watch?v=...&t=4787. */
+    /** Absolute watch URL on arcmira.com with the timestamp, e.g. https://arcmira.com/watch?v=...&t=4787. */
     watch_url: string;
     /** A ready citation line: title, clock, channel, date. */
     cite_line?: (string | null) | undefined;

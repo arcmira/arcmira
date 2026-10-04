@@ -61,6 +61,9 @@ type Command = {
 /** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. 3 is retired. */
 const EXIT_PENDING = 4;
 
+/** The API prices reads in rows of 4 credits; people see credits. */
+const CREDITS_PER_ROW = 4;
+
 const GLOBAL: Record<string, OptionSpec> = {
     json: { type: "boolean", help: "Print the API response as JSON on stdout; errors as JSON on stderr." },
     key: { type: "string", help: "API key. Defaults to ARCMIRA_API_KEY, then the key saved by `arcmira login`." },
@@ -89,7 +92,7 @@ const ALIASES: Record<string, string> = { transcript: "transcripts get", follow:
 /** Names held for later versions, each with the way to reach the same endpoints today. */
 const RESERVED: Record<string, string> = {
     feedback: "use `arcmira api POST /v1/feedback --body @feedback.json` (arcmira schema submit_feedback)",
-    keys: "manage keys at https://arcmira.com/dashboard?tab=api-keys",
+    keys: "manage keys at https://arcmira.com/dashboard/api",
 };
 
 /** Commands earlier versions had, each with what replaces it. */
@@ -512,7 +515,13 @@ function usageLine(me: Arcmira.MeResponse): string {
     const n = (x: number) => x.toLocaleString("en-US");
     const plan = c.plan.credits == null ? `${n(c.plan.used)} plan credits used` : `${n(c.plan.used)} of ${n(c.plan.credits)} plan credits used`;
     const onDemand = c.on_demand.enabled ? `, on-demand ${n(c.on_demand.used)}${c.on_demand.cap_credits == null ? "" : ` of ${n(c.on_demand.cap_credits)}`}` : ", on-demand off";
-    return `${plan}${onDemand}${c.available == null ? "" : `, ${n(c.available)} available`}, resets ${day(c.plan.resets_at)}`;
+    const sources = [
+        c.plan.credits == null ? null : `${n(Math.max(c.plan.credits - c.plan.used, 0))} plan`,
+        c.granted ? `${n(c.granted)} granted` : null,
+        c.purchased ? `${n(c.purchased)} top-up` : null,
+    ].filter(Boolean);
+    const available = c.available == null ? "" : `, ${n(c.available)} available${sources.length > 1 ? ` (${sources.join(", ")})` : ""}`;
+    return `${plan}${onDemand}${available}, resets ${day(c.plan.resets_at)}`;
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -647,9 +656,9 @@ const COMMANDS: Record<string, Command> = {
         examples: ["arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg", "arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg --status active --limit 20"],
         positionals: "one",
         options: {
-            "min-ad-reads": { type: "string", int: [1, 100], help: "Exclude sponsors with fewer ad reads. Default 3. Pro plans." },
-            status: { type: "string", oneOf: ["active", "lapsed", "ended", "uncertain"], help: "Filter by curated sponsorship status. Pro plans." },
-            ...limit(200, "Sponsors to return, 1 to 200. Pro plans past the free slice."),
+            "min-ad-reads": { type: "string", int: [1, 100], help: "Exclude sponsors with fewer ad reads. Default 3. Pro+." },
+            status: { type: "string", oneOf: ["active", "lapsed", "ended", "uncertain"], help: "Filter by curated sponsorship status. Pro+." },
+            ...limit(200, "Sponsors to return, 1 to 200. Pro+ past the free slice."),
         },
         run: ({ client, positionals: [channel_id], values: v }) =>
             client.channels.sponsors.list({
@@ -770,7 +779,7 @@ const COMMANDS: Record<string, Command> = {
             const who = (id: number | undefined) => (id == null ? "" : `${names.get(id) ?? `Speaker ${id}`}: `);
             for (const line of r.lines ?? []) console.log(`[${seconds(line.start)}] ${who(line.speaker)}${line.text}`);
             for (const p of r.paragraphs ?? []) console.log(`${who(p.speaker)}${p.text}\n`);
-            note(`${r.video.title || r.video.id}  ${r.quality}  ${r.language}  rows billed ${r.rows_billed}`);
+            note(`${r.video.title || r.video.id}  ${r.quality}  ${r.language}  ${(r.rows_billed * CREDITS_PER_ROW).toLocaleString("en-US")} credits`);
         },
     },
     "transcripts quote": {
@@ -1218,7 +1227,7 @@ function help(name?: string): string {
     for (const [key, spec] of Object.entries(GLOBAL)) if (!spec.reserved) lines.push(optionLine(key, spec, 24));
     const reserved = Object.entries(GLOBAL).filter(([, spec]) => spec.reserved).map(([key, spec]) => `--${key}${spec.short ? `/-${spec.short}` : ""}`);
     lines.push(
-        `Reserved flags, not available yet: ${reserved.join(", ")}.`,
+        `Reserved flags, not available yet: ${reserved.join(", ")}. setup has its own --dry-run and --yes.`,
         "",
         "Examples:",
         "  arcmira setup                          connect the MCP server and skills to your coding agents, updates on",
