@@ -43,7 +43,7 @@ test('the transcript union carries ready (200) and pending (202) with their HTTP
     assert.deepEqual(pending.data, fixtures.pending_premium.body); assert.equal(pending.rawResponse.status, 202);
     assert.equal(pending.rawResponse.headers.get('retry-after'), '29');
     assert.equal(pending.data.job.state, 'pending');
-    assert.equal(calls.filter(call => call.method !== 'GET').length, 0, 'a Premium read is one GET; the SDK never posts a purchase');
+    assert.equal(calls.filter(call => call.method !== 'GET').length, 0, 'a Premium read is one GET; the SDK sends no POST');
 });
 
 test('a refused Premium read is a typed error carrying error.details.quote', async () => {

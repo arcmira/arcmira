@@ -21,7 +21,7 @@ def field(name, where, schema, required, description=''):
 
 operations=[]
 reference=['# API reference', '', 'Generated from `fern/openapi.json` and the public SDK overlay. Run `python3 scripts/build-reference.py`.', '',
-           'Transcript reads return `state: ready` (200) or `state: pending` (202). A Premium read buys the transcript within the account\'s plan, included credits first and then the on-demand budget; on `pending`, read again after `Retry-After`. Repeated reads join the same job and never buy twice. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.', '',
+           'Transcript reads return `state: ready` (200) or `state: pending` (202). A Premium read of a video not transcribed yet starts transcribing it, using credits from the account\'s plan and then its on-demand budget; on `pending`, read again after `Retry-After`. Repeated reads join the same job and never use credits twice. TypeScript uses `.withRawResponse()` for HTTP status and headers. Python uses `.with_raw_response`.', '',
            'Reads take ids: `entity_id` (`ent_N`) and `channel_id` (`UC` plus 22 characters). Resolve a name with `entities.resolve` first. Dated reads take `after` (inclusive) and `before` (exclusive).', '']
 for path, methods in doc['paths'].items():
     for method, op in methods.items():

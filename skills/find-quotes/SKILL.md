@@ -5,7 +5,7 @@ description: "Finds exact spoken quotes and clip-ready moments on podcasts and Y
 
 # Find quotes and clip moments
 
-`search` finds the passage; `transcript` with `start` and `end` returns the exact lines around it with second offsets, which give the verbatim quote and the clip boundaries. Caption reads bill returned lines. A Premium purchase always prices the whole video; start/end only select the returned window.
+`search` finds the passage; `transcript` with `start` and `end` returns the exact lines around it with second offsets, which give the verbatim quote and the clip boundaries. Caption reads meter only the returned lines. A Premium read uses credits for the whole video; start/end only select the returned window.
 
 Use it through the arcmira MCP server (`arcmira_describe`, then `arcmira_execute_read` with a program) or the arcmira CLI, whose commands have the same names. `arcmira_describe` carries the full method reference (CLI: `arcmira <command> --help`), and the `arcmira` skill the shared procedure.
 
@@ -49,13 +49,13 @@ const assumed = Boolean(r?.suggested), why = r?.suggested?.evidence ?? null;
 const hits = await arcmira.search({ query: "Anthropic IPO", speakerIds: [id], limit: 5 });
 const moments = [];
 for (const c of hits.chunks.slice(0, 2)) {
-  const moment = { episode: c.videoTitle, show: c.channelName, date: c.publishedAt, url: c.watchUrl, speakers: c.speakers_by.map(s => s.name) };
+  const moment = { episode: c.video_title, show: c.channel_name, date: c.published_at, url: c.watch_url, speakers: c.speakers_by.map(s => s.name) };
   try {
-    const t = await arcmira.transcript(c.videoId, { start: Math.max(0, c.startSeconds - 10), end: c.startSeconds + 50 });
-    moment.clip = { start: t.lines[0]?.start ?? c.startSeconds, end: t.lines.at(-1)?.end ?? c.startSeconds + 60 };
+    const t = await arcmira.transcript(c.video_id, { start: Math.max(0, c.start_seconds - 10), end: c.start_seconds + 50 });
+    moment.clip = { start: t.lines[0]?.start ?? c.start_seconds, end: t.lines.at(-1)?.end ?? c.start_seconds + 60 };
     moment.lines = t.lines.map(l => `[${Math.round(l.start)}s] ${l.text}`);
   } catch (err) {
-    moment.clip = { start: c.startSeconds, end: c.startSeconds + 60 };
+    moment.clip = { start: c.start_seconds, end: c.start_seconds + 60 };
     moment.passage = c.text;
     moment.transcript = err.code;
   }
@@ -68,7 +68,7 @@ return { speaker: { id, name: e?.name ?? null, assumed, why }, as_of: hits.as_of
 
 - Names the speaker or show it searched, with the id, and quotes the words exactly as the transcript lines give them, trimmed to whole sentences, never paraphrased inside quotation marks.
 - Gives the show, the episode title, the date, and the speaker when the chunk or a premium transcript names one.
-- Links the `watchUrl`, which starts at the moment, and gives a clip start and end in seconds from the transcript lines.
+- Links the `watch_url`, which starts at the moment, and gives a clip start and end in seconds from the transcript lines.
 - Says so when nothing matched, with `as_of`, instead of offering a quote from memory.
 
 ## Traps
@@ -79,7 +79,7 @@ return { speaker: { id, name: e?.name ?? null, assumed, why }, as_of: hits.as_of
 - Keep transcript windows short (`start`, `end`): a whole episode bills every line.
 - Some videos have no readable caption track yet (`transcript_unavailable`, `transcript_fetching`); quote the search chunk `text` for those and say the words come from the search passage.
 
-When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work uses included credits, then on-demand within the account's budget, without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
+When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work uses credits from the account's plan, then its on-demand budget, without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
 
 Search as_of is the newest publication date among the returned passages, not the date the whole index was updated. For channel freshness, call arcmira.status({ channelId }) and report channel.search_indexed_through for transcript search. A result date or an empty query does not establish missing recent episodes.
 

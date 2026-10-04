@@ -16,15 +16,15 @@ const premiumBody = (id, videoId) => {
     if (b.job) Object.assign(b.job, { video_id: videoId, status_url: `https://api.arcmira.com/v1/transcriptions/${b.job.id}` });
     return b;
 };
-/** Premium reads by video id: premiumVid* buys on the first read (202) and is ready after; pendingVid* stays pending; failedVid* answers its failed purchase until retry=true buys it again (202); brokeVid* is refused 402; freeVid* is refused 403. */
+/** Premium reads by video id: premiumVid* starts transcribing on the first read (202) and is ready after; pendingVid* stays pending; failedVid* answers its failed transcription until retry=true transcribes it again (202); brokeVid* is refused 402; freeVid* is refused 403. */
 const PREMIUM = [
-    [/^premiumVid/, (videoId) => (bought.has(videoId) ? [200, premiumBody("premium_ready", videoId)] : (bought.add(videoId), [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }]))],
+    [/^premiumVid/, (videoId) => (started.has(videoId) ? [200, premiumBody("premium_ready", videoId)] : (started.add(videoId), [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }]))],
     [/^pendingVid/, (videoId) => [202, premiumBody("pending_premium", videoId), { "retry-after": "1" }]],
     [/^failedVid/, (videoId, url) => (url.searchParams.get("retry") === "true" ? [202, premiumBody("pending_premium", videoId), { "retry-after": "0" }] : [200, premiumBody("premium_failed", videoId)])],
     [/^brokeVid/, () => [402, premiumBody("refused_quota")]],
     [/^freeVid/, () => [403, premiumBody("paid_plan_required")]],
 ];
-const bought = new Set();
+const started = new Set();
 /** The account already follows Brex, so a follow of brex answers 409 with the existing tracker id. */
 const EXISTING_TRACKERS = new Map([["organization:brex", "trk_9"]]);
 let createdTrackers = 0;

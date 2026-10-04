@@ -20,9 +20,9 @@ export interface TranscriptResponse {
     speakers?: TranscriptResponse.Speakers.Item[] | undefined;
     /** Premium reads only. Opaque id of the transcript you were served, the approved corrections on it, and who speaks each line. It changes when any of those change. */
     revision?: string | undefined;
-    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free. */
+    /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed. An explicit Premium read is charged for the whole video, from the account's plan credits and then its on-demand budget; the window only trims the returned content. */
     range?: TranscriptResponse.Range | undefined;
-    /** Rows this call charged. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window, and always 0 on Premium retrieval. */
+    /** Caption retrieval rows charged by this call. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window. Premium responses report 0 here even when the read was charged for the whole video; this field does not report Premium charges. */
     rows_billed: number;
     /** When the transcript was produced. */
     as_of: string | null;
@@ -90,7 +90,7 @@ export namespace TranscriptResponse {
     }
 
     /**
-     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed; Premium retrieval is free.
+     * Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed. An explicit Premium read is charged for the whole video, from the account's plan credits and then its on-demand budget; the window only trims the returned content.
      */
     export interface Range {
         start: number;
@@ -191,6 +191,10 @@ export namespace TranscriptResponse {
             quote?: Arcmira.RefusedQuote | undefined;
             /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
             existing_id?: string | undefined;
+            /** On tracker_limit, the trackers the plan holds. */
+            limit?: number | undefined;
+            /** On tracker_limit, the trackers the account holds now. */
+            count?: number | undefined;
         }
     }
 }
