@@ -5,7 +5,7 @@ import type * as Arcmira from "../index.js";
 export interface RecommendationListResponse {
     /** Newest first. */
     recommendations: Arcmira.Recommendation[];
-    /** True when more rows exist past this page. */
+    /** True when more results exist past this page. */
     has_more: boolean;
     /** Opaque cursor for the next page. Null on the last page. */
     next_cursor: string | null;

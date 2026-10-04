@@ -89,7 +89,7 @@ for (const chunk of hits.chunks) console.log(chunk.channel_name, chunk.published
 if (hits.window.before) console.log(`results stop before ${hits.window.before}`);
 if (hits.search_index.missing_before) console.log(`transcripts before ${hits.search_index.missing_before} are still being added`);
 
-// Catalog rows page themselves: iterate and the client follows next_cursor. Each row bills, so stop when you have enough.
+// Catalog rows page themselves: iterate and the client follows next_cursor. Each row uses credits, so stop when you have enough.
 let seen = 0;
 for await (const mention of await client.mentions.list({ entity_id: ramp.id, after: "2026-09-01", limit: 25 })) {
     console.log(mention.media.title, mention.start_seconds);
@@ -210,7 +210,7 @@ Account
   arcmira setup [--only agent]        connect the MCP server and skills to your coding agents, updates on
   arcmira login [email] [--code N] [--key arc_sk_...]
   arcmira logout
-  arcmira whoami                      key id, label and account, plan, scopes, rate limit, rows, and where the key came from
+  arcmira whoami                      key id, label and account, plan, scopes, rate limit, credits, and where the key came from
   arcmira auth login                  same as arcmira login
   arcmira auth logout                 same as arcmira logout
   arcmira auth status                 same as arcmira whoami

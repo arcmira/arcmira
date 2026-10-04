@@ -4,9 +4,9 @@
  * Commercial-intelligence rollup. Only present for organization and product entities when the caller has Recommendations API access (a Pro+ plan) and a brand profile exists.
  */
 export interface EntityDetailRecommendationsSummary {
-    /** Total ad_read rows across all channels. 0 when none. */
+    /** Total ad_read recommendations across all channels. 0 when none. */
     total_ad_reads: number;
-    /** Total endorsement rows across all channels. 0 when none. */
+    /** Total endorsement recommendations across all channels. 0 when none. */
     total_endorsements: number;
     /** Number of distinct shows/channels with commercial mentions of this entity. */
     unique_shows: number;
