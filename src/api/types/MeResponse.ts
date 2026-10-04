@@ -13,8 +13,8 @@ export interface MeResponse {
     credential_kind: MeResponse.CredentialKind;
     /** The account email with the local part masked after its first character, e.g. z***@example.com. Null when the account has none. */
     email_masked: string | null;
-    /** ISO 8601 time the plan credits reset: 00:00 UTC on the first of next month. Null on the free plan, whose 1,000 credits a month reset on usage.credits.plan.resets_at. */
-    period_resets_at: string | null;
+    /** ISO 8601 time the plan credits reset: 00:00 UTC on the first of next month, on every plan. */
+    period_resets_at: string;
     /** Plan tier, e.g. free, pro, pro_plus, ultra, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
@@ -37,11 +37,11 @@ export namespace MeResponse {
     export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind];
 
     export interface Usage {
-        /** Plan credits used this month, in rows: usage.credits.plan.used divided by 4, rounded up. A row is 4 credits. */
+        /** Plan credits used this month, in rows (a row is 4 credits): usage.credits.plan.used divided by 4, rounded up. */
         rows_used: number;
-        /** Credits left from the plan, grants and top-ups, on-demand excluded, in rows: divided by 4, rounded up. A row is 4 credits. */
+        /** Credits left from the plan, grants and top-ups, on-demand excluded, in rows (a row is 4 credits): divided by 4, rounded up. */
         rows_remaining: number;
-        /** The plan credits a month, in rows: usage.credits.plan.credits divided by 4 when the plan has a limit. A row is 4 credits. */
+        /** Plan credits a month, in rows (a row is 4 credits): usage.credits.plan.credits divided by 4 when the plan has a limit. */
         monthly_rows: number;
         /** On-demand overage spend so far this period, in US cents. */
         current_spend_cents: number;

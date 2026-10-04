@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3
+
+Generated from the API document of 2026-10-04, evening, whose descriptions lead with credits. `MeResponse.period_resets_at` is a string on every plan.
+
+- `arcmira transcripts get` reports the credits a read used.
+- `arcmira whoami` and `arcmira status` split available credits into plan, granted and top-up.
+- `sponsors` help says Pro+. Root help notes that `setup` has its own `--dry-run` and `--yes`. `keys` links /dashboard/api.
+
 ## 0.4.2
 
 Generated from the v1 document of 2026-10-04, which prices every read in credits.
