@@ -3,6 +3,6 @@
 export interface TranscriptQuote {
     /** Number of 15-minute blocks in the video, ceiling'd, minimum 1. */
     quarters: number;
-    /** Total unlock cost in rows: 75 rows per 15-minute block. */
+    /** Rows the whole video uses, 75 rows per 15-minute block. */
     rows: number;
 }

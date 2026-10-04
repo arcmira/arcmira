@@ -33,7 +33,7 @@ async function consumer() {
     await client.mentions.list({ entity_name: 'Ramp' });
     // @ts-expect-error the date pair is after and before
     await client.mentions.list({ entity_id: 'ent_14', date_from: '2026-09-01' });
-    // @ts-expect-error a Premium read buys within the plan; the purchase POST is not SDK surface
+    // @ts-expect-error a Premium read is one GET; transcripts.request is not SDK surface
     await client.transcripts.request({ video_id: 'dQw4w9WgXcQ' });
     // @ts-expect-error monitor bodies are snake_case
     await client.monitors.create({ name: 'Ramp', notifyFrequency: 'daily' });

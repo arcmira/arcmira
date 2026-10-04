@@ -6,15 +6,15 @@ import type * as Arcmira from "../index.js";
  * The refused price, on a priced refusal: quota_exceeded, spend_limit_exceeded and paid_plan_required.
  */
 export interface RefusedQuote extends Arcmira.TranscriptQuote {
-    /** What the purchase would charge at the current balance. Absent when no current price could be read. */
+    /** What the request would charge at the current balance. Absent when no current price could be read. */
     charge?: RefusedQuote.Charge | undefined;
-    /** The on-demand money, in whole cents, this purchase needs beyond included credits at the current balance. */
+    /** The on-demand usage, in whole cents, this request needs beyond the plan's credits at the current balance. */
     max_on_demand_cents?: number | undefined;
 }
 
 export namespace RefusedQuote {
     /**
-     * What the purchase would charge at the current balance. Absent when no current price could be read.
+     * What the request would charge at the current balance. Absent when no current price could be read.
      */
     export interface Charge {
         unit: Charge.Unit;

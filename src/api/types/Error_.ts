@@ -98,6 +98,10 @@ export namespace Error_ {
             quote?: Arcmira.RefusedQuote | undefined;
             /** On tracker_already_exists, the existing tracker id. Reuse it instead of creating another tracker. */
             existing_id?: string | undefined;
+            /** On tracker_limit, the trackers the plan holds. */
+            limit?: number | undefined;
+            /** On tracker_limit, the trackers the account holds now. */
+            count?: number | undefined;
         }
     }
 }

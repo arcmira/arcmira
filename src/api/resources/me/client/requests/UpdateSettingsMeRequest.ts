@@ -16,7 +16,7 @@ export namespace UpdateSettingsMeRequest {
      * Fields to change. An omitted field keeps the value the account already carries.
      */
     export interface Transcripts {
-        /** Default transcript quality for this account: captions or premium. premium reads require an existing purchase. Owned transcripts remain readable after a plan downgrade; new purchases require an eligible plan. */
+        /** Default transcript quality for this account: captions or premium. As a default, premium reads only transcripts the account already owns. Owned transcripts remain readable after a plan downgrade; starting new ones requires an eligible plan. */
         quality?: Transcripts.Quality | undefined;
         /** Default comma-separated caption language priority list, tried in order (e.g. "de,en"), at most 5 codes. Use asr for the first automatic track and asr-<code> for a specific one. */
         language?: string | undefined;
@@ -25,7 +25,7 @@ export namespace UpdateSettingsMeRequest {
     }
 
     export namespace Transcripts {
-        /** Default transcript quality for this account: captions or premium. premium reads require an existing purchase. Owned transcripts remain readable after a plan downgrade; new purchases require an eligible plan. */
+        /** Default transcript quality for this account: captions or premium. As a default, premium reads only transcripts the account already owns. Owned transcripts remain readable after a plan downgrade; starting new ones requires an eligible plan. */
         export const Quality = {
             Captions: "captions",
             Premium: "premium",

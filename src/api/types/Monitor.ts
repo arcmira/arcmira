@@ -11,7 +11,7 @@ export interface Monitor {
     notify_emails: string[];
     /** Every address the monitor reaches, with consent and invitation state. An account is not required to accept. */
     email_recipients?: Monitor.EmailRecipients.Item[] | undefined;
-    /** Delivery cadence. Values: realtime (deliver immediately), hourly (hourly digest), daily (daily digest). Free tier is limited to daily. */
+    /** Delivery cadence. Values: realtime (deliver immediately), hourly (hourly digest), daily (daily digest). */
     notify_frequency?: string | undefined;
     /** Day of week for digest delivery. */
     digest_day?: string | undefined;

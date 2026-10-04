@@ -77,20 +77,20 @@ test("a Premium read is one GET: 202 exits 4 with the eta, the next read prints 
     const first = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
     assert.equal(first.code, 4);
     assert.equal(first.stdout, "");
-    assert.match(first.stderr, /Premium for premiumVid1 is still queued, about 3 min left\. Run the same command again later; it reads this job and never buys twice\./);
+    assert.match(first.stderr, /Premium for premiumVid1 is still queued, about 3 min left\. Run the same command again later; it reads this job and never uses credits twice\./);
     const second = await arcmira(["transcripts", "get", "premiumVid1", "--quality", "premium"]);
     assert.equal(second.code, 0, second.stderr);
     assert.match(second.stdout, /John Coogan: Ramp has been on the show/);
-    assert.equal(fake.requests.filter((r) => r.method !== "GET" && r.path.startsWith("/v1/transcri")).length, 0, "no purchase POST");
+    assert.equal(fake.requests.filter((r) => r.method !== "GET" && r.path.startsWith("/v1/transcri")).length, 0, "no POST");
     const json = await arcmira(["transcripts", "get", "pendingVid1", "--quality", "premium", "--json"]);
     assert.equal(json.code, 4);
     assert.equal(JSON.parse(json.stdout).state, "pending");
 });
 
-test("a failed Premium purchase exits 1 and buys again only with --retry", async () => {
+test("a failed Premium transcription exits 1 and transcribes again only with --retry", async () => {
     const failed = await arcmira(["transcripts", "get", "failedVid01", "--quality", "premium"]);
     assert.equal(failed.code, 1);
-    assert.match(failed.stderr, /The last Premium purchase for failedVid01 was refunded \(Transcription timed out\)\. Run it again with --retry to buy it again\./);
+    assert.match(failed.stderr, /The last Premium transcription of failedVid01 was refunded \(Transcription timed out\)\. Run it again with --retry to transcribe it again, which uses credits again\./);
     const retried = await arcmira(["transcripts", "get", "failedVid01", "--quality", "premium", "--retry"]);
     assert.equal(retried.code, 4);
     assert.equal(fake.requests.at(-1).query.retry, "true");
@@ -110,7 +110,7 @@ test("retired commands and flags say what replaced them, exit 2, no call", async
     const before = fake.requests.length;
     const request = await arcmira(["transcripts", "request", "dQw4w9WgXcQ"]);
     assert.equal(request.code, 2);
-    assert.match(request.stderr, /^arcmira transcripts request is gone since 0\.4\.0; a Premium read buys its own transcript now/);
+    assert.match(request.stderr, /^arcmira transcripts request is gone since 0\.4\.0; a Premium read now starts the transcription itself/);
     assert.equal((await arcmira(["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60"])).code, 2);
     const wait = await arcmira(["transcripts", "get", "premiumVid3", "--quality", "premium", "--wait"]);
     assert.equal(wait.code, 2);

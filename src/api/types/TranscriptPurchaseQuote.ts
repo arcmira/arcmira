@@ -8,7 +8,7 @@ export interface TranscriptPurchaseQuote {
     billing_scope: TranscriptPurchaseQuote.BillingScope;
     owned: boolean;
     eligible: boolean;
-    /** Present when eligible is false: the plan checkout that can buy this transcript, as a button label and an absolute link. */
+    /** Present when eligible is false. Names the plan that includes Premium transcripts, as a button label and an absolute link to its checkout. */
     upgrade?: TranscriptPurchaseQuote.Upgrade | undefined;
     quote: Arcmira.TranscriptQuote;
     charge: TranscriptPurchaseQuote.Charge;
@@ -25,7 +25,7 @@ export namespace TranscriptPurchaseQuote {
     export type BillingScope = (typeof BillingScope)[keyof typeof BillingScope];
 
     /**
-     * Present when eligible is false: the plan checkout that can buy this transcript, as a button label and an absolute link.
+     * Present when eligible is false. Names the plan that includes Premium transcripts, as a button label and an absolute link to its checkout.
      */
     export interface Upgrade {
         label: string;

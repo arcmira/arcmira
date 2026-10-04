@@ -27,7 +27,7 @@ Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authenti
 
 ## Premium transcripts
 
-A Premium read can purchase the transcript using included credits and then your configured on-demand budget. Get a free price quote with `transcripts.quote({ video_id })` before reading.
+A Premium read uses credits from your plan, then your on-demand budget. `transcripts.quote({ video_id })` shows how many credits a read of the video will use, free, before you read it.
 
 ```ts
 import { ArcmiraClient } from "arcmira";
@@ -42,9 +42,9 @@ if (read.state === "ready") {
 }
 ```
 
-A Premium read is one GET. When your account does not own the transcript yet, the read buys it within your plan: included credits first, then your on-demand budget, which you set in the dashboard and which is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never buy twice. When the last purchase failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and buys nothing; read with `retry: true` to buy it again. `transcripts.quote({ video_id })` prices it first, free.
+A Premium read is one GET. When your account does not own the transcript yet, the read starts transcribing it and uses credits from your plan, then your on-demand budget. You set that budget in the dashboard, and it is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never use credits twice. When the last transcription failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and uses no credits; read with `retry: true` to transcribe it again, which uses credits again. `transcripts.quote({ video_id })` shows the credits first, free.
 
-A read the plan cannot pay for throws instead. `PaymentRequiredError` carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` carries `paid_plan_required` on a free plan. Both carry the price in `err.body.error.details.quote`.
+A read your plan and budget cannot cover throws instead. `PaymentRequiredError` carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` carries `paid_plan_required` on a free plan. Both carry the price in `err.body.error.details.quote`.
 
 ```ts
 import { Arcmira } from "arcmira";
@@ -186,7 +186,7 @@ Data commands (they mirror the MCP client; filters take ids, arcmira resolve fin
   arcmira sponsors <UC id>            recurring sponsors of a YouTube channel
   arcmira recommendations <ent_id>    who recommends an entity on air: --kind sponsored, organic, mention or all
   arcmira episodes <UC id>            newest indexed videos of a channel
-  arcmira transcripts get <video>     full transcript of one YouTube video; --quality premium buys it within your plan
+  arcmira transcripts get <video>     full transcript of one YouTube video; --quality premium uses credits from your plan
   arcmira transcripts quote <video>   free whole-video Premium price
   arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
   arcmira status [UC id]              your plan, or a channel's coverage
@@ -232,7 +232,7 @@ Reads take ids. `--entity`, `--about`, `--by` and every entity positional take a
 
 Every dated command takes `--after` (inclusive) and `--before` (exclusive), as a date or an ISO 8601 datetime with an offset, read in UTC. September is `--after 2026-09-01 --before 2026-10-01`.
 
-`arcmira transcripts get <video> --quality premium` is one read. When your account does not own the transcript, the read buys it within your plan (included credits, then your on-demand budget) and exits 4 while it transcribes, naming the minutes left on stderr. Run the same command again later: it reads the same job and never buys twice. When the last purchase failed it exits 1 and names the error; add `--retry` to buy it again. A plan that cannot pay exits 1 and prints the quote. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
+`arcmira transcripts get <video> --quality premium` is one read. When your account does not own the transcript, the read starts transcribing it, using credits from your plan and then your on-demand budget, and exits 4 while it transcribes, naming the minutes left on stderr. Run the same command again later: it reads the same job and never uses credits twice. When the last transcription failed it exits 1 and names the error; add `--retry` to transcribe it again, which uses credits again. A read your plan and budget cannot cover exits 1 and prints the quote. With `--json` the API body is still printed on stdout, so `arcmira transcripts get X --quality premium --json | jq` fails on the exit code under `set -o pipefail`.
 
 `arcmira api` follows `gh api`: `-f` adds a string parameter and `-F` a typed one (`true`, `false`, `null`, numbers, `@file`, `key[]=value`). They go to the query string on GET and DELETE, and into a JSON body otherwise. A POST without `-H 'Idempotency-Key: ...'` gets a generated key; `--verbose` shows it. Reuse the same key and input to retry a write. The path may drop the `/v1` prefix.
 
@@ -240,7 +240,7 @@ Every dated command takes `--after` (inclusive) and `--before` (exclusive), as a
 - Output: data on stdout, notes and errors on stderr, no colour. `--json` prints the API response unchanged on stdout; on failure it prints `{"error":{"type","code","message","request_id",...}}` on stderr, the API's own error body or a `usage_error` in the same shape.
 - Errors: every API error names its `request_id` (quote it to support). A 401 adds `try: arcmira login`.
 - Paging: `mentions`, `recommendations` and `episodes` take `--cursor`; the next page's command is printed on stderr, and `next_cursor` is in `--json`. `arcmira api --paginate` follows every page.
-- Exit codes: 0 ok, 1 an API or network error (the message names the code, any unlock link, and the quote on a priced refusal), 2 a usage error (bad input, a name where an id belongs, no key, a command or flag not available yet or retired), 4 Premium is still transcribing (run the same command again later). Input is checked before any request. Exit 3 is retired with Premium preparation.
+- Exit codes: 0 ok, 1 an API or network error (the message names the code, any unlock link, and the quote on a priced refusal), 2 a usage error (bad input, a name where an id belongs, no key, a command or flag not available yet or retired), 4 Premium is still transcribing (run the same command again later). Input is checked before any request. Exit 3 is retired.
 - Writes (`trackers create`, `monitors create|update|add|attach`) send a fresh `Idempotency-Key`, so the CLI's one retry never applies a write twice.
 - Reserved flags: `--dry-run`, `--force`, `-y`/`--yes`, `--profile` and `--jq` exit 2 in this version outside `arcmira setup`; their names are held for write commands to come.
 - Requests carry `User-Agent: arcmira-cli/<version>`. The SDK used on its own sends `arcmira/<version>`.
@@ -272,6 +272,6 @@ Run `npm run generate -- <path to arcmira-v1.json>` with Node 22 or newer, Pytho
 
 `fern/method-names.json` names the SDK group and method of every operation by its `operationId`; an operation it does not name, or a name for an operation the spec lacks, fails generation. The overlay combines success schemas into a `state` union and discovers cursor collections from their schemas. The installer rewrites the `exports` map in `package.json` from the generated resources. Unknown or ambiguous collections fail generation. An exact checked patch keeps request timer cleanup in `finally` until the pinned generator includes the fix. Generated source is never edited by hand.
 
-Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consumer type contract. Tests use local HTTP fixtures and do not purchase transcripts.
+Run `npm test` for the SDK and CLI tests, and `npm run test:types` for the consumer type contract. Tests use local HTTP fixtures and use no credits.
 
 Upgrading from 0.3: see [CHANGELOG.md](./CHANGELOG.md) for every removed method and its replacement.
