@@ -11,7 +11,7 @@ export interface SignupVerifiedResponse {
     scopes: string[];
     /** The plan the account is on: free for a new account, its plan when the address already had one. */
     tier: string;
-    /** The pool this key draws on: a free account's lifetime credits, a paid plan's monthly rows. */
+    /** On a paid plan, its monthly allowance in rows; a row is 4 credits. On the free plan, the account's row allotment from before credits (1,000 for a new account). The free plan uses 1,000 credits a month, read from usage.credits on GET /v1/me. */
     rows_allotted: number;
     /** A curl command for the first call: GET /v1/me with the key. */
     next: string;

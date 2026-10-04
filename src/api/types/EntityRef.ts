@@ -5,7 +5,7 @@ export interface EntityRef {
     id: string;
     /** Canonical entity name. */
     name: string;
-    /** Entity type. Values: person (an individual), organization (a company or institution; legacy rows may read company or brand), product (a product or service), topic (a subject or theme), channel (a media source such as a YouTube channel), unknown (type was never classified). */
+    /** Entity type. Values: person (an individual), organization (a company or institution; legacy entities may read company or brand), product (a product or service), topic (a subject or theme), channel (a media source such as a YouTube channel), unknown (type was never classified). */
     type: string;
     /** URL slug, the site's canonical id for every type but channel. Null when never slugged. */
     slug: string | null;

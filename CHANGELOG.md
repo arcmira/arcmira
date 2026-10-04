@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+Generated from the v1 document of 2026-10-04, which prices every read in credits.
+
+- `arcmira whoami` and `arcmira status` show plan credits used, the on-demand budget, credits available and the reset day.
+- `PremiumQuote` replaces the `TranscriptPurchaseQuote` type.
+
 ## 0.4.1
 
 Paid reads use credits from your plan, then your on-demand budget.

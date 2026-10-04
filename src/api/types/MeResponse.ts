@@ -13,7 +13,7 @@ export interface MeResponse {
     credential_kind: MeResponse.CredentialKind;
     /** The account email with the local part masked after its first character, e.g. z***@example.com. Null when the account has none. */
     email_masked: string | null;
-    /** ISO 8601 time the monthly row pool resets: 00:00 UTC on the first of next month. Null on the free plan, whose rows are a lifetime pool. */
+    /** ISO 8601 time the plan credits reset: 00:00 UTC on the first of next month. Null on the free plan, whose 1,000 credits a month reset on usage.credits.plan.resets_at. */
     period_resets_at: string | null;
     /** Plan tier, e.g. free, pro, pro_plus, ultra, enterprise. */
     tier: string;
@@ -37,21 +37,21 @@ export namespace MeResponse {
     export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind];
 
     export interface Usage {
-        /** Premium rows consumed this period. */
+        /** Plan credits used this month, in rows: usage.credits.plan.used divided by 4, rounded up. A row is 4 credits. */
         rows_used: number;
-        /** Premium rows left this period. */
+        /** Credits left from the plan, grants and top-ups, on-demand excluded, in rows: divided by 4, rounded up. A row is 4 credits. */
         rows_remaining: number;
-        /** Total premium rows included per period. */
+        /** The plan credits a month, in rows: usage.credits.plan.credits divided by 4 when the plan has a limit. A row is 4 credits. */
         monthly_rows: number;
         /** On-demand overage spend so far this period, in US cents. */
         current_spend_cents: number;
-        /** The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access. */
+        /** The month in credits, the primary measure of usage. Every read uses credits from the plan, then the on-demand budget. An included plan credit is valued at $0.001; on-demand usage costs $0.002 a credit. A row is 4 credits. Present only when the credits ledger decides access. */
         credits?: Usage.Credits | undefined;
     }
 
     export namespace Usage {
         /**
-         * The month in credits (1 credit is $0.001; a row is 4 credits). Present only when the credits ledger decides access.
+         * The month in credits, the primary measure of usage. Every read uses credits from the plan, then the on-demand budget. An included plan credit is valued at $0.001; on-demand usage costs $0.002 a credit. A row is 4 credits. Present only when the credits ledger decides access.
          */
         export interface Credits {
             /** Credits spendable now: plan, granted, purchased, and on-demand up to its cap. Null when nothing limits it. */
@@ -77,7 +77,7 @@ export namespace MeResponse {
             export interface OnDemand {
                 /** True when on-demand credits are on. */
                 enabled: boolean;
-                /** The on-demand cap in credits, at $0.002 a credit. Null when uncapped or off. */
+                /** The on-demand budget in credits. On-demand usage costs $0.002 a credit, so this is the dollar budget divided by 0.002. Null when uncapped or off. */
                 cap_credits: number | null;
                 /** On-demand credits spent this month. */
                 used: number;

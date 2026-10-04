@@ -10,7 +10,7 @@ export interface TranscriptJob {
     video_id: string;
     /** Coarse outcome: pending until the Premium transcript is servable (ready), the job failed, or it was refunded. */
     state: TranscriptJob.State;
-    /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (rejected intent, or a legacy request needing accounting review), refund_pending (refund transaction must still complete), refunded (terminal failure; the charged rows were returned and the unlock this request granted was revoked). */
+    /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (rejected intent, or a legacy request needing accounting review), refund_pending (refund transaction must still complete), refunded (terminal failure; the charge was returned and the unlock this request granted was revoked). */
     status: TranscriptJob.Status;
     /** User-facing stage: downloading folds into transcribing. Values: queued (waiting to start), transcribing (downloading or transcribing), analyzing (analysis running). Null for terminal statuses and refund_pending. */
     stage: TranscriptJob.Stage | null;
@@ -41,7 +41,7 @@ export namespace TranscriptJob {
         Refunded: "refunded",
     } as const;
     export type State = (typeof State)[keyof typeof State];
-    /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (rejected intent, or a legacy request needing accounting review), refund_pending (refund transaction must still complete), refunded (terminal failure; the charged rows were returned and the unlock this request granted was revoked). */
+    /** Request status. Values: queued (accepted; audio download not started), downloading (fetching the video audio), transcribing (premium speech-to-text is running), analyzing (entity/commercial analysis is running), complete (premium transcript is servable via GET /v1/transcripts/{video_id}), failed (rejected intent, or a legacy request needing accounting review), refund_pending (refund transaction must still complete), refunded (terminal failure; the charge was returned and the unlock this request granted was revoked). */
     export const Status = {
         Queued: "queued",
         Downloading: "downloading",

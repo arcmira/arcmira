@@ -23,7 +23,7 @@ export class EntitiesClient {
     }
 
     /**
-     * Call this before passing an id to about, by, entity_ids, channel_ids or channel; those filters refuse names with id_required. Pass context with the user's own words about the name ("the startup bank", "on My First Million"). The answer is one of three: best (the name means one row: use it and name it), suggested (no row is certain but one stands out, with reason and evidence: use it and tell the user you assumed it), or ask (several rows fit: show ask.options, or check every option id and answer per row). For a show pass type=channel and use the youtube_channel_id; for a brand or a person use the id. Free; bills no rows.
+     * Call this before passing an id to about, by, entity_ids, channel_ids or channel; those filters refuse names with id_required. Pass context with the user's own words about the name ("the startup bank", "on My First Million"). The answer is one of three: best (the name means one entity: use it and name it), suggested (no entity is certain but one stands out, with reason and evidence: use it and tell the user you assumed it), or ask (several entities fit: show ask.options, or check every option id and answer per entity). For a show pass type=channel and use the youtube_channel_id; for a brand or a person use the id. Free; uses no credits.
      *
      * @param {Arcmira.ResolveEntitiesRequest} request
      * @param {EntitiesClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -219,7 +219,7 @@ export class EntitiesClient {
     }
 
     /**
-     * Mentions in the last 7 and 30 days against the prior 30, an absolute-delta verdict (accelerating, flat, fading, none), the newest media date, and the top shows in the window. It counts the shows we index, not the whole internet, and it is a count, not a score. On a Pro+ plan the card also carries paid_vs_organic; otherwise that field is absent and access names the gate. Bills one row. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
+     * Mentions in the last 7 and 30 days against the prior 30, an absolute-delta verdict (accelerating, flat, fading, none), the newest media date, and the top shows in the window. It counts the shows we index, not the whole internet, and it is a count, not a score. On a Pro+ plan the card also carries paid_vs_organic; otherwise that field is absent and access names the gate. Free; uses no credits. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.
      *
      * @param {Arcmira.MomentumEntitiesRequest} request
      * @param {EntitiesClient.RequestOptions} requestOptions - Request-specific configuration.

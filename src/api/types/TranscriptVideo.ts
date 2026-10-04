@@ -10,7 +10,7 @@ export interface TranscriptVideo {
     channel_name: string | null;
     /** Publish timestamp. Cite it as the date of anything you quote. */
     published_at: string | null;
-    /** Video length in seconds. Null when unknown, which also means the row estimate was unknown. */
+    /** Video length in seconds. Null when unknown, which also means the credit estimate was unknown. */
     duration_seconds: number | null;
     /** Canonical YouTube watch URL. */
     watch_url: string;

@@ -15,8 +15,8 @@ test.after(() => fake.close());
 test("sends the bearer key and the SDK user agent", async () => {
     await client.me.get();
     assert.equal(last().headers.authorization, "Bearer test-key");
-    assert.equal(last().headers["user-agent"], "arcmira/0.4.1");
-    assert.equal(last().headers["x-fern-sdk-version"], "0.4.1");
+    assert.equal(last().headers["user-agent"], "arcmira/0.4.2");
+    assert.equal(last().headers["x-fern-sdk-version"], "0.4.2");
 });
 
 test("falls back to ARCMIRA_API_KEY", async () => {

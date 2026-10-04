@@ -21,7 +21,7 @@ export interface ListMentionsRequest {
     is_appearance?: boolean;
     /** Only media published at or after this instant. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
     after?: string;
-    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
+    /** Only media published before this instant, so before=2026-09-02 includes all of 2026-09-01. Needs a paid plan: the free plan refuses it with filter_requires_paid. An ISO 8601 date (2026-09-01) or datetime with offset (2026-09-01T00:00:00Z), read in UTC. The window is half-open: after is inclusive, before is exclusive. */
     before?: string;
     details?: Arcmira.ListMentionsRequestDetails;
 }

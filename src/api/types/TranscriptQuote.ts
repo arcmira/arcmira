@@ -3,6 +3,6 @@
 export interface TranscriptQuote {
     /** Number of 15-minute blocks in the video, ceiling'd, minimum 1. */
     quarters: number;
-    /** Rows the whole video uses, 75 rows per 15-minute block. */
+    /** Rows the whole video uses, 75 rows per 15-minute block. A row is 4 credits, so Premium uses 300 credits per block. */
     rows: number;
 }
