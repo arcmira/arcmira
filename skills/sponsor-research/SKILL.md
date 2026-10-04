@@ -64,11 +64,12 @@ const id = ID ?? e.id;
 const assumed = Boolean(r?.suggested), why = r?.suggested?.evidence ?? null;
 const after = arcmira.daysAgo(90);
 const reads = [];
-let cursor, entity;
+let cursor, entity, window;
 do {
   const page = await arcmira.recommendations(id, { kind: "sponsored", after, limit: 50, cursor });
   entity = page.entity;
-  reads.push(...page.data);
+  window = page.window;
+  reads.push(...page.recommendations);
   cursor = page.has_more ? page.next_cursor : undefined;
 } while (cursor && reads.length < 500);
 const shows = new Map();
@@ -81,7 +82,7 @@ for (const x of reads) {
   shows.set(name, row);
 }
 return {
-  brand: { id, name: entity?.name ?? e?.name ?? null, type: entity?.type ?? e?.type ?? null, assumed, why }, window: { after, through: arcmira.today() }, ad_reads_total: reads.length,
+  brand: { id, name: entity?.name ?? e?.name ?? null, type: entity?.type ?? e?.type ?? null, assumed, why }, window, ad_reads_total: reads.length,
   shows: [...shows.values()].sort((a, b) => b.ad_reads - a.ad_reads).slice(0, 10).map(s => ({ ...s, episodes: s.episodes.size })),
   sample_read: reads[0] ? { said: reads[0].verbatim_quote, show: reads[0].media.source_channel?.name ?? null, date: reads[0].media.published_at, promo_code: reads[0].promo_code } : null,
 };
@@ -100,7 +101,7 @@ return {
 - An ad read is sponsored; an unpaid on-air endorsement is `kind: "organic"`. Do not mix them in one count.
 - Page with `cursor` until `has_more` is false before you count reads; one page is at most 50 rows.
 
-When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work uses included credits, then on-demand within the account's budget, without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
+When a plan or usage limit blocks a capability, briefly name the limit and any required tier reported by the API. Link to https://arcmira.com/pricing as "Plan access details" for information; do not upgrade a plan. Requested Premium work uses credits from the account's plan, then its on-demand budget, without another confirmation. Preserve error codes and reported quota or reset facts. If the user requested Premium, keep quality: "premium". Do not retry with captions, suggest third-party transcripts, or present them as equivalent. Only change the requested quality if the user asks.
 
 Search as_of is the newest publication date among the returned passages, not the date the whole index was updated. For channel freshness, call arcmira.status({ channelId }) and report channel.search_indexed_through for transcript search. A result date or an empty query does not establish missing recent episodes.
 
