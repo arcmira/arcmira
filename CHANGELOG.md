@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+Paid reads use credits from your plan, then your on-demand budget.
+
 ## 0.4.0
 
 Generated from the v1 document of 2026-10-02. The document dropped from 88 operations to 36. Routes that left it still serve over HTTP, but the SDK no longer has methods for them.
@@ -16,9 +20,9 @@ Added.
 
 Breaking changes from 0.3.
 
-- Premium is one read. `transcripts.get({ video_id, quality: "premium" })` answers `ready` (200) when the account owns the transcript. Otherwise it buys the whole video within the plan and the account's on-demand budget and answers `pending` (202) with the `job` and a `Retry-After` header. Read again after `Retry-After`; repeated reads join the same purchase and never buy twice. When the last purchase for the video failed or was refunded, the read answers `failed` (200) with the `job` and `last_attempt` and buys nothing; pass `retry: true` to buy it again. `TranscriptResult` is `TranscriptResult.Ready | TranscriptResult.Pending | TranscriptResult.Failed`; `preparation_required` is gone. Priced refusals carry one `RefusedQuote` type.
+- Premium is one read. `transcripts.get({ video_id, quality: "premium" })` answers `ready` (200) when the account owns the transcript. Otherwise it starts transcribing the whole video, using credits from the plan and then the account's on-demand budget, and answers `pending` (202) with the `job` and a `Retry-After` header. Read again after `Retry-After`; repeated reads join the same job and never use credits twice. When the last transcription of the video failed or was refunded, the read answers `failed` (200) with the `job` and `last_attempt` and uses no credits; pass `retry: true` to transcribe it again, which uses credits again. `TranscriptResult` is `TranscriptResult.Ready | TranscriptResult.Pending | TranscriptResult.Failed`; `preparation_required` is gone. Priced refusals carry one `RefusedQuote` type.
 - `transcripts.prepareAndWait` is removed, with `PreparationError`, `PreparationFailedError`, `PreparationTimeoutError`, `PremiumUnavailableError` and `PrepareAndWaitRequest`. Loop on `transcripts.get` until `state === "ready"`; the README has the loop.
-- `transcripts.request` and `transcripts.status` are removed, with `TranscriptRequestSubmitResponse`. `transcripts.listRequests` still lists past purchases.
+- `transcripts.request` and `transcripts.status` are removed, with `TranscriptRequestSubmitResponse`. `transcripts.listRequests` still lists past Premium transcriptions.
 - A Premium refusal throws from the read itself. `PaymentRequiredError` (402) carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` (403) carries `paid_plan_required`. Nothing is charged.
 - Error extras moved under `error.details`. `body.quote` is `body.error.details.quote`, `body.existing_request_id` is `body.error.details.existing_request_id`, and `body.existingId` (409 `tracker_already_exists`) is `body.error.details.existing_id`.
 - Reads take ids. `mentions.list` and `recommendations.list` require `entity_id` (`ent_N`), and `channel_id` takes a YouTube channel id (`UC` plus 22 characters). `entity_name`, `entity_type` and `channel_name` are gone. A name where an id belongs throws `BadRequestError` with code `id_required` naming the parameter. Resolve names first with `entities.resolve`.
@@ -55,7 +59,7 @@ CLI changes from 0.3.
 
 - Reads take ids. `--entity`, `--about`, `--by` and entity positionals take an `ent_` id, and `--channel` and channel positionals take a `UC` id. A name or `@handle` exits 2 before any request and prints the `arcmira resolve` command that finds the id. 0.3 resolved names silently with an extra call.
 - `--after` is inclusive and `--before` exclusive on every dated command (`mentions`, `recommendations`, `search`, `occurrences`, `episodes`). In 0.3, `--before` was inclusive on `mentions` and `recommendations`.
-- `transcripts get --quality premium` is one read that buys within the plan. It exits 4 while the transcript is transcribing; run it again later. `--wait`, `--timeout` and exit code 3 are gone. A refused read exits 1 and prints the quote.
+- `transcripts get --quality premium` is one read, which uses credits from your plan when the video is not transcribed yet. It exits 4 while the transcript is transcribing; run it again later. `--wait`, `--timeout` and exit code 3 are gone. A refused read exits 1 and prints the quote.
 - `transcripts request` and `transcripts status` are retired. They exit 2 with one line naming the replacement.
 - `recommendations --kind` takes `sponsored`, `organic`, `mention` or `all`, sent as `class`. `search --kind` takes `sponsored`, `organic` or `mention`.
 - `momentum --json` prints `{ momentum: [...] }` in place of `{ data: [...] }`.

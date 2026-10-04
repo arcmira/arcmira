@@ -58,7 +58,7 @@ type Command = {
     exitCode?: (result: any, ctx: Context) => number;
 };
 
-/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. 3 is retired with Premium preparation. */
+/** Exit codes past 0 ok, 1 API or network error and 2 usage error. A pipeline sees them even with --json. 3 is retired. */
 const EXIT_PENDING = 4;
 
 const GLOBAL: Record<string, OptionSpec> = {
@@ -94,7 +94,7 @@ const RESERVED: Record<string, string> = {
 
 /** Commands earlier versions had, each with what replaces it. */
 const RETIRED: Record<string, string> = {
-    "transcripts request": "a Premium read buys its own transcript now: arcmira transcripts get <video> --quality premium",
+    "transcripts request": "a Premium read now starts the transcription itself: arcmira transcripts get <video> --quality premium",
     "transcripts status": "read the transcript again: arcmira transcripts get <video> --quality premium answers the job while it runs",
 };
 
@@ -724,13 +724,13 @@ const COMMANDS: Record<string, Command> = {
             quality: {
                 type: "string",
                 oneOf: ["captions", "premium"],
-                help: "captions (default) or premium, Arcmira's diarized transcript on paid plans. A premium read buys the transcript within your plan, included credits first and then your on-demand budget, and exits 4 while it transcribes.",
+                help: "captions (default) or premium, Arcmira's diarized transcript on paid plans. A premium read of a video not transcribed yet uses credits from your plan, then your on-demand budget, and exits 4 while it transcribes.",
             },
             language: { type: "string", short: "l", help: "Caption language priority list, like de,en." },
             paragraphs: { type: "boolean", help: "Paragraphs for reading instead of timestamped lines." },
             start: { type: "string", number: true, help: "Window start in seconds." },
             end: { type: "string", number: true, help: "Window end in seconds." },
-            retry: { type: "boolean", help: "Premium only. Buy the transcript again after the last purchase failed." },
+            retry: { type: "boolean", help: "Premium only. Transcribe again after the last attempt failed; this uses credits again." },
         },
         run: ({ client, positionals: [video], values: v }) =>
             client.transcripts.get({
@@ -745,12 +745,12 @@ const COMMANDS: Record<string, Command> = {
         exitCode: (r: Arcmira.TranscriptResult) => {
             if (r.state === "ready") return 0;
             if (r.state === "failed") {
-                const next = r.last_attempt.status === "refund_pending" ? "Its refund is still settling; try again later." : "Run it again with --retry to buy it again.";
-                note(`The last Premium purchase for ${r.video_id} ${r.last_attempt.status === "failed" ? "failed" : "was refunded"} (${r.last_attempt.error.replace(/\.$/, "")}). ${next}`);
+                const next = r.last_attempt.status === "refund_pending" ? "Its refund is still settling; try again later." : "Run it again with --retry to transcribe it again, which uses credits again.";
+                note(`The last Premium transcription of ${r.video_id} ${r.last_attempt.status === "failed" ? "failed" : "was refunded"} (${r.last_attempt.error.replace(/\.$/, "")}). ${next}`);
                 return 1;
             }
             const eta = r.job.eta_seconds != null ? `, about ${Math.max(1, Math.round(r.job.eta_seconds / 60))} min left` : "";
-            note(`Premium for ${r.video_id} is still ${r.job.status}${eta}. Run the same command again later; it reads this job and never buys twice.`);
+            note(`Premium for ${r.video_id} is still ${r.job.status}${eta}. Run the same command again later; it reads this job and never uses credits twice.`);
             return EXIT_PENDING;
         },
         print: (r: Arcmira.TranscriptResult) => {
@@ -1223,7 +1223,7 @@ function help(name?: string): string {
         "Errors: every API error line carries the request_id to quote to support.",
         "Dates: --after is inclusive and --before exclusive, in UTC, on every dated command.",
         "Exit codes: 0 ok, 1 API or network error, 2 usage error (bad input, a name where an id belongs, no key),",
-        "  4 Premium still transcribing (run the same command again later; it never buys twice).",
+        "  4 Premium still transcribing (run the same command again later; it never uses credits twice).",
         "Telemetry: none. The CLI sends only the API requests you ask for.",
         "Docs: https://arcmira.com/docs   Worked examples: arcmira examples   Each command: arcmira <command> --help",
     );

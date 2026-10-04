@@ -416,9 +416,9 @@ const premiumFirst = await run(["transcripts", "get", "premiumVidR", "--quality"
 const premiumAgain = await run(["transcripts", "get", "premiumVidR", "--quality", "premium"]);
 g.premium_one_read = {
     pass:
-        premiumFirst.code === 4 && premiumFirst.stdout === "" && /never buys twice/.test(premiumFirst.stderr) && premiumAgain.code === 0 && premiumAgain.stdout.trim().length > 0 &&
+        premiumFirst.code === 4 && premiumFirst.stdout === "" && /never uses credits twice/.test(premiumFirst.stderr) && premiumAgain.code === 0 && premiumAgain.stdout.trim().length > 0 &&
         [...premiumFirst.requests, ...premiumAgain.requests].every((q) => q.method === "GET" && q.path === "/v1/transcripts/premiumVidR"),
-    rule: "a Premium read is one GET: 202 pending exits 4 and says to read again, the next read prints the transcript, nothing posts a purchase",
+    rule: "a Premium read is one GET: 202 pending exits 4 and says to read again, the next read prints the transcript, nothing sends a POST",
 };
 const retired = await run(["transcripts", "request", "dQw4w9WgXcQ"]);
 const retiredJson = await run(["transcripts", "status", "2f2b4a3e-8d1c-4c8e-9a0f-1b2c3d4e5f60", "--json"]);
