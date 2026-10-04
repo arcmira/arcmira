@@ -1,6 +1,6 @@
 {
   "name": "arcmira",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "YouTube transcript search with timestamps, mentions, sponsors and recommendations. Official Arcmira TypeScript SDK and CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",

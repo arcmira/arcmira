@@ -92,7 +92,7 @@ const ALIASES: Record<string, string> = { transcript: "transcripts get", follow:
 /** Names held for later versions, each with the way to reach the same endpoints today. */
 const RESERVED: Record<string, string> = {
     feedback: "use `arcmira api POST /v1/feedback --body @feedback.json` (arcmira schema submit_feedback)",
-    keys: "manage keys at https://arcmira.com/dashboard?tab=api-keys",
+    keys: "manage keys at https://arcmira.com/dashboard/api",
 };
 
 /** Commands earlier versions had, each with what replaces it. */
