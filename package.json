@@ -24,7 +24,8 @@
     "youtube-transcript-search",
     "transcript-search",
     "youtube-transcript",
-    "typescript-sdk"
+    "typescript-sdk",
+    "pi-package"
   ],
   "bin": {
     "arcmira": "./dist/cli/main.js"
@@ -282,5 +283,10 @@
     "stream": false,
     "crypto": false
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  }
 }
