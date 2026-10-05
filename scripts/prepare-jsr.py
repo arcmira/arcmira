@@ -51,7 +51,7 @@ def prepare(output: Path) -> None:
     root = output / "src/index.ts"
     if "BearerAuthProvider" in root.read_text():
         raise ValueError("Review the root BearerAuthProvider export; its source changed.")
-    root.write_text(root.read_text() + '\nexport { BearerAuthProvider } from "./auth/BearerAuthProvider.ts";\n')
+    root.write_text(root.read_text() + '\nexport type { BearerAuthProvider } from "./auth/BearerAuthProvider.ts";\n')
     exports = {}
     for name, entry in package["exports"].items():
         if name == "./package.json":
@@ -72,7 +72,7 @@ def prepare(output: Path) -> None:
     manifest = {
         "version": version, "sdk_exports": len(exports),
         "relative_import_files": changed_files, "relative_import_rewrites": rewrites,
-        "staged_adjustments": ["Two Deno runtime property guards", "Error.cause override", "Additional root BearerAuthProvider export"],
+        "staged_adjustments": ["Two Deno runtime property guards", "Error.cause override", "Root BearerAuthProvider type export"],
         "files": {str(path.relative_to(output)): hashlib.sha256(path.read_bytes()).hexdigest()
                   for path in sorted(output.rglob("*")) if path.is_file()},
     }

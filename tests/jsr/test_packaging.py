@@ -54,6 +54,18 @@ class PackagingTests(unittest.TestCase):
             self.assertFalse((first / "package.json").exists())
         self.assertEqual(hashes(ROOT / "src"), before)
 
+    def test_parity_rejects_extra_runtime_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "candidate"
+            result = prepare(output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            entry = output / "src/index.ts"
+            entry.write_text(entry.read_text() + "\nexport const unexpectedRuntimeExport = true;\n")
+            result = subprocess.run([sys.executable, str(ROOT / "scripts/check-jsr-exports.py"), str(output)],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Runtime export mismatch: .", result.stderr)
+
     def test_parity_rejects_missing_sdk_entry(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "candidate"
