@@ -12,7 +12,7 @@ Use the repository's Node/npm toolchain, Python 3.9 or later, and an already-ins
 ./scripts/ci.sh
 ```
 
-The script runs the existing npm build/tests, type checks and generation tests, four packaging-boundary checks, then the JSR checks. JSR checks stage source in a new temporary directory outside the checkout, run the full publish dry-run and ten tests, compare all SDK entry points and remove their temporary files. Only loopback network access is permitted during the tests. No Arcmira credentials, live research or model calls are needed.
+The script runs the existing npm build/tests, type checks and generation tests, five packaging-boundary checks, then the JSR checks. JSR checks stage source in a new temporary directory outside the checkout, run the full publish dry-run and ten tests, compare all SDK entry points and remove their temporary files. Only loopback network access is permitted during the tests. No Arcmira credentials, live research or model calls are needed.
 
 To keep a candidate for review after building the npm package:
 
@@ -34,11 +34,11 @@ The SDK source and generator remain unchanged in the checkout. The distribution 
 - Relative `.js` imports resolve to existing `.ts` source files. For SDK 0.4.3, this changes 576 imports in 184 files.
 - The browser `window.document` and React Native `navigator.product` checks first test property existence so Deno can type-check them.
 - `ArcmiraError.cause` has an explicit `override` modifier.
-- The root additionally exports the existing `BearerAuthProvider` class. This resolves a Deno public-declaration omission involving its merged namespace. It deliberately adds one public runtime export to the JSR package; npm exports do not change.
+- The root adds a type-only export of the existing `BearerAuthProvider` class. This resolves a Deno public-declaration omission involving its merged namespace without adding a runtime export. The npm source and exports remain unchanged.
 
 The three text patches and root-export adjustment fail when the expected source changes. Review and update the staging transform when regenerating the SDK; do not disable declaration checks or silently ignore a failed patch. The full publish dry-run uses no `--no-check`, `--allow-slow-types` or `--allow-dirty` flags.
 
-The parity check compares every npm SDK subpath and runtime export against the locally built npm ESM modules. It permits only the explicit root `BearerAuthProvider` addition. Publication checks type-check all entry points. This does not claim identical type declarations across runtimes or support beyond the tested environment.
+The parity check compares every npm SDK subpath and runtime export against the locally built npm ESM modules. It requires exact runtime-export parity, with no exceptions. A negative test verifies that an extra staged runtime export is rejected. Publication checks type-check all entry points. This does not claim identical type declarations across runtimes or support beyond the tested environment.
 
 The ten tests cover auth/query construction, source/timestamp/coverage preservation, empty responses and structured refusals. Seven exercise actual local HTTP. Refusal checks configure `maxRetries: 0` and preserve status, body, request ID and Retry-After. They do not claim that retries are disabled by default.
 

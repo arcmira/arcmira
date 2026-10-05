@@ -25,13 +25,11 @@ def check(candidate: Path) -> None:
             f'import * as jsr{i} from {json.dumps(staged.as_uri())};',
             '{',
             f'const expected = Object.keys(npm{i}).sort();',
-            f'const actual = Object.keys(jsr{i}).filter(key => !({json.dumps(name)} === "." && key === "BearerAuthProvider")).sort();',
+            f'const actual = Object.keys(jsr{i}).sort();',
             f'if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error("Runtime export mismatch: {name}");',
             f'console.log({json.dumps(name)}, JSON.stringify(expected));',
             '}',
         ])
-        if name == ".":
-            checks.append(f'if (typeof jsr{i}.BearerAuthProvider !== "function") throw new Error("Expected the reviewed BearerAuthProvider addition");')
     script = candidate / "export-parity.ts"
     script.write_text("\n".join(checks) + "\n")
     subprocess.run(["deno", "run", str(script)], check=True, cwd=candidate)
