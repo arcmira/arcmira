@@ -48,6 +48,6 @@ The ten tests cover auth/query construction, source/timestamp/coverage preservat
 2. Recheck the released npm version, source commit and intended JSR version. Confirm branded scope ownership, package availability and repository provenance linkage through the approved publisher flow.
 3. Run the full local checks on the exact release source. Keep the source commit, Deno version and artifact hashes with the release evidence. `validation-manifest.json` records deterministic candidate file hashes; it, the tests and parity script are excluded from the publishing file list.
 4. Obtain the normal publication approval and upload only the reviewed, validated source. If adding release automation, use a publication job for the prevalidated artifact with hash/source checks. Do not add GitHub build or test workflows.
-5. Verify the registry page, generated reference docs, clean installation and API-docs links before removing the unpublished notice.
+5. Verify the registry page, generated reference docs, clean installation and API-docs links before recording the release as published.
 
 No publisher workflow, credential configuration or registry upload is included here.
