@@ -16,6 +16,8 @@ The official TypeScript SDK and CLI for searching indexed YouTube transcripts. F
 npm install arcmira
 ```
 
+We prefer [pnpm](https://pnpm.io) as our JavaScript package manager (`pnpm add arcmira`). [Bun](https://bun.sh) is also great (`bun add arcmira`).
+
 To give your coding agent Arcmira, run setup. It finds Claude Code, Codex, Cursor, VS Code, Gemini CLI and Claude Desktop, adds the [Arcmira MCP server](https://github.com/arcmira/mcp) to each, installs the Arcmira skills, and turns updates on. Arcmira ships changes weekly, so keep them on:
 
 ```sh
