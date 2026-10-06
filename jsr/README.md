@@ -1,6 +1,6 @@
 # Arcmira: YouTube Transcript Search
 
-[API documentation](https://arcmira.com/docs) · [OpenAPI](https://api.arcmira.com/v1/openapi.json) · [Arcmira](https://arcmira.com)
+[Arcmira](https://arcmira.com) · [API documentation](https://arcmira.com/docs) · [OpenAPI](https://api.arcmira.com/v1/openapi.json)
 
 TypeScript SDK for finding timestamped passages, following speaker appearances across channels, researching mentions and sponsors, and managing media monitors.
 
