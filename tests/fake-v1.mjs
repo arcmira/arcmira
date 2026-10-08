@@ -1,7 +1,7 @@
 // A local fake of api.arcmira.com/v1 for the SDK and CLI tests. Bodies come from fixtures/v1.json,
 // which the private monorepo derives from the OpenAPI document, and fixtures/transcription-responses.json
 // for Premium; the mutations below are the cases the tests assert on (ids, paging, a plan gate, a 404,
-// an echoed write, a duplicate follow).
+// an echoed write, a name another monitor already follows).
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 
@@ -25,9 +25,8 @@ const PREMIUM = [
     [/^freeVid/, () => [403, premiumBody("paid_plan_required")]],
 ];
 const started = new Set();
-/** The account already follows Brex, so a follow of brex answers 409 with the existing tracker id. */
-const EXISTING_TRACKERS = new Map([["organization:brex", "trk_9"]]);
-let createdTrackers = 0;
+/** The account already follows Brex in monitor mon_9, so a name follow of brex is not added. */
+const EXISTING_TRACKERS = new Map([["organization:brex", { tracker_id: "trk_9", current_monitor_id: "mon_9" }]]);
 
 export function gateBody() {
     const e = JSON.parse(JSON.stringify(fixtures.error));
@@ -51,7 +50,11 @@ export function notFoundBody(code, message) {
 
 const ROUTES = [
     ["GET", /^\/v1\/health$/, () => [200, body("get_health")]],
-    ["GET", /^\/v1\/me$/, () => [200, body("get_me")]],
+    ["GET", /^\/v1\/me$/, () => {
+        const b = body("get_me");
+        Object.assign(b, { tier: "ultra", email_masked: "z***@example.com", account: { id: "acc_1", name: "Acme", kind: "team", plan: "ultra" }, role: "admin" });
+        return [200, b];
+    }],
     ["GET", /^\/v1\/search$/, (_m, url) => {
         const b = body("search");
         b.query = url.searchParams.get("q");
@@ -132,26 +135,21 @@ const ROUTES = [
     ["POST", /^\/v1\/monitors\/([^/]+)\/trackers$/, (m, _url, json) => [200, { monitor_id: m[1], attached_count: json.tracker_ids.length, message: "Attached." }]],
     ["POST", /^\/v1\/monitors\/([^/]+)\/entities$/, (m, _url, json) => [200, {
         monitor_id: m[1],
-        results: json.entity_ids.map((entity_id, index) => ({ entity_id, tracker_id: `trk_${100 + index}`, created: true, attached: true })),
+        results: [
+            ...(json.entity_ids ?? []).map((entity_id, index) => ({ entity_id, tracker_id: `trk_${100 + index}`, created: true, attached: true })),
+            ...(json.names ?? []).map(({ name, type }, index) => {
+                const kind = type === "org" ? "organization" : type;
+                const existing = EXISTING_TRACKERS.get(`${kind}:${name.toLowerCase()}`);
+                if (existing) return { name, type: kind, ...existing, created: false, attached: false, reason: "tracked_in_another_monitor" };
+                return { name, type: kind, tracker_id: `trk_${200 + index}`, created: true, attached: true };
+            }),
+        ],
     }]],
     ["GET", /^\/v1\/integrations\/slack$/, () => [200, { integrations: [{ id: "slk_1", team_name: "Arcmira", default_channel_id: "C1", channels: [{ id: "C1", name: "alerts" }] }] }]],
     ["GET", /^\/v1\/trackers$/, () => {
         const b = body("list_trackers");
         Object.assign(b.trackers[0], { id: "trk_1", entity_name: "Ramp", entity_type: "organization", paused: false });
         return [200, b];
-    }],
-    ["POST", /^\/v1\/trackers$/, (_m, _url, json) => {
-        const existing = EXISTING_TRACKERS.get(`${json.entity_type}:${json.entity_name.toLowerCase()}`);
-        if (existing) {
-            const e = JSON.parse(JSON.stringify(fixtures.error));
-            Object.assign(e.error, { type: "conflict_error", code: "tracker_already_exists", message: "You already follow this name.", details: { existing_id: existing }, doc_url: "https://arcmira.com/docs/errors#tracker_already_exists", request_id: "req_409" });
-            return [409, e];
-        }
-        const id = `trk_${(createdTrackers += 1) + 10}`;
-        const b = body("create_tracker");
-        Object.assign(b.tracker, { id, entity_name: json.entity_name, entity_type: json.entity_type, display_name: json.display_name ?? json.entity_name, paused: false });
-        b.message = "Following.";
-        return [201, b];
     }],
 ];
 

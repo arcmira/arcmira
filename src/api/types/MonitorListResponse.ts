@@ -3,7 +3,7 @@
 import type * as Arcmira from "../index.js";
 
 export interface MonitorListResponse {
-    /** The account's personal monitors and the monitors of every team it belongs to, ordered by dashboard sort position, then name. */
+    /** The monitors of the account the caller acts in, ordered by dashboard sort position, then name. */
     monitors: MonitorListResponse.Monitors.Item[];
 }
 

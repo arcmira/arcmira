@@ -11,10 +11,14 @@ export interface MeResponse {
     key_label: string | null;
     /** How the request authenticated: account_key is an arc_sk_ key, oauth is a token from a connected client, session is a signed-in browser. */
     credential_kind: MeResponse.CredentialKind;
-    /** The account email with the local part masked after its first character, e.g. z***@example.com. Null when the account has none. */
+    /** The email of the person calling (user_id), with the local part masked after its first character, e.g. z***@example.com. Null when the person has none. */
     email_masked: string | null;
     /** ISO 8601 time the plan credits reset: 00:00 UTC on the first of next month, on every plan. */
     period_resets_at: string;
+    /** The account whose credits and plan this request uses. user_id is the person; this is who pays. */
+    account: MeResponse.Account;
+    /** The person's role on the account: owner of their own account, or admin or member of a team. */
+    role: MeResponse.Role;
     /** Plan tier, e.g. free, pro, pro_plus, ultra, enterprise. */
     tier: string;
     /** Scopes granted to this API key, e.g. read, monitors:write, trackers:write, recommendations:read. */
@@ -36,10 +40,41 @@ export namespace MeResponse {
     } as const;
     export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind];
 
+    /**
+     * The account whose credits and plan this request uses. user_id is the person; this is who pays.
+     */
+    export interface Account {
+        /** Id of the account this request spends: the person's own account, or the team account a key or OAuth token was made in. */
+        id: string;
+        /** The team name when the account is a team, else the account holder's name. Null when the account has no name. */
+        name: string | null;
+        /** team when the account is a team, personal otherwise. */
+        kind: Account.Kind;
+        /** The account's plan tier, the same value as tier. */
+        plan: string;
+    }
+
+    export namespace Account {
+        /** team when the account is a team, personal otherwise. */
+        export const Kind = {
+            Personal: "personal",
+            Team: "team",
+        } as const;
+        export type Kind = (typeof Kind)[keyof typeof Kind];
+    }
+
+    /** The person's role on the account: owner of their own account, or admin or member of a team. */
+    export const Role = {
+        Owner: "owner",
+        Admin: "admin",
+        Member: "member",
+    } as const;
+    export type Role = (typeof Role)[keyof typeof Role];
+
     export interface Usage {
         /** Plan credits used this month, in rows (a row is 4 credits): usage.credits.plan.used divided by 4, rounded up. */
         rows_used: number;
-        /** Credits left from the plan, grants and top-ups, on-demand excluded, in rows (a row is 4 credits): divided by 4, rounded up. */
+        /** Credits left from the plan and grants, on-demand excluded, in rows (a row is 4 credits): divided by 4, rounded up. */
         rows_remaining: number;
         /** Plan credits a month, in rows (a row is 4 credits): usage.credits.plan.credits divided by 4 when the plan has a limit. */
         monthly_rows: number;
@@ -54,13 +89,11 @@ export namespace MeResponse {
          * The month in credits, the primary measure of usage. Every read uses credits from the plan, then the on-demand budget. An included plan credit is valued at $0.001; on-demand usage costs $0.002 a credit. A row is 4 credits. Present only when the credits ledger decides access.
          */
         export interface Credits {
-            /** Credits spendable now: plan, granted, purchased, and on-demand up to its cap. Null when nothing limits it. */
+            /** Credits spendable now: plan, granted, and on-demand up to its cap. Null when nothing limits it. */
             available: number | null;
             plan: Credits.Plan;
             /** Credits left in granted lots that have not expired. */
             granted: number;
-            /** Credits left in purchased top-ups. */
-            purchased: number;
             on_demand: Credits.OnDemand;
         }
 

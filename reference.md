@@ -16,7 +16,7 @@ Health check
 
 `GET /v1/me`
 
-Available even when the account has exhausted its usage allowance. Returns the credential making the request (key_id, key_label, credential_kind), the masked account email, the tier, scopes, rate limit, usage with period_resets_at, and account settings. usage.credits is the primary measure: credits from the plan, then the on-demand budget. The row fields restate it at 4 credits a row. settings.transcripts is what a transcript request that names no parameter of its own receives: every key of the account resolves against it.
+Available even when the account has exhausted its usage allowance. Returns the credential making the request (key_id, key_label, credential_kind), the masked email of the person, the account whose credits it spends (account: id, name, kind, plan) and the role the person holds on it, the tier, scopes, rate limit, usage with period_resets_at, and account settings. usage.credits is the primary measure: credits from the plan, then the on-demand budget. The row fields restate it at 4 credits a row. settings.transcripts is what a transcript request that names no parameter of its own receives: every key of the account resolves against it.
 
 ## me.updateSettings
 
@@ -228,7 +228,6 @@ Creating with notify_webhook: true and a webhook_url enables HMAC-signed webhook
 | `notify_slack` | body | no | boolean |
 | `slack_integration_id` | body | no | string |
 | `slack_channel_id` | body | no | string |
-| `team_id` | body | no | string |
 
 ## monitors.update
 
@@ -256,7 +255,7 @@ A PATCH that newly enables webhook signing (turns notify_webhook on, or sets a w
 
 `DELETE /v1/monitors/{id}`
 
-Deletes the monitor AND every tracker inside it (trackers_deleted reports how many). Cannot be undone. Retrying with the original Idempotency-Key returns the original deleted count without deleting again.
+Deletes the monitor AND every tracker inside it (trackers_deleted reports how many). Anyone in the account can restore it, with its trackers and recipients, from Recently deleted on the dashboard Monitors page for 30 days. Retrying with the original Idempotency-Key returns the original deleted count without deleting again.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -288,7 +287,7 @@ List monitor trackers
 
 `POST /v1/monitors/{id}/trackers`
 
-Attaches EXISTING trackers to the monitor by id ({ tracker_ids: ["trk_..."] }). It does not create trackers: create them first via POST /v1/trackers, then attach. Attached trackers use the monitor's delivery settings. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none are attached. attached_count reports the unique attached count.
+Moves the account's trackers into this monitor by id ({ tracker_ids: ["trk_..."] }), out of the monitors they are in. A tracker always sits in one monitor and alerts through its delivery settings. It does not create trackers: POST /v1/monitors/{id}/entities does. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none move. attached_count reports the unique moved count.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -311,7 +310,7 @@ The newest limit alert deliveries for the monitor (default 25, at most 100), as 
 
 `POST /v1/monitors/{id}/entities`
 
-Follows each entity ({ entity_ids: ["ent_..."] }) and each exact name ({ names: [{ name, type }] }) in the monitor: the monitor account's existing tracker for the entity or name (compared case-insensitively) is reused, else a tracker is created under the monitor's account (the team owner on a team monitor) for the canonical entity (a merged id follows its redirect) or the name as given, then the trackers are attached, all in one write. Use names for something not yet indexed; a channel is named by its YouTube channel id, and a channel name answers 400 id_required. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids and names together; duplicates count once. Each gets one result, ids first then names, in request order; a names result carries name and type in place of entity_id. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
+Follows each entity ({ entity_ids: ["ent_..."] }) and each exact name ({ names: [{ name, type }] }) in the monitor: the monitor account's existing tracker for the entity or name (compared case-insensitively) is reused, else a tracker is created in the monitor's account for the canonical entity (a merged id follows its redirect) or the name as given, then the trackers are attached, all in one write. Use names for something not yet indexed; a channel is named by its YouTube channel id, and a channel name answers 400 id_required. Attached trackers use the monitor's delivery settings. Supply 1 to 90 ids and names together; duplicates count once. Each gets one result, ids first then names, in request order; a names result carries name and type in place of entity_id. An id that cannot be followed comes back with attached: false and a reason (entity_not_found, entity_type_not_trackable, tracker_limit_reached, tracked_in_another_monitor) while the rest still attach; a tracker already in another monitor is left there and named in current_monitor_id. Requires the monitors:write and trackers:write scopes.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
@@ -333,44 +332,17 @@ The account's active Slack workspaces with the ids a monitor needs for Slack del
 
 All trackers for the account, newest first, with per-channel delivery counts for the current billing period. Single page, no pagination.
 
-## trackers.create
-
-`POST /v1/trackers`
-
-Creates a standalone tracker watching one exact name and type, matched case-insensitively against entities in newly analyzed media, so a tracker can exist before the entity is indexed. To follow an entity you already have an id for, use POST /v1/monitors/{id}/entities. A channel is followed by its YouTube channel id (UC plus 22 characters); a channel name answers 400 id_required. Attach it to a monitor afterwards via POST /v1/monitors/{id}/trackers. Creating a duplicate (same entity name + type) returns 409 tracker_already_exists with the existing tracker id in error.details.existing_id.
-
-| Field | Location | Required | Type |
-|---|---|---|---|
-| `Idempotency-Key` | header | no | string |
-| `entity_name` | body | yes | string |
-| `entity_type` | body | yes | string |
-| `display_name` | body | no | string |
-| `notify_email` | body | no | boolean |
-| `notify_webhook` | body | no | boolean |
-| `notify_slack` | body | no | boolean |
-| `webhook_url` | body | no | string |
-| `slack_channel_id` | body | no | string |
-| `slack_integration_id` | body | no | string |
-| `person_match_mode` | body | no | string |
-| `filters` | body | no | object |
-
 ## trackers.update
 
 `PATCH /v1/trackers/{id}`
 
-Partial update: send only the fields to change. The tracked entity itself (entity_name/entity_type) is immutable; delete and recreate to watch a different entity.
+Partial update: send only the fields to change. The tracked entity itself (entity_name/entity_type) is immutable; delete and recreate to watch a different entity. Delivery is the monitor's: change it with PATCH /v1/monitors/{id}.
 
 | Field | Location | Required | Type |
 |---|---|---|---|
 | `id` | path | yes | string |
 | `Idempotency-Key` | header | no | string |
 | `display_name` | body | no | string |
-| `notify_email` | body | no | boolean |
-| `notify_webhook` | body | no | boolean |
-| `notify_slack` | body | no | boolean |
-| `webhook_url` | body | no | string |
-| `slack_channel_id` | body | no | string |
-| `slack_integration_id` | body | no | string |
 | `person_match_mode` | body | no | string |
 | `filters` | body | no | object |
 | `paused` | body | no | boolean |
@@ -379,7 +351,7 @@ Partial update: send only the fields to change. The tracked entity itself (entit
 
 `DELETE /v1/trackers/{id}`
 
-Deletes the tracker. Cannot be undone.
+Deletes the tracker. Cannot be undone. Its monitor stays, with its delivery settings, even when this was its last tracker.
 
 | Field | Location | Required | Type |
 |---|---|---|---|

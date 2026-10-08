@@ -14,7 +14,7 @@ export interface AddEntitiesRequest {
     "Idempotency-Key"?: string;
     /** Entity ids ("ent_...") to follow in this monitor, from GET /v1/entities/resolve or search. Duplicates count once. A merged id follows its redirect to the canonical entity. */
     entity_ids?: string[];
-    /** Exact names to follow in this monitor, for a name not yet indexed or one you have no id for. The tracker is created under the monitor's account (the team owner on a team monitor) and attached in the same call; the account's tracker for the same name (compared case-insensitively) and type is reused. Duplicates count once. */
+    /** Exact names to follow in this monitor, for a name not yet indexed or one you have no id for. The tracker is created in the monitor's account and attached in the same call; the account's tracker for the same name (compared case-insensitively) and type is reused. Duplicates count once. */
     names?: AddEntitiesRequest.Names.Item[];
     /** For person trackers this request creates: mentions (default) matches others talking about the person; appearances matches the person present as a speaker, host or guest; both accepts either. Other types ignore it, and a tracker that already exists keeps its own setting (change it with PATCH /v1/trackers/{id}). */
     person_match_mode?: AddEntitiesRequest.PersonMatchMode;
