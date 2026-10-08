@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+Generated from the API document of 2026-10-08, after the on-demand pause. No type or method changed.
+
+- The API's `402 on_demand_paused` arrives as `PaymentRequiredError` with `error.type` `quota_exceeded` and no `error.unlock`. The account's included credits are used and on-demand usage is paused after a declined payment. An admin of the account updates the card at https://arcmira.com/dashboard/billing, and on-demand usage resumes once the invoice is paid.
+- The `arcmira` skill that `arcmira setup` installs names the refusal, synced from arcmira/mcp 0.10.6.
+
 ## 0.5.0
 
 Generated from the API document of 2026-10-08, after the team account changes. This release removes types and a method, so it is a minor bump while the package is 0.x.
