@@ -222,7 +222,7 @@ export class MonitorsClient {
     }
 
     /**
-     * Deletes the monitor AND every tracker inside it (trackers_deleted reports how many). Cannot be undone. Retrying with the original Idempotency-Key returns the original deleted count without deleting again.
+     * Deletes the monitor AND every tracker inside it (trackers_deleted reports how many). Anyone in the account can restore it, with its trackers and recipients, from Recently deleted on the dashboard Monitors page for 30 days. Retrying with the original Idempotency-Key returns the original deleted count without deleting again.
      *
      * @param {Arcmira.DeleteMonitorsRequest} request
      * @param {MonitorsClient.RequestOptions} requestOptions - Request-specific configuration.

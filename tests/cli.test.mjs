@@ -157,35 +157,46 @@ test("kind maps to the API's class; all sends none", async () => {
     assert.equal(fake.requests.at(-1).query.class, undefined);
 });
 
-test("follow creates a tracker by exact name and type, maps org, and attaches to a monitor", async () => {
+test("follow adds an exact name to a monitor through the entities route and maps org", async () => {
     const json = await arcmira(["follow", "Ramp", "--type", "org", "--monitor", "mon_1", "--json"]);
     assert.equal(json.code, 0, json.stderr);
-    const { tracker, attached } = JSON.parse(json.stdout);
-    const create = fake.requests.findLast((r) => r.method === "POST" && r.path === "/v1/trackers");
-    assert.deepEqual(create.body, { entity_name: "Ramp", entity_type: "organization" });
-    assert.ok(create.headers["idempotency-key"], "writes carry an Idempotency-Key");
-    assert.deepEqual([fake.requests.at(-1).path, fake.requests.at(-1).body], ["/v1/monitors/mon_1/trackers", { tracker_ids: [tracker.id] }]);
-    assert.equal(attached.monitor_id, "mon_1");
-    const human = await arcmira(["follow", "Sam Altman", "--type", "person", "--monitor", "mon_1"]);
+    const add = fake.requests.at(-1);
+    assert.deepEqual([add.method, add.path, add.body], ["POST", "/v1/monitors/mon_1/entities", { names: [{ name: "Ramp", type: "organization" }] }]);
+    assert.ok(add.headers["idempotency-key"], "writes carry an Idempotency-Key");
+    assert.equal(JSON.parse(json.stdout).results[0].tracker_id, "trk_200");
+    const human = await arcmira(["follow", "Sam Altman", "--type", "person", "--person-match-mode", "both", "-m", "mon_1"]);
     assert.equal(human.code, 0, human.stderr);
-    assert.match(human.stdout, /^trk_\d+  person        Sam Altman/m);
-    assert.match(human.stderr, /Attached to monitor mon_1\./);
-    const dup = await arcmira(["follow", "brex", "--type", "org"]);
-    assert.equal(dup.code, 1);
-    assert.match(dup.stderr, /tracker_already_exists/);
-    assert.match(dup.stderr, /^existing: trk_9$/m);
+    assert.deepEqual(fake.requests.at(-1).body, { names: [{ name: "Sam Altman", type: "person" }], person_match_mode: "both" });
+    assert.equal(human.stdout, "Sam Altman  trk_200  followed\n");
+    const elsewhere = await arcmira(["follow", "brex", "--type", "org", "--monitor", "mon_1"]);
+    assert.equal(elsewhere.code, 1);
+    assert.equal(elsewhere.stdout, "brex  trk_9  not added: tracked_in_another_monitor (monitor mon_9)\n");
+    assert.equal(fake.requests.some((r) => r.path === "/v1/trackers" && r.method === "POST"), false);
 });
 
-test("follow checks its type and takes a channel by UC id only", async () => {
+test("follow checks its type and monitor, and takes a channel by UC id only", async () => {
     const before = fake.requests.length;
-    assert.match((await arcmira(["follow", "Ramp"])).stderr, /trackers create needs --type/);
-    const show = await arcmira(["follow", "TBPN", "--type", "channel"]);
+    assert.match((await arcmira(["follow", "Ramp", "--monitor", "mon_1"])).stderr, /trackers create needs --type/);
+    const noMonitor = await arcmira(["follow", "Ramp", "--type", "org"]);
+    assert.equal(noMonitor.code, 2);
+    assert.match(noMonitor.stderr, /trackers create needs --monitor/);
+    const show = await arcmira(["follow", "TBPN", "--type", "channel", "--monitor", "mon_1"]);
     assert.equal(show.code, 2);
     assert.match(show.stderr, /try: arcmira resolve "TBPN" --type channel/);
     assert.equal(fake.requests.length, before);
-    const byId = await arcmira(["trackers", "create", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "channel", "--json"]);
+    const byId = await arcmira(["trackers", "create", "UC-DRzaGnL_vtBUpCFH5M0tg", "--type", "channel", "--monitor", "mon_1", "--json"]);
     assert.equal(byId.code, 0, byId.stderr);
-    assert.deepEqual(fake.requests.at(-1).body, { entity_name: "UC-DRzaGnL_vtBUpCFH5M0tg", entity_type: "channel" });
+    assert.deepEqual(fake.requests.at(-1).body, { names: [{ name: "UC-DRzaGnL_vtBUpCFH5M0tg", type: "channel" }] });
+});
+
+test("whoami and status name the account the key spends and the caller's role", async () => {
+    const who = await arcmira(["whoami"]);
+    assert.equal(who.code, 0, who.stderr);
+    assert.match(who.stdout, /^account Acme \(team, admin\)  plan ultra  scopes /m);
+    assert.match(who.stdout, /  as z\*\*\*@example\.com  from /);
+    assert.doesNotMatch(who.stdout, /account z\*\*\*/);
+    const status = await arcmira(["status"]);
+    assert.match(status.stdout, /^account Acme \(team, admin\)  plan ultra  /m);
 });
 
 test("monitors create and update send snake_case fields; a webhook prints its secret once", async () => {

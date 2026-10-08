@@ -8,8 +8,8 @@ export interface Alert {
     id: string;
     /** Id of the tracker (tracked entity) that produced the alert. */
     tracker_id: string | null;
-    /** Id of the monitor the tracker belongs to. Null for trackers outside a monitor. */
-    monitor_id: string | null;
+    /** Id of the monitor whose delivery sent the alert. */
+    monitor_id: string;
     /** Public id ("ent_{n}") of the entity that triggered the alert, when recorded. Null on older alerts recorded before entity_id was stored. Resolve the entity through mention_id or the embedded tracker when this is null. */
     entity_id: string | null;
     /** Public id ("men_{n}") of the mention or appearance that triggered the alert. Matches the id on /v1/mentions results. Null when not appearance-scoped. */
@@ -36,7 +36,7 @@ export interface Alert {
     created_at: string;
     /** The tracker the alert belongs to. Fields are null when the tracker was deleted. */
     tracker: Alert.Tracker;
-    /** The monitor the tracker belongs to. Null for trackers outside a monitor. */
+    /** The monitor the tracker belongs to. Null when that monitor was deleted. */
     monitor: Alert.Monitor | null;
 }
 
@@ -62,7 +62,7 @@ export namespace Alert {
     }
 
     /**
-     * The monitor the tracker belongs to. Null for trackers outside a monitor.
+     * The monitor the tracker belongs to. Null when that monitor was deleted.
      */
     export interface Monitor {
         /** Monitor id. */

@@ -15,8 +15,8 @@ test.after(() => fake.close());
 test("sends the bearer key and the SDK user agent", async () => {
     await client.me.get();
     assert.equal(last().headers.authorization, "Bearer test-key");
-    assert.equal(last().headers["user-agent"], "arcmira/0.4.3");
-    assert.equal(last().headers["x-fern-sdk-version"], "0.4.3");
+    assert.equal(last().headers["user-agent"], "arcmira/0.5.0");
+    assert.equal(last().headers["x-fern-sdk-version"], "0.5.0");
 });
 
 test("falls back to ARCMIRA_API_KEY", async () => {
@@ -65,20 +65,23 @@ test("monitor and tracker writes send snake_case bodies", async () => {
     assert.equal(monitor.name, "Ramp");
     await client.monitors.update({ id: "mon_2", paused: true });
     assert.deepEqual([last().method, last().path, last().body], ["PATCH", "/v1/monitors/mon_2", { paused: true }]);
-    const { tracker } = await client.trackers.create({ entity_name: "Mercury", entity_type: "organization" });
-    assert.deepEqual(last().body, { entity_name: "Mercury", entity_type: "organization" });
-    await client.monitors.trackers.add({ id: "mon_2", tracker_ids: [tracker.id] });
-    assert.deepEqual(last().body, { tracker_ids: [tracker.id] });
+    const named = await client.monitors.entities.add({ id: "mon_2", names: [{ name: "Mercury", type: "organization" }] });
+    assert.deepEqual([last().path, last().body], ["/v1/monitors/mon_2/entities", { names: [{ name: "Mercury", type: "organization" }] }]);
+    await client.monitors.trackers.add({ id: "mon_2", tracker_ids: [named.results[0].tracker_id] });
+    assert.deepEqual(last().body, { tracker_ids: ["trk_200"] });
     const added = await client.monitors.entities.add({ id: "mon_2", entity_ids: ["ent_14"], person_match_mode: "both" });
     assert.deepEqual(last().body, { entity_ids: ["ent_14"], person_match_mode: "both" });
     assert.equal(added.results[0].tracker_id, "trk_100");
 });
 
-test("a duplicate follow is a typed ConflictError carrying error.details.existing_id", async () => {
-    const err = await client.trackers.create({ entity_name: "brex", entity_type: "organization" }).catch((e) => e);
-    assert.ok(err instanceof Arcmira.ConflictError);
-    assert.equal(err.body.error.code, "tracker_already_exists");
-    assert.equal(err.body.error.details.existing_id, "trk_9");
+test("a name another monitor follows comes back not attached, with that monitor", async () => {
+    const { results } = await client.monitors.entities.add({ id: "mon_2", names: [{ name: "brex", type: "org" }] });
+    assert.deepEqual(results, [{ name: "brex", type: "organization", tracker_id: "trk_9", current_monitor_id: "mon_9", created: false, attached: false, reason: "tracked_in_another_monitor" }]);
+});
+
+test("me names the account the key spends and the caller's role", async () => {
+    const me = await client.me.get();
+    assert.deepEqual([me.account, me.role], [{ id: "acc_1", name: "Acme", kind: "team", plan: "ultra" }, "admin"]);
 });
 
 test("a plan gate is a typed PaymentRequiredError with the parsed body", async () => {
@@ -102,6 +105,7 @@ test("the methods whose operations left the document are gone", () => {
     for (const method of ["request", "status", "captions", "prepareAndWait"]) assert.equal(method in client.transcripts, false, method);
     for (const method of ["search", "lookup", "cards"]) assert.equal(method in client.entities, false, method);
     assert.equal("get" in client.channels, false);
+    assert.equal("create" in client.trackers, false);
 });
 
 test("a process exits promptly after a request that could not connect", async () => {

@@ -112,106 +112,7 @@ export class TrackersClient {
     }
 
     /**
-     * Creates a standalone tracker watching one exact name and type, matched case-insensitively against entities in newly analyzed media, so a tracker can exist before the entity is indexed. To follow an entity you already have an id for, use POST /v1/monitors/{id}/entities. A channel is followed by its YouTube channel id (UC plus 22 characters); a channel name answers 400 id_required. Attach it to a monitor afterwards via POST /v1/monitors/{id}/trackers. Creating a duplicate (same entity name + type) returns 409 tracker_already_exists with the existing tracker id in error.details.existing_id.
-     *
-     * @param {Arcmira.CreateTrackersRequest} request
-     * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.
-     *
-     * @throws {@link Arcmira.BadRequestError}
-     * @throws {@link Arcmira.UnauthorizedError}
-     * @throws {@link Arcmira.ForbiddenError}
-     * @throws {@link Arcmira.NotFoundError}
-     * @throws {@link Arcmira.ConflictError}
-     * @throws {@link Arcmira.TooManyRequestsError}
-     * @throws {@link Arcmira.InternalServerError}
-     * @throws {@link errors.ArcmiraError}
-     * @throws {@link errors.ArcmiraTimeoutError}
-     *
-     * @example
-     *     await client.trackers.create({
-     *         "Idempotency-Key": "8b2f6c3e-4d1a-4e7b-9c05-2f6a1b7d3e90",
-     *         entity_name: "entity_name",
-     *         entity_type: "person"
-     *     })
-     */
-    public create(
-        request: Arcmira.CreateTrackersRequest,
-        requestOptions?: TrackersClient.RequestOptions,
-    ): core.HttpResponsePromise<Arcmira.TrackerMutationResponse> {
-        return core.HttpResponsePromise.fromPromise(this.__create(request, requestOptions));
-    }
-
-    private async __create(
-        request: Arcmira.CreateTrackersRequest,
-        requestOptions?: TrackersClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Arcmira.TrackerMutationResponse>> {
-        const { "Idempotency-Key": idempotencyKey, ..._body } = request;
-        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
-        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
-            _authRequest.headers,
-            this._options?.headers,
-            mergeOnlyDefinedHeaders({ "Idempotency-Key": idempotencyKey }),
-            requestOptions?.headers,
-        );
-        const _response = await core.fetcher({
-            url: core.url.join(
-                (await core.Supplier.get(this._options.baseUrl)) ??
-                    (await core.Supplier.get(this._options.environment)) ??
-                    environments.ArcmiraEnvironment.Default,
-                "v1/trackers",
-            ),
-            method: "POST",
-            headers: _headers,
-            contentType: "application/json",
-            queryString: core.url.queryBuilder().mergeAdditional(requestOptions?.queryParams).build(),
-            requestType: "json",
-            body: mergeAdditionalBodyParameters(_body, requestOptions?.additionalBodyParameters),
-            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 60) * 1000,
-            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
-            abortSignal: requestOptions?.abortSignal,
-            fetchFn: this._options?.fetch,
-            logging: this._options.logging,
-        });
-        if (_response.ok) {
-            return { data: _response.body as Arcmira.TrackerMutationResponse, rawResponse: _response.rawResponse };
-        }
-
-        if (_response.error.reason === "status-code") {
-            switch (_response.error.statusCode) {
-                case 400:
-                    throw new Arcmira.BadRequestError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 401:
-                    throw new Arcmira.UnauthorizedError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 403:
-                    throw new Arcmira.ForbiddenError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 404:
-                    throw new Arcmira.NotFoundError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 409:
-                    throw new Arcmira.ConflictError(_response.error.body as Arcmira.Error_, _response.rawResponse);
-                case 429:
-                    throw new Arcmira.TooManyRequestsError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                case 500:
-                    throw new Arcmira.InternalServerError(
-                        _response.error.body as Arcmira.Error_,
-                        _response.rawResponse,
-                    );
-                default:
-                    throw new errors.ArcmiraError({
-                        statusCode: _response.error.statusCode,
-                        body: _response.error.body,
-                        rawResponse: _response.rawResponse,
-                    });
-            }
-        }
-
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/v1/trackers");
-    }
-
-    /**
-     * Deletes the tracker. Cannot be undone.
+     * Deletes the tracker. Cannot be undone. Its monitor stays, with its delivery settings, even when this was its last tracker.
      *
      * @param {Arcmira.DeleteTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.
@@ -306,7 +207,7 @@ export class TrackersClient {
     }
 
     /**
-     * Partial update: send only the fields to change. The tracked entity itself (entity_name/entity_type) is immutable; delete and recreate to watch a different entity.
+     * Partial update: send only the fields to change. The tracked entity itself (entity_name/entity_type) is immutable; delete and recreate to watch a different entity. Delivery is the monitor's: change it with PATCH /v1/monitors/{id}.
      *
      * @param {Arcmira.UpdateTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.

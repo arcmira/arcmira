@@ -30,8 +30,6 @@ export interface CreateMonitorsRequest {
     slack_integration_id?: string;
     /** Slack channel id to deliver to. */
     slack_channel_id?: string;
-    /** Create the monitor in this team, which the caller must belong to. The team owner pays for it and its plan sets the limits. A member may not set a webhook. Create only. */
-    team_id?: string;
 }
 
 export namespace CreateMonitorsRequest {

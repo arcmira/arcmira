@@ -110,13 +110,11 @@ try {
     else throw err;
 }
 
-// Follow an exact name. The tracker fires on newly analyzed media, even before the name is indexed.
-// A channel is followed by its YouTube channel id. A duplicate is a ConflictError with error.details.existing_id.
+// Every tracker lives in a monitor, which sets how it alerts. An indexed entity joins by id; an exact name
+// joins by name and type, and fires on newly analyzed media even before the name is indexed. A channel is
+// followed by its YouTube channel id. Each id or name gets one result; attached: false comes with a reason.
 const { monitor } = await client.monitors.create({ name: "Fintech", notify_frequency: "daily" });
-const { tracker } = await client.trackers.create({ entity_name: "Mercury", entity_type: "organization" });
-await client.monitors.trackers.add({ id: monitor.id, tracker_ids: [tracker.id] });
-// An indexed entity joins a monitor by id.
-await client.monitors.entities.add({ id: monitor.id, entity_ids: [ramp.id] });
+await client.monitors.entities.add({ id: monitor.id, entity_ids: [ramp.id], names: [{ name: "Mercury", type: "organization" }] });
 ```
 
 Every method is listed with its request and response types in [reference.md](./reference.md). The same operations, with `curl` samples, are in the [API reference](https://arcmira.com/docs/api-reference).
@@ -127,7 +125,7 @@ A method that returns a `Page` is an async iterable over rows. `page.data` holds
 
 ### Errors
 
-Every non-2xx answer throws a subclass of `ArcmiraError` named for the status: `BadRequestError`, `UnauthorizedError`, `PaymentRequiredError`, `ForbiddenError`, `NotFoundError`, `ConflictError`, `TooManyRequestsError`, `InternalServerError` and so on, all under the `Arcmira` namespace. `err.statusCode` is the status and `err.body.error` is the API's error object: `type`, `code`, `message`, `doc_url`, `request_id`, on a plan gate `gate` and `unlock.url`, and on a few codes `details` (`quote` on a priced refusal, `existing_id` on a duplicate follow). The envelope is `{ error }` alone. Switch on `type` and `gate` first; `code` is a string whose catalog is in the [errors page](https://arcmira.com/docs/errors).
+Every non-2xx answer throws a subclass of `ArcmiraError` named for the status: `BadRequestError`, `UnauthorizedError`, `PaymentRequiredError`, `ForbiddenError`, `NotFoundError`, `ConflictError`, `TooManyRequestsError`, `InternalServerError` and so on, all under the `Arcmira` namespace. `err.statusCode` is the status and `err.body.error` is the API's error object: `type`, `code`, `message`, `doc_url`, `request_id`, on a plan gate `gate` and `unlock.url`, and `details.quote` on a priced refusal. The envelope is `{ error }` alone. Switch on `type` and `gate` first; `code` is a string whose catalog is in the [errors page](https://arcmira.com/docs/errors).
 
 ### Options
 
@@ -145,7 +143,7 @@ npx arcmira resolve Ramp                          # ent_14  organization  Ramp
 npx arcmira mentions --entity ent_14 --after 2026-09-01 --before 2026-10-01
 npx arcmira search "agent payments" --limit 3
 npx arcmira resolve TBPN --type channel           # the UC id: arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg
-npx arcmira follow Ramp --type org
+npx arcmira follow Ramp --type org --monitor <monitor-id>
 npx arcmira api GET /v1/mentions -f entity_id=ent_14 --paginate
 ```
 
@@ -191,10 +189,10 @@ Data commands (they mirror the MCP client; filters take ids, arcmira resolve fin
   arcmira transcripts get <video>     full transcript of one YouTube video; --quality premium uses credits from your plan
   arcmira transcripts quote <video>   free whole-video Premium price
   arcmira occurrences --channel ...   ranked counts of the entities a set of channels or videos mention
-  arcmira status [UC id]              your plan, or a channel's coverage
+  arcmira status [UC id]              your account and plan, or a channel's coverage
 
 Follow and alert (these change the account)
-  arcmira trackers create <name> --type T   follow an exact name; --type person, organization (or org), product, topic, or channel with a UC id
+  arcmira trackers create <name> --type T --monitor ID   follow an exact name in a monitor; --type person, organization (or org), product, topic, or channel with a UC id
   arcmira trackers list                     every followed name
   arcmira monitors list                     monitors with tracker and alert counts
   arcmira monitors create <name> --frequency realtime|hourly|daily [--email ...] [--webhook-url URL] [--slack-integration ID --slack-channel ID]
@@ -206,13 +204,13 @@ Follow and alert (these change the account)
 
 Aliases
   arcmira transcript <video>          same as arcmira transcripts get (the MCP client's transcript)
-  arcmira follow <name> --type T      same as arcmira trackers create
+  arcmira follow <name> --type T -m ID  same as arcmira trackers create
 
 Account
   arcmira setup [--only agent]        connect the MCP server and skills to your coding agents, updates on
   arcmira login [email] [--code N] [--key arc_sk_...]
   arcmira logout
-  arcmira whoami                      key id, label and account, plan, scopes, rate limit, credits, and where the key came from
+  arcmira whoami                      the account the key spends and your role there, key id and label, plan, scopes, rate limit, credits, and where the key came from
   arcmira auth login                  same as arcmira login
   arcmira auth logout                 same as arcmira logout
   arcmira auth status                 same as arcmira whoami
@@ -230,7 +228,7 @@ Not available yet (each prints the arcmira api call that does the same, and exit
 Also: arcmira help [command], --help, --version
 ```
 
-Reads take ids. `--entity`, `--about`, `--by` and every entity positional take an `ent_` id; `--channel` and every channel positional take a YouTube channel id (`UC` plus 22 characters). A name or `@handle` there exits 2 before any request, with the `arcmira resolve` command that finds the id. Follows are the one place a name belongs: `arcmira follow Ramp --type org` watches the exact name, matched case-insensitively in newly analyzed media, and works before Arcmira has indexed it. A channel is followed by its UC id.
+Reads take ids. `--entity`, `--about`, `--by` and every entity positional take an `ent_` id; `--channel` and every channel positional take a YouTube channel id (`UC` plus 22 characters). A name or `@handle` there exits 2 before any request, with the `arcmira resolve` command that finds the id. Follows are the one place a name belongs: `arcmira follow Ramp --type org --monitor <monitor-id>` watches the exact name in that monitor, matched case-insensitively in newly analyzed media, and works before Arcmira has indexed it. A channel is followed by its UC id.
 
 Every dated command takes `--after` (inclusive) and `--before` (exclusive), as a date or an ISO 8601 datetime with an offset, read in UTC. September is `--after 2026-09-01 --before 2026-10-01`.
 
