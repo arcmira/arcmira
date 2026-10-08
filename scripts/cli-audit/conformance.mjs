@@ -175,10 +175,10 @@ const COMMANDS = {
         noKeyNeeded: true,
     },
     "trackers create": {
-        ok: ["trackers", "create", "Ramp", "--type", "org"],
-        bad: [["trackers", "create"], ["trackers", "create", "Ramp"], ["trackers", "create", "Ramp", "--type", "company"], ["trackers", "create", "TBPN", "--type", "channel"]],
-        typo: [["trackers", "create", "Ramp", "--tpye", "org"], "--type"],
-        ids: ["trackers", "create", "TBPN", "--type", "channel"],
+        ok: ["trackers", "create", "Ramp", "--type", "org", "--monitor", "mon_1"],
+        bad: [["trackers", "create"], ["trackers", "create", "Ramp", "--monitor", "mon_1"], ["trackers", "create", "Ramp", "--type", "org"], ["trackers", "create", "Ramp", "--type", "company", "--monitor", "mon_1"], ["trackers", "create", "TBPN", "--type", "channel", "--monitor", "mon_1"]],
+        typo: [["trackers", "create", "Ramp", "--tpye", "org", "--monitor", "mon_1"], "--type"],
+        ids: ["trackers", "create", "TBPN", "--type", "channel", "--monitor", "mon_1"],
     },
     "trackers list": { ok: ["trackers", "list"], bad: [["trackers", "list", "extra"]], typo: [["trackers", "list", "--jsn"], "--json"] },
     "monitors list": { ok: ["monitors", "list"], bad: [["monitors", "list", "extra"]], typo: [["monitors", "list", "--jsn"], "--json"] },
@@ -426,10 +426,10 @@ g.retired_commands = {
     pass: retired.code === 2 && retired.requests.length === 0 && retired.stderr.trim().split("\n").length === 1 && /is gone since 0\.4\.0; /.test(retired.stderr) && retiredJson.code === 2 && errorCodeIn(retiredJson.stderr) === "command_retired",
     rule: "retired commands (transcripts request, transcripts status): exit 2, no call, one line naming what replaced them",
 };
-const follow = await run(["follow", "Mercury", "--type", "org", "--json"]);
+const follow = await run(["follow", "Mercury", "--type", "org", "--monitor", "mon_1", "--json"]);
 g.follow_alias = {
-    pass: follow.code === 0 && follow.requests.length === 1 && parses(follow.requests[0].body)?.entity_type === "organization" && /^Aliases: .*follow is trackers create/m.test(top.stdout),
-    rule: "follow is an alias of trackers create, listed under Aliases; --type org sends organization",
+    pass: follow.code === 0 && follow.requests.length === 1 && follow.requests[0].path === "/v1/monitors/mon_1/entities" && parses(follow.requests[0].body)?.names?.[0]?.type === "organization" && /^Aliases: .*follow is trackers create/m.test(top.stdout),
+    rule: "follow is an alias of trackers create, listed under Aliases; it adds the name to the monitor and --type org sends organization",
 };
 
 const RESERVED = ["feedback", "keys"];

@@ -112,7 +112,7 @@ export class TrackersClient {
     }
 
     /**
-     * Attaches EXISTING trackers to the monitor by id ({ tracker_ids: ["trk_..."] }). It does not create trackers: create them first via POST /v1/trackers, then attach. Attached trackers use the monitor's delivery settings. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none are attached. attached_count reports the unique attached count.
+     * Moves the account's trackers into this monitor by id ({ tracker_ids: ["trk_..."] }), out of the monitors they are in. A tracker always sits in one monitor and alerts through its delivery settings. It does not create trackers: POST /v1/monitors/{id}/entities does. Supply 1 to 90 IDs. Duplicate IDs count once. Every ID must belong to the account; a missing or foreign ID returns tracker_not_found and none move. attached_count reports the unique moved count.
      *
      * @param {Arcmira.monitors.AddTrackersRequest} request
      * @param {TrackersClient.RequestOptions} requestOptions - Request-specific configuration.

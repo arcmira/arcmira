@@ -14,18 +14,6 @@ export interface UpdateTrackersRequest {
     "Idempotency-Key"?: string;
     /** Optional label shown in alerts and the dashboard. */
     display_name?: string;
-    /** Per-tracker email delivery. Default true. */
-    notify_email?: boolean;
-    /** Per-tracker webhook delivery override. Paid plans only. */
-    notify_webhook?: boolean;
-    /** Per-tracker Slack delivery override. Paid plans only. */
-    notify_slack?: boolean;
-    /** Per-tracker webhook destination override (http/https). */
-    webhook_url?: string;
-    /** Per-tracker Slack channel override. */
-    slack_channel_id?: string;
-    /** Per-tracker Slack integration override. */
-    slack_integration_id?: string;
     /** Person trackers only. Mentions (default) matches others talking about the person; appearances matches the person present as a speaker, host or guest; both accepts either. Non-person trackers reject this field. PATCH changes future and pending delivery eligibility, without backfill. */
     person_match_mode?: UpdateTrackersRequest.PersonMatchMode;
     /** Stored filter object. personMatchMode is also accepted here for person trackers. Other filter keys are retained; do not assume they change matching. */

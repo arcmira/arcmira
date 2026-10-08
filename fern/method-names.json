@@ -180,12 +180,6 @@
     ],
     "method": "list"
   },
-  "create_tracker": {
-    "group": [
-      "trackers"
-    ],
-    "method": "create"
-  },
   "update_tracker": {
     "group": [
       "trackers"

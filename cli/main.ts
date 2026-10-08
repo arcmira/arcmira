@@ -377,6 +377,10 @@ function printMonitor({ monitor: m, message }: Arcmira.MonitorMutationResponse) 
     if (m.webhook_secret) console.log(`webhook secret (shown once): ${m.webhook_secret}`);
     note(message);
 }
+/** Whose plan and credits the key spends, and the caller's role there. */
+const accountLine = ({ account, role }: Arcmira.MeResponse) => `account ${account.name ?? account.id} (${account.kind}, ${role})`;
+const entityResultLine = (x: Arcmira.MonitorEntityResult) =>
+    `${x.entity_id ?? x.name}  ${x.tracker_id ?? "-"}  ${x.attached ? (x.created ? "followed" : "attached") : `not added: ${x.reason ?? "unknown"}${x.current_monitor_id ? ` (monitor ${x.current_monitor_id})` : ""}`}`;
 const trackerLine = (t: { id: string; entity_type: string; entity_name: string; paused: boolean; monitor_id?: string }) =>
     `${t.id}  ${t.entity_type.padEnd(12)}  ${t.entity_name}${t.monitor_id ? `  monitor ${t.monitor_id}` : ""}${t.paused ? "  paused" : ""}`;
 const limit = (max: number, help: string): Record<string, OptionSpec> => ({ limit: { type: "string", short: "n", int: [1, max], help } });
@@ -518,7 +522,6 @@ function usageLine(me: Arcmira.MeResponse): string {
     const sources = [
         c.plan.credits == null ? null : `${n(Math.max(c.plan.credits - c.plan.used, 0))} plan`,
         c.granted ? `${n(c.granted)} granted` : null,
-        c.purchased ? `${n(c.purchased)} top-up` : null,
     ].filter(Boolean);
     const available = c.available == null ? "" : `, ${n(c.available)} available${sources.length > 1 ? ` (${sources.join(", ")})` : ""}`;
     return `${plan}${onDemand}${available}, resets ${day(c.plan.resets_at)}`;
@@ -835,7 +838,7 @@ const COMMANDS: Record<string, Command> = {
     status: {
         section: "data",
         operations: ["get_me", "get_channel_coverage"],
-        summary: "Your key and plan, or what the index holds for a channel.",
+        summary: "Your account, key and plan, or what the index holds for a channel.",
         usage: "status [UC...]",
         examples: ["arcmira status", "arcmira status UC-DRzaGnL_vtBUpCFH5M0tg"],
         positionals: "optional",
@@ -848,43 +851,38 @@ const COMMANDS: Record<string, Command> = {
                 return note(r.note);
             }
             const me = r as Arcmira.MeResponse;
-            console.log(`plan ${me.tier}  ${usageLine(me)}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
+            console.log(`${accountLine(me)}  plan ${me.tier}  ${usageLine(me)}  scopes ${me.scopes.join(",")}  key from ${keySource}`);
         },
     },
     "trackers create": {
         section: "follow",
-        operations: ["create_tracker", "add_monitor_trackers"],
-        summary: "Follow an exact name. Alerts fire when newly analyzed media mention it, even before Arcmira has indexed it.",
-        usage: "trackers create <exact name|UC...> --type person|organization|org|product|topic|channel [--monitor ID] [--display-name TEXT] [--person-match-mode mentions|appearances|both]",
+        operations: ["add_monitor_entities"],
+        summary: "Follow an exact name in a monitor. Alerts fire when newly analyzed media mention it, even before Arcmira has indexed it.",
+        usage: "trackers create <exact name|UC...> --type person|organization|org|product|topic|channel --monitor ID [--person-match-mode mentions|appearances|both]",
         examples: [
-            "arcmira follow Ramp --type org",
+            "arcmira follow Ramp --type org --monitor <monitor-id>",
             'arcmira follow "Sam Altman" --type person --person-match-mode both --monitor <monitor-id>',
-            "arcmira trackers create UC-DRzaGnL_vtBUpCFH5M0tg --type channel",
+            "arcmira trackers create UC-DRzaGnL_vtBUpCFH5M0tg --type channel --monitor <monitor-id>",
         ],
         positionals: "text",
         options: {
             type: { type: "string", short: "t", oneOf: FOLLOW_TYPES, help: "What the name is: person, organization (or org), product, topic or channel. Required. A channel is followed by its YouTube channel id." },
-            monitor: { type: "string", short: "m", help: "Attach the new tracker to this monitor, by the id arcmira monitors list prints." },
-            "display-name": { type: "string", help: "Label for alerts. Defaults to the name." },
+            monitor: { type: "string", short: "m", help: "The monitor that follows the name and alerts on it, by the id arcmira monitors list prints. Required." },
             "person-match-mode": { type: "string", oneOf: PERSON_MATCH_MODES, help: "For a person: mentions (default), appearances (on air) or both." },
         },
-        run: async ({ client, positionals, values: v }) => {
+        run: ({ client, positionals, values: v }) => {
             const type = str(v.type)!;
-            const created = await client.trackers.create({
+            return client.monitors.entities.add({
                 "Idempotency-Key": randomUUID(),
-                entity_name: positionals.join(" "),
-                entity_type: (type === "org" ? "organization" : type) as Arcmira.CreateTrackersRequest.EntityType,
-                display_name: str(v["display-name"]),
-                person_match_mode: str(v["person-match-mode"]) as Arcmira.CreateTrackersRequest.PersonMatchMode | undefined,
+                id: str(v.monitor)!,
+                names: [{ name: positionals.join(" "), type: (type === "org" ? "organization" : type) as Arcmira.monitors.AddEntitiesRequest.Names.Item.Type }],
+                person_match_mode: str(v["person-match-mode"]) as Arcmira.monitors.AddEntitiesRequest.PersonMatchMode | undefined,
             });
-            const monitor = str(v.monitor);
-            if (!monitor) return created;
-            return { ...created, attached: await client.monitors.trackers.add({ "Idempotency-Key": randomUUID(), id: monitor, tracker_ids: [created.tracker.id] }) };
         },
-        print: (r: Arcmira.TrackerMutationResponse & { attached?: Arcmira.MonitorAddTrackersResponse }) => {
-            console.log(trackerLine(r.tracker));
-            note(r.attached ? `${r.message} Attached to monitor ${r.attached.monitor_id}.` : r.message);
+        print: (r: Arcmira.MonitorAddEntitiesResponse) => {
+            for (const x of r.results) console.log(entityResultLine(x));
         },
+        exitCode: (r: Arcmira.MonitorAddEntitiesResponse) => (r.results.every((x) => x.attached) ? 0 : 1),
     },
     "trackers list": {
         section: "follow",
@@ -896,7 +894,7 @@ const COMMANDS: Record<string, Command> = {
         options: {},
         run: ({ client }) => client.trackers.list(),
         print: (r: Arcmira.TrackerListResponse) => {
-            if (r.trackers.length === 0) return console.log("No trackers. Follow a name: arcmira follow Ramp --type org");
+            if (r.trackers.length === 0) return console.log("No trackers. Follow a name in a monitor: arcmira follow Ramp --type org --monitor <monitor-id>");
             for (const t of r.trackers) console.log(trackerLine(t));
         },
     },
@@ -974,7 +972,7 @@ const COMMANDS: Record<string, Command> = {
         run: ({ client, positionals: [id, ...entity_ids], values: v }) =>
             client.monitors.entities.add({ "Idempotency-Key": randomUUID(), id, entity_ids: [...new Set(entity_ids)], person_match_mode: str(v["person-match-mode"]) as Arcmira.monitors.AddEntitiesRequest.PersonMatchMode | undefined }),
         print: (r: Arcmira.MonitorAddEntitiesResponse) => {
-            for (const x of r.results) console.log(`${x.entity_id}  ${x.tracker_id ?? "-"}  ${x.attached ? (x.created ? "followed" : "attached") : `not added: ${x.reason ?? "unknown"}${x.current_monitor_id ? ` (monitor ${x.current_monitor_id})` : ""}`}`);
+            for (const x of r.results) console.log(entityResultLine(x));
         },
     },
     "monitors attach": {
@@ -1051,17 +1049,17 @@ const COMMANDS: Record<string, Command> = {
     whoami: {
         section: "account",
         operations: ["get_me"],
-        summary: "The key in use: its id, label, account, plan, scopes, rate limit, credits, and where it came from.",
+        summary: "The key in use: the account it spends and your role there, its id, label, plan, scopes, rate limit, credits, and where it came from.",
         usage: "whoami",
         examples: ["arcmira whoami", "arcmira whoami --json"],
         positionals: "none",
         options: {},
         run: ({ client }) => client.me.get(),
         print: (me: Arcmira.MeResponse) => {
-            console.log(`plan ${me.tier}  scopes ${me.scopes.join(",")}  rate limit ${me.rate_limit} a minute`);
+            console.log(`${accountLine(me)}  plan ${me.tier}  scopes ${me.scopes.join(",")}  rate limit ${me.rate_limit} a minute`);
             console.log(usageLine(me));
             const credential = [me.credential_kind === "oauth" ? "oauth token" : "key", me.key_label ? `"${me.key_label}"` : "", me.key_id ?? ""].filter(Boolean).join(" ");
-            console.log(`${credential}${me.email_masked ? `  account ${me.email_masked}` : ""}  from ${keySource}`);
+            console.log(`${credential}${me.email_masked ? `  as ${me.email_masked}` : ""}  from ${keySource}`);
         },
     },
     "auth token": {
@@ -1235,7 +1233,7 @@ function help(name?: string): string {
         "  arcmira resolve Ramp                   names to ent_ ids; filter with the id: arcmira mentions --entity ent_14",
         "  arcmira resolve TBPN --type channel    shows to UC ids: arcmira sponsors UC-DRzaGnL_vtBUpCFH5M0tg",
         "  arcmira mentions --entity ent_14 --after 2026-09-01 --before 2026-10-01 --json",
-        "  arcmira follow Ramp --type org         alerts on a name, even before it is indexed",
+        "  arcmira follow Ramp --type org -m ID   alerts on a name in a monitor, even before it is indexed",
         "  arcmira api GET /v1/monitors           any endpoint; arcmira schema lists them",
         "",
         "Key: --key, then ARCMIRA_API_KEY, then the key saved by `arcmira login`.",
@@ -1275,6 +1273,7 @@ function validate(name: string, command: Command, values: Values, positionals: s
     if (name === "trackers create") {
         if (!values.type) throw new UsageError("trackers create needs --type: person, organization (or org), product, topic or channel", "missing_type");
         if (values.type === "channel") needId(positionals.join(" "), "channel", "a channel follow");
+        if (!values.monitor) throw new UsageError("trackers create needs --monitor: every tracker lives in a monitor, which sets how it alerts", "missing_monitor", "arcmira monitors list");
     }
     if (name === "monitors add" || name === "monitors attach") {
         const [, ...ids] = positionals;
@@ -1323,7 +1322,6 @@ function fail(error: unknown, json: boolean, name: string | undefined, baseUrl =
         const lines = [detail ? `error ${error.statusCode} ${detail.type} ${detail.code}: ${detail.message}` : `error ${error.statusCode ?? ""}: ${error.message.split("\n")[0]}`];
         const quote = detail?.details?.quote;
         if (quote) lines.push(`quote: ${quote.rows} rows${quote.charge ? `, ${quote.charge.amount} ${quote.charge.unit} from ${quote.charge.from}` : ""}`);
-        if (detail?.details?.existing_id) lines.push(`existing: ${detail.details.existing_id}`);
         if (detail?.unlock?.url) lines.push(`unlock: ${detail.unlock.url}`);
         else if (detail?.doc_url) lines.push(`docs: ${detail.doc_url}`);
         if (requestId) lines.push(`request_id: ${requestId}`);

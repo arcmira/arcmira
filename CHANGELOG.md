@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.0
+
+Generated from the API document of 2026-10-08, after the team account changes. This release removes types and a method, so it is a minor bump while the package is 0.x.
+
+Breaking changes from 0.4.
+
+- `client.trackers.create` is removed, with `CreateTrackersRequest`. `POST /v1/trackers` answers `410 tracker_create_retired`. Follow ids or exact names in a monitor with `client.monitors.entities.add({ id, entity_ids?, names?: [{ name, type }] })`, which reports the plan limit per entity as `reason: "tracker_limit_reached"`.
+- `Tracker` no longer has `notify_email`, `notify_webhook`, `notify_slack`, `webhook_url`, `slack_channel_id` or `slack_integration_id`, and `trackers.update` no longer takes them. A tracker alerts through its monitor's delivery; set it with `monitors.update`. `Tracker.monitor_id` is always set.
+- `monitors.create` no longer takes `team_id`. `Monitor` no longer has `team` or `muted`, and a recipient status is never `muted`.
+- `MeResponse.usage.credits.purchased` is removed.
+
+Added.
+
+- `MeResponse.account` (`id`, `name`, `kind` `personal` or `team`, `plan`) and `MeResponse.role` (`owner`, `admin` or `member`) say whose credits the key spends. `email_masked` is the person calling.
+- The API's `402 member_limit` and `402 fair_use_cap` arrive as `PaymentRequiredError` with `error.type` `quota_exceeded` and no `error.unlock`.
+
+CLI.
+
+- `arcmira whoami` and `arcmira status` print the account name, its kind and your role, as `account Acme (team, admin)`. whoami labels the masked email as the person calling (`as z***@example.com`), not the account.
+- `arcmira follow` (`trackers create`) needs `--monitor` and follows the name through the monitor's entities route. It prints one result line and exits 1 when the name was not added, for example `tracked_in_another_monitor`. `--display-name` is gone.
+- Available credits no longer list top-ups.
+
 ## 0.4.3
 
 Generated from the API document of 2026-10-04, evening, whose descriptions lead with credits. `MeResponse.period_resets_at` is a string on every plan.

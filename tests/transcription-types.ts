@@ -27,7 +27,16 @@ async function consumer() {
         const kind: 'sponsored' | 'organic' | 'mention' = row.class;
         void kind;
     }
+    await client.monitors.entities.add({ id: 'mon_1', names: [{ name: 'Ramp', type: 'organization' }] });
+    const me = await client.me.get();
+    const kind: 'personal' | 'team' = me.account.kind;
+    const role: 'owner' | 'admin' | 'member' = me.role;
+    void kind;
+    void role;
+    // @ts-expect-error trackers are created in a monitor; POST /v1/trackers is retired
     await client.trackers.create({ entity_name: 'Ramp', entity_type: 'organization' });
+    // @ts-expect-error top-up credits are gone
+    void me.usage.credits?.purchased;
     await client.monitors.update({ id: 'mon_1', paused: true });
     // @ts-expect-error reads take entity_id; names are not a filter
     await client.mentions.list({ entity_name: 'Ramp' });

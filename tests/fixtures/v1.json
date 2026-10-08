@@ -26,6 +26,13 @@
       "credential_kind": "account_key",
       "email_masked": "x",
       "period_resets_at": "x",
+      "account": {
+        "id": "x",
+        "name": "x",
+        "kind": "personal",
+        "plan": "x"
+      },
+      "role": "owner",
       "tier": "x",
       "scopes": [
         "x"
@@ -56,6 +63,13 @@
           "credential_kind": "account_key",
           "email_masked": "x",
           "period_resets_at": "x",
+          "account": {
+            "id": "x",
+            "name": "x",
+            "kind": "personal",
+            "plan": "x"
+          },
+          "role": "owner",
           "tier": "x",
           "scopes": [
             "x"
@@ -806,6 +820,58 @@
       "as_of": "x",
       "note": "x"
     },
+    "variants": {
+      "ready": {
+        "status": 200,
+        "body": {
+          "state": "ready",
+          "video": {
+            "id": "x",
+            "title": "x",
+            "channel_id": "x",
+            "channel_name": "x",
+            "published_at": "x",
+            "duration_seconds": 1,
+            "watch_url": "x"
+          },
+          "quality": "captions",
+          "source": "creator_captions",
+          "language": "x",
+          "languages": [
+            {
+              "code": "x",
+              "name": "x",
+              "generated": true
+            }
+          ],
+          "rows_billed": 1,
+          "as_of": "x",
+          "note": "x"
+        }
+      },
+      "failed": {
+        "status": 200,
+        "body": {
+          "state": "failed",
+          "quality": "premium",
+          "video_id": "x",
+          "job": {
+            "id": "x",
+            "video_id": "x",
+            "state": "pending",
+            "status": "queued",
+            "stage": "queued",
+            "created_at": "x",
+            "status_url": "x"
+          },
+          "last_attempt": {
+            "status": "failed",
+            "error": "x"
+          },
+          "note": "x"
+        }
+      }
+    },
     "responses": {
       "200": {
         "status": 200,
@@ -833,6 +899,58 @@
           "rows_billed": 1,
           "as_of": "x",
           "note": "x"
+        },
+        "variants": {
+          "ready": {
+            "status": 200,
+            "body": {
+              "state": "ready",
+              "video": {
+                "id": "x",
+                "title": "x",
+                "channel_id": "x",
+                "channel_name": "x",
+                "published_at": "x",
+                "duration_seconds": 1,
+                "watch_url": "x"
+              },
+              "quality": "captions",
+              "source": "creator_captions",
+              "language": "x",
+              "languages": [
+                {
+                  "code": "x",
+                  "name": "x",
+                  "generated": true
+                }
+              ],
+              "rows_billed": 1,
+              "as_of": "x",
+              "note": "x"
+            }
+          },
+          "failed": {
+            "status": 200,
+            "body": {
+              "state": "failed",
+              "quality": "premium",
+              "video_id": "x",
+              "job": {
+                "id": "x",
+                "video_id": "x",
+                "state": "pending",
+                "status": "queued",
+                "stage": "queued",
+                "created_at": "x",
+                "status_url": "x"
+              },
+              "last_attempt": {
+                "status": "failed",
+                "error": "x"
+              },
+              "note": "x"
+            }
+          }
         }
       },
       "202": {
@@ -1117,12 +1235,7 @@
           "slack_channel_id": "x",
           "created_at": "x",
           "updated_at": "x",
-          "team": {
-            "id": "x",
-            "name": "x"
-          },
           "access": "account",
-          "muted": true,
           "tracker_count": 1,
           "alerts_this_month": 1
         }
@@ -1148,12 +1261,7 @@
               "slack_channel_id": "x",
               "created_at": "x",
               "updated_at": "x",
-              "team": {
-                "id": "x",
-                "name": "x"
-              },
               "access": "account",
-              "muted": true,
               "tracker_count": 1,
               "alerts_this_month": 1
             }
@@ -1180,12 +1288,7 @@
         "slack_channel_id": "x",
         "created_at": "x",
         "updated_at": "x",
-        "team": {
-          "id": "x",
-          "name": "x"
-        },
         "access": "account",
-        "muted": true,
         "tracker_count": 1
       },
       "message": "x"
@@ -1209,12 +1312,7 @@
             "slack_channel_id": "x",
             "created_at": "x",
             "updated_at": "x",
-            "team": {
-              "id": "x",
-              "name": "x"
-            },
             "access": "account",
-            "muted": true,
             "tracker_count": 1
           },
           "message": "x"
@@ -1238,12 +1336,7 @@
             "slack_channel_id": "x",
             "created_at": "x",
             "updated_at": "x",
-            "team": {
-              "id": "x",
-              "name": "x"
-            },
             "access": "account",
-            "muted": true,
             "tracker_count": 1
           },
           "message": "x"
@@ -1269,12 +1362,7 @@
         "slack_channel_id": "x",
         "created_at": "x",
         "updated_at": "x",
-        "team": {
-          "id": "x",
-          "name": "x"
-        },
         "access": "account",
-        "muted": true,
         "tracker_count": 1
       },
       "message": "x"
@@ -1298,12 +1386,7 @@
             "slack_channel_id": "x",
             "created_at": "x",
             "updated_at": "x",
-            "team": {
-              "id": "x",
-              "name": "x"
-            },
             "access": "account",
-            "muted": true,
             "tracker_count": 1
           },
           "message": "x"
@@ -1377,7 +1460,6 @@
       "monitor_id": "x",
       "results": [
         {
-          "entity_id": "x",
           "tracker_id": "x",
           "created": true,
           "attached": true
@@ -1391,7 +1473,6 @@
           "monitor_id": "x",
           "results": [
             {
-              "entity_id": "x",
               "tracker_id": "x",
               "created": true,
               "attached": true
@@ -1448,17 +1529,13 @@
           "entity_name": "x",
           "entity_type": "x",
           "display_name": "x",
-          "notify_email": true,
-          "notify_webhook": true,
-          "notify_slack": true,
-          "slack_channel_id": "x",
-          "slack_integration_id": "x",
           "filters": {},
           "paused": true,
           "paused_at": "x",
           "last_notified_at": "x",
           "created_at": "x",
           "updated_at": "x",
+          "monitor_id": "x",
           "email_delivery_count": 1,
           "webhook_delivery_count": 1,
           "slack_delivery_count": 1
@@ -1476,103 +1553,19 @@
               "entity_name": "x",
               "entity_type": "x",
               "display_name": "x",
-              "notify_email": true,
-              "notify_webhook": true,
-              "notify_slack": true,
-              "slack_channel_id": "x",
-              "slack_integration_id": "x",
               "filters": {},
               "paused": true,
               "paused_at": "x",
               "last_notified_at": "x",
               "created_at": "x",
               "updated_at": "x",
+              "monitor_id": "x",
               "email_delivery_count": 1,
               "webhook_delivery_count": 1,
               "slack_delivery_count": 1
             }
           ],
           "count": 1
-        }
-      }
-    }
-  },
-  "create_tracker": {
-    "status": 200,
-    "body": {
-      "tracker": {
-        "id": "x",
-        "entity_name": "x",
-        "entity_type": "x",
-        "display_name": "x",
-        "notify_email": true,
-        "notify_webhook": true,
-        "notify_slack": true,
-        "slack_channel_id": "x",
-        "slack_integration_id": "x",
-        "filters": {},
-        "paused": true,
-        "paused_at": "x",
-        "last_notified_at": "x",
-        "created_at": "x",
-        "updated_at": "x",
-        "email_delivery_count": 1,
-        "webhook_delivery_count": 1,
-        "slack_delivery_count": 1
-      },
-      "message": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "tracker": {
-            "id": "x",
-            "entity_name": "x",
-            "entity_type": "x",
-            "display_name": "x",
-            "notify_email": true,
-            "notify_webhook": true,
-            "notify_slack": true,
-            "slack_channel_id": "x",
-            "slack_integration_id": "x",
-            "filters": {},
-            "paused": true,
-            "paused_at": "x",
-            "last_notified_at": "x",
-            "created_at": "x",
-            "updated_at": "x",
-            "email_delivery_count": 1,
-            "webhook_delivery_count": 1,
-            "slack_delivery_count": 1
-          },
-          "message": "x"
-        }
-      },
-      "201": {
-        "status": 201,
-        "body": {
-          "tracker": {
-            "id": "x",
-            "entity_name": "x",
-            "entity_type": "x",
-            "display_name": "x",
-            "notify_email": true,
-            "notify_webhook": true,
-            "notify_slack": true,
-            "slack_channel_id": "x",
-            "slack_integration_id": "x",
-            "filters": {},
-            "paused": true,
-            "paused_at": "x",
-            "last_notified_at": "x",
-            "created_at": "x",
-            "updated_at": "x",
-            "email_delivery_count": 1,
-            "webhook_delivery_count": 1,
-            "slack_delivery_count": 1
-          },
-          "message": "x"
         }
       }
     }

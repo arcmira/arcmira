@@ -9,18 +9,6 @@ export interface Tracker {
     entity_type: string;
     /** User-facing display name. Falls back to entity_name when not customized. */
     display_name: string;
-    /** True when this tracker delivers by email (default true at creation). */
-    notify_email: boolean;
-    /** True when this tracker has a per-tracker webhook override enabled. */
-    notify_webhook: boolean;
-    /** True when this tracker has a per-tracker Slack override enabled. */
-    notify_slack: boolean;
-    /** Per-tracker webhook destination override. Null when the tracker uses its monitor's delivery settings. Absent when the tracker is in a team monitor the caller does not own. */
-    webhook_url?: (string | null) | undefined;
-    /** Per-tracker Slack channel override. Null when not set. */
-    slack_channel_id: string | null;
-    /** Per-tracker Slack integration override. Null when not set. */
-    slack_integration_id: string | null;
     /** Optional matching filters as submitted. Null when none were set. */
     filters: Record<string, unknown> | null;
     /** True when the tracker is paused. */
@@ -33,8 +21,8 @@ export interface Tracker {
     created_at: string;
     /** When the tracker was last updated. */
     updated_at: string | null;
-    /** The monitor this tracker belongs to. Absent for standalone trackers. */
-    monitor_id?: string | undefined;
+    /** The monitor this tracker wakes, whose delivery its alerts use. Every tracker is in exactly one monitor. */
+    monitor_id: string;
     /** Email deliveries in the current billing period. */
     email_delivery_count: number;
     /** Webhook deliveries in the current billing period. */

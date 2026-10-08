@@ -19,13 +19,13 @@ export interface Monitor {
     digest_time?: string | undefined;
     /** True when webhook delivery is enabled. */
     notify_webhook: boolean;
-    /** Webhook destination URL. Null when no webhook is configured. Absent when access is member: only the team owner sees the webhook. */
+    /** Webhook destination URL. Null when no webhook is configured. */
     webhook_url?: (string | null) | undefined;
-    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; enablement and rotation responses support recovery with the original Idempotency-Key during the valid recovery window. Absent when access is member. */
+    /** True when a webhook signing secret exists for this monitor. The secret itself is never returned on reads; enablement and rotation responses support recovery with the original Idempotency-Key during the valid recovery window. */
     webhook_secret_set?: boolean | undefined;
-    /** Last 4 characters of the current signing secret, for identifying which secret you hold. Null until a secret exists. Absent when access is member. */
+    /** Last 4 characters of the current signing secret, for identifying which secret you hold. Null until a secret exists. */
     webhook_secret_hint?: (string | null) | undefined;
-    /** Consecutive webhook delivery failures recorded for this monitor. Reset by a secret rotation or PATCHing notify_webhook: true; 10 consecutive failures auto-disable a webhook. Note: the delivery pipeline currently accrues failures on the tracker that fired, so this monitor-level counter can lag. */
+    /** Consecutive webhook delivery failures recorded for this monitor. Reset by a secret rotation or PATCHing notify_webhook: true; 10 consecutive failures auto-disable a webhook. */
     webhook_failures?: number | undefined;
     /** When the webhook was auto-disabled after repeated failures. Null while delivery is enabled. Re-enable by PATCHing notify_webhook: true; rotation alone never re-enables. */
     webhook_disabled_at: string | null;
@@ -41,12 +41,8 @@ export interface Monitor {
     created_at: string;
     /** When the monitor was last updated. */
     updated_at: string;
-    /** The team the monitor is shared with. Null for a personal monitor. */
-    team: Monitor.Team | null;
-    /** account: the caller pays for the monitor, as its personal owner or the team owner. member: the caller is another member of its team, who may edit it but not its webhook, and may not delete it. */
+    /** account: the caller owns the account the monitor belongs to, or is an admin in it. member: the caller is a member of that team account, who may edit the monitor and its webhook but may not delete it. */
     access: Monitor.Access;
-    /** True when the caller muted this team monitor for themselves. Always false on a personal monitor. */
-    muted: boolean;
 }
 
 export namespace Monitor {
@@ -55,24 +51,22 @@ export namespace Monitor {
     export namespace EmailRecipients {
         export interface Item {
             email: string;
-            /** owner: the paying account. member: a member of the monitor's team, who receives its alerts without an invitation and does not count toward the recipient limits. external: anyone else, who must confirm first. */
+            /** owner: the address of the account the monitor belongs to. member: a teammate in that account. external: anyone else, who must confirm first. */
             role: Item.Role;
             /** The Arcmira user behind an owner or member address. Null for external recipients. */
             user_id: string | null;
-            /** muted: a team member muted this monitor for themselves. */
             status: Item.Status;
             invitation_status?: Item.InvitationStatus | undefined;
         }
 
         export namespace Item {
-            /** owner: the paying account. member: a member of the monitor's team, who receives its alerts without an invitation and does not count toward the recipient limits. external: anyone else, who must confirm first. */
+            /** owner: the address of the account the monitor belongs to. member: a teammate in that account. external: anyone else, who must confirm first. */
             export const Role = {
                 Owner: "owner",
                 Member: "member",
                 External: "external",
             } as const;
             export type Role = (typeof Role)[keyof typeof Role];
-            /** muted: a team member muted this monitor for themselves. */
             export const Status = {
                 Active: "active",
                 Pending: "pending",
@@ -81,7 +75,6 @@ export namespace Monitor {
                 Removed: "removed",
                 OwnerUnverified: "owner_unverified",
                 PlanLimited: "plan_limited",
-                Muted: "muted",
             } as const;
             export type Status = (typeof Status)[keyof typeof Status];
             export const InvitationStatus = {
@@ -94,17 +87,7 @@ export namespace Monitor {
         }
     }
 
-    /**
-     * The team the monitor is shared with. Null for a personal monitor.
-     */
-    export interface Team {
-        /** Team id. */
-        id: string;
-        /** Team name. */
-        name: string;
-    }
-
-    /** account: the caller pays for the monitor, as its personal owner or the team owner. member: the caller is another member of its team, who may edit it but not its webhook, and may not delete it. */
+    /** account: the caller owns the account the monitor belongs to, or is an admin in it. member: the caller is a member of that team account, who may edit the monitor and its webhook but may not delete it. */
     export const Access = {
         Account: "account",
         Member: "member",
