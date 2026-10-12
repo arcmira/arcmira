@@ -104,6 +104,11 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(suggestion['type'], ['object', 'null'])
         self.assertNotIn('allOf', suggestion)
 
+    def test_fake_fixtures_match_the_vendored_document(self):
+        built = runpy.run_path(str(ROOT / 'scripts/build-fixtures.py'))['build']()
+        committed = json.loads((ROOT / 'tests/fixtures/v1.json').read_text())
+        self.assertEqual(committed, built, 'run python3 scripts/build-fixtures.py')
+
     def test_package_exports_follow_the_generated_resources(self):
         exports = json.loads((ROOT / 'package.json').read_text())['exports']
         resources = {str(p.parent.relative_to(ROOT / 'src/api/resources')).replace('/resources/', '/') for p in (ROOT / 'src/api/resources').rglob('exports.ts')}
