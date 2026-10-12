@@ -189,6 +189,7 @@ export namespace TranscriptResponse {
          */
         export interface Details {
             quote?: Arcmira.RefusedQuote | undefined;
+            limit?: Arcmira.Limit | undefined;
         }
     }
 }

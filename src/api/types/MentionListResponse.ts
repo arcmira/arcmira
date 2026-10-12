@@ -15,6 +15,7 @@ export interface MentionListResponse {
     note?: string | undefined;
     /** Present with note on a free preview page. */
     unlock?: MentionListResponse.Unlock | undefined;
+    freshness?: Arcmira.Freshness | undefined;
 }
 
 export namespace MentionListResponse {

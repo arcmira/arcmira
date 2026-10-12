@@ -4,25 +4,30 @@ import type * as Arcmira from "../index.js";
 
 export interface EntityMomentumResponse {
     entity: Arcmira.EntityRef;
-    /** Absolute delta of the last 30 days against the prior 30. none when the entity has no mentions at all. */
+    /** Absolute delta of the window against the prior window of the same length. The delta it needs grows with the square root of the window: 3 at 7 days, 5 at 30, 9 at 90, 18 at 365. none when the entity has no mentions at all. */
     verdict: EntityMomentumResponse.Verdict;
     /** Newest indexed media that mentions the entity. Lead with it; it is the date the verdict is true as of. */
     as_of: string | null;
+    window: Arcmira.MomentumWindow;
     /** What the count measures. Always the shows we index, never the whole internet. */
     coverage: string;
+    /** Each count ends where window ends. On a plan whose freshness gate cut the window, nothing published after window.before is counted. */
     volume: EntityMomentumResponse.Volume;
-    /** Up to five channels by mentions in the last 30 days. */
+    /** Up to five channels by mentions in window. */
     top_shows: EntityMomentumResponse.TopShows.Item[];
-    /** Commercial split for the last 30 days. Present only on a Pro+ plan; otherwise access names the gate. */
+    /** Commercial split in window. Present only on a Pro+ plan; otherwise access names the gate. */
     paid_vs_organic?: EntityMomentumResponse.PaidVsOrganic | undefined;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: EntityMomentumResponse.Access | undefined;
+    freshness?: Arcmira.Freshness | undefined;
+    /** Present with freshness when your plan's freshness gate cut the window; note says so. */
+    unlock?: EntityMomentumResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
 }
 
 export namespace EntityMomentumResponse {
-    /** Absolute delta of the last 30 days against the prior 30. none when the entity has no mentions at all. */
+    /** Absolute delta of the window against the prior window of the same length. The delta it needs grows with the square root of the window: 3 at 7 days, 5 at 30, 9 at 90, 18 at 365. none when the entity has no mentions at all. */
     export const Verdict = {
         Accelerating: "accelerating",
         Flat: "flat",
@@ -31,6 +36,9 @@ export namespace EntityMomentumResponse {
     } as const;
     export type Verdict = (typeof Verdict)[keyof typeof Verdict];
 
+    /**
+     * Each count ends where window ends. On a plan whose freshness gate cut the window, nothing published after window.before is counted.
+     */
     export interface Volume {
         mentions_7d: number;
         mentions_30d: number;
@@ -41,6 +49,13 @@ export namespace EntityMomentumResponse {
         mentions_90d: number;
         /** All-time mentions in the index. */
         total: number;
+        /** Mentions in window. Equals mentions_30d when days is 30. */
+        mentions_window: number;
+        /** Mentions in the same number of days before window.after. Equals mentions_prior_30d when days is 30. */
+        mentions_prior_window: number;
+        delta_window_absolute: number;
+        /** Percent change against the prior window. Null when the prior window was zero. */
+        delta_window_pct: number | null;
     }
 
     export type TopShows = TopShows.Item[];
@@ -56,7 +71,7 @@ export namespace EntityMomentumResponse {
     }
 
     /**
-     * Commercial split for the last 30 days. Present only on a Pro+ plan; otherwise access names the gate.
+     * Commercial split in window. Present only on a Pro+ plan; otherwise access names the gate.
      */
     export interface PaidVsOrganic {
         ad_reads: number;
@@ -156,6 +171,17 @@ export namespace EntityMomentumResponse {
          */
         export interface Details {
             quote?: Arcmira.RefusedQuote | undefined;
+            limit?: Arcmira.Limit | undefined;
         }
+    }
+
+    /**
+     * Present with freshness when your plan's freshness gate cut the window; note says so.
+     */
+    export interface Unlock {
+        /** The plan that lifts the freshness gate. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

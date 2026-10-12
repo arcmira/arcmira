@@ -27,6 +27,8 @@ export interface MeResponse {
     rate_limit: number;
     /** True when the plan includes the Recommendations API (commercial intelligence endpoints). */
     recommendations_api_enabled: boolean;
+    /** Where results stop for this account now: the free plan, and a paid plan past its usage limit, read media after a delay. Dated reads cut their window at served_through and say so. Null when results are current. */
+    freshness: MeResponse.Freshness | null;
     usage: MeResponse.Usage;
     settings: Arcmira.AccountSettings;
 }
@@ -70,6 +72,16 @@ export namespace MeResponse {
         Member: "member",
     } as const;
     export type Role = (typeof Role)[keyof typeof Role];
+
+    /**
+     * Where results stop for this account now: the free plan, and a paid plan past its usage limit, read media after a delay. Dated reads cut their window at served_through and say so. Null when results are current.
+     */
+    export interface Freshness {
+        /** Days after publication before this plan reads a video. */
+        delay_days: number;
+        /** YYYY-MM-DD (UTC). Results on this plan stop at this publish date; media published after it is not read. */
+        served_through: string;
+    }
 
     export interface Usage {
         /** Plan credits used this month, in rows (a row is 4 credits): usage.credits.plan.used divided by 4, rounded up. */

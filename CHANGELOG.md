@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0
+
+Generated from the API document of 2026-10-12, after the clear-language release (arcmira/mcp 0.10.7). One field set is removed, so it is a minor bump while the package is 0.x.
+
+- `client.entities.momentum({ id, days })` takes a lookback window from 7 to 365 days (default 30). The response adds `window` (`after`, `before`, `days`) and `volume.mentions_window`, `mentions_prior_window`, `delta_window_absolute` and `delta_window_pct`; the verdict and top shows cover that window. Each call uses 10 credits at any window. The CLI takes `arcmira momentum <ent_...> --days N`.
+- `MeResponse.freshness` (`delay_days`, `served_through`) says where results stop on a plan with a delay. Mentions, counts and episode lists carry `freshness` and `unlock` when the plan's delay cut the window.
+- Errors carry `details.limit` (`kind`, `amount`, `used`, `unit`, `resets_at`): the limit a refusal met, such as plan credits, the on-demand budget, a member's on-demand limit or Premium hours.
+- Breaking: `TranscriptSearchResponse.partial` and `failed_batches` are removed. The API no longer sends them.
+- The README states usage as fact: the on-demand budget is set in the dashboard and Arcmira enforces it, so no call takes a spending amount.
+- The skills `arcmira setup` installs are synced from arcmira/mcp 0.10.7: usage stated as facts, no scripted refusal replies, and date windows default to the last 90 days.
+
 ## 0.5.1
 
 Generated from the API document of 2026-10-08, after the on-demand pause. No type or method changed.

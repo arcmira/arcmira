@@ -18,6 +18,9 @@ export interface ChannelVideosResponse {
     index_age_days: number | null;
     /** Same as indexed_through. */
     as_of: string | null;
+    freshness?: Arcmira.Freshness | undefined;
+    /** Present with freshness when your plan's freshness gate cut the window; note says so. */
+    unlock?: ChannelVideosResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
 }
@@ -53,5 +56,15 @@ export namespace ChannelVideosResponse {
             /** The episode on arcmira.com, absolute. */
             watch_url: string;
         }
+    }
+
+    /**
+     * Present with freshness when your plan's freshness gate cut the window; note says so.
+     */
+    export interface Unlock {
+        /** The plan that lifts the freshness gate. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

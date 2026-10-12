@@ -9,4 +9,6 @@
 export interface MomentumEntitiesRequest {
     /** Entity id, ent_{n} or the numeric id. Merged ids follow their redirect. */
     id: string;
+    /** Lookback window in days, 7 to 365. Default 30. The card counts mentions in that many days, and in as many days before them, as mentions_window and mentions_prior_window. Pass the window the rest of your answer uses. */
+    days?: number;
 }
