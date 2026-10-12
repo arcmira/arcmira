@@ -1,5 +1,5 @@
 // A local fake of api.arcmira.com/v1 for the SDK and CLI tests. Bodies come from fixtures/v1.json,
-// which is derived from the OpenAPI document, and fixtures/transcription-responses.json
+// which scripts/build-fixtures.py writes from fern/openapi.json, and fixtures/transcription-responses.json
 // for Premium; the mutations below are the cases the tests assert on (ids, paging, a plan gate, a 404,
 // an echoed write, a name another monitor already follows).
 import { createServer } from "node:http";

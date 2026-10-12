@@ -260,7 +260,7 @@ Every dated command takes `--after` (inclusive) and `--before` (exclusive), as a
 
 ## Development
 
-`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. `cli/` (except `cli/operations.ts`), `tests/` and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`).
+`src/` is generated from the Arcmira OpenAPI document by [Fern](https://github.com/fern-api/fern); do not edit it by hand, a regeneration overwrites it. `cli/` (except `cli/operations.ts`), `tests/` (except `tests/fixtures/v1.json`) and this file are hand-written. `npm test` builds and runs the tests against a local fake of the API (`tests/fake-v1.mjs`, bodies in `tests/fixtures/v1.json`, written from `fern/openapi.json` by `scripts/build-fixtures.py`).
 
 ## License
 
@@ -268,7 +268,7 @@ Apache-2.0. See [LICENSE](./LICENSE).
 
 ## Regenerate the SDK
 
-Run `npm run generate -- <path to arcmira-v1.json>` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It vendors the spec into `fern/openapi.json` (omit the path to reuse the vendored copy), pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and regenerates `src/`, `reference.md` and `cli/operations.ts`.
+Run `npm run generate -- <path to arcmira-v1.json>` with Node 22 or newer, Python 3, Docker, and Fern access for the `arcmira` organization. It vendors the spec into `fern/openapi.json` (omit the path to reuse the vendored copy), pins Fern CLI 5.131.1 and TypeScript generator 3.96.0, disables CLI version redirection and telemetry, and regenerates `src/`, `reference.md`, `cli/operations.ts` and the test fixtures.
 
 `fern/method-names.json` names the SDK group and method of every operation by its `operationId`; an operation it does not name, or a name for an operation the spec lacks, fails generation. The overlay combines success schemas into a `state` union and discovers cursor collections from their schemas. The installer rewrites the `exports` map in `package.json` from the generated resources. Unknown or ambiguous collections fail generation. An exact checked patch keeps request timer cleanup in `finally` until the pinned generator includes the fix. Generated source is never edited by hand.
 

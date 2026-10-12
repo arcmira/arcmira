@@ -17,50 +17,6 @@
       }
     }
   },
-  "get_openapi_document": {
-    "status": 200,
-    "body": {
-      "openapi": "x",
-      "info": {
-        "title": "x",
-        "version": "x",
-        "contact": {
-          "name": "x",
-          "url": "x"
-        }
-      },
-      "servers": [
-        {
-          "url": "x"
-        }
-      ],
-      "paths": {},
-      "components": {}
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "openapi": "x",
-          "info": {
-            "title": "x",
-            "version": "x",
-            "contact": {
-              "name": "x",
-              "url": "x"
-            }
-          },
-          "servers": [
-            {
-              "url": "x"
-            }
-          ],
-          "paths": {},
-          "components": {}
-        }
-      }
-    }
-  },
   "get_me": {
     "status": 200,
     "body": {
@@ -167,60 +123,6 @@
               "timestamps": true
             }
           }
-        }
-      }
-    }
-  },
-  "create_signup": {
-    "status": 202,
-    "body": {
-      "next": {
-        "method": "POST",
-        "url": "x"
-      },
-      "expires_in": 1
-    },
-    "responses": {
-      "202": {
-        "status": 202,
-        "body": {
-          "next": {
-            "method": "POST",
-            "url": "x"
-          },
-          "expires_in": 1
-        }
-      }
-    }
-  },
-  "verify_signup": {
-    "status": 201,
-    "body": {
-      "key": "x",
-      "key_id": "x",
-      "header": "x",
-      "scopes": [
-        "x"
-      ],
-      "tier": "x",
-      "rows_allotted": 1,
-      "next": "x",
-      "docs_url": "x"
-    },
-    "responses": {
-      "201": {
-        "status": 201,
-        "body": {
-          "key": "x",
-          "key_id": "x",
-          "header": "x",
-          "scopes": [
-            "x"
-          ],
-          "tier": "x",
-          "rows_allotted": 1,
-          "next": "x",
-          "docs_url": "x"
         }
       }
     }
