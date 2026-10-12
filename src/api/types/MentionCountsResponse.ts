@@ -19,6 +19,9 @@ export interface MentionCountsResponse {
     shared: MentionCountsResponse.Shared.Item[];
     /** Newest media across rows. Null when there are none. */
     as_of: string | null;
+    freshness?: Arcmira.Freshness | undefined;
+    /** Present with freshness when your plan's freshness gate cut the window; note says so. */
+    unlock?: MentionCountsResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
 }
@@ -99,5 +102,15 @@ export namespace MentionCountsResponse {
                 }
             }
         }
+    }
+
+    /**
+     * Present with freshness when your plan's freshness gate cut the window; note says so.
+     */
+    export interface Unlock {
+        /** The plan that lifts the freshness gate. */
+        tier: string;
+        /** Where to start that plan. */
+        url: string;
     }
 }

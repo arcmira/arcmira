@@ -633,19 +633,21 @@ const COMMANDS: Record<string, Command> = {
     momentum: {
         section: "data",
         operations: ["get_entity_momentum"],
-        summary: "Spoken-web heat for one to four entities: 7 and 30 day volume against the prior 30.",
-        usage: "momentum <ent_...> [ent_... up to 4]",
-        examples: ["arcmira momentum ent_14", "arcmira momentum ent_14 ent_258320"],
+        summary: "Spoken-web heat for one to four entities: volume in a window of days against the same number of days before it. 10 credits per entity.",
+        usage: "momentum <ent_...> [ent_... up to 4] [--days N]",
+        examples: ["arcmira momentum ent_14", "arcmira momentum ent_14 ent_258320 --days 90"],
         positionals: "many",
-        options: {},
-        run: async ({ client, positionals }) => {
+        options: {
+            days: { type: "string", int: [7, 365], help: "Lookback window in days, 7 to 365. Default 30." },
+        },
+        run: async ({ client, positionals, values: v }) => {
             if (positionals.length > 4) throw new UsageError("momentum takes one to four entities", "too_many_entities");
-            return { momentum: await Promise.all(positionals.map((id) => client.entities.momentum({ id }))) };
+            return { momentum: await Promise.all(positionals.map((id) => client.entities.momentum({ id, days: num(v.days) }))) };
         },
         print: ({ momentum }: { momentum: Arcmira.EntityMomentumResponse[] }) => {
             for (const r of momentum) {
                 const v = r.volume as unknown as Record<string, number>;
-                console.log(`${r.entity.name} (${r.entity.id}): ${r.verdict}  as of ${day(r.as_of)}  ${Object.entries(v).map(([k, n]) => `${k}=${n}`).join("  ")}`);
+                console.log(`${r.entity.name} (${r.entity.id}): ${r.verdict}  ${r.window.days} days to ${day(r.window.before)}  ${Object.entries(v).map(([k, n]) => `${k}=${n}`).join("  ")}`);
                 for (const s of r.top_shows.slice(0, 5)) console.log(`  ${String(s.mentions).padStart(5)}  ${s.channel_name ?? s.channel_id}`);
                 if (r.paid_vs_organic) console.log(`  paid vs organic: ad reads ${r.paid_vs_organic.ad_reads}, endorsements ${r.paid_vs_organic.endorsements}, organic ${r.paid_vs_organic.organic}`);
             }

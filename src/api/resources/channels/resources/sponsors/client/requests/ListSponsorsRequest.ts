@@ -13,8 +13,8 @@ export interface ListSponsorsRequest {
     channel_id: string;
     /** Sponsors with fewer ad reads are excluded. Default 3. Pro+ only; on other plans passing it is refused with filter_requires_paid. */
     min_ad_reads?: number;
-    /** Filter against the curated known-advertisers dataset. Pro+ only. */
+    /** Filter against the curated known-advertisers dataset. Pro+ only; on other plans passing it is refused with filter_requires_paid. */
     status?: Arcmira.channels.ListSponsorsRequestStatus;
-    /** Sponsors to return. Default 100. Pro+ only; other plans receive the free slice. */
+    /** Sponsors to return. Default 100. Pro+ only; on other plans passing it is refused with filter_requires_paid, and omitting it serves the free slice. */
     limit?: number;
 }

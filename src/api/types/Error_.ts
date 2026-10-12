@@ -96,6 +96,7 @@ export namespace Error_ {
          */
         export interface Details {
             quote?: Arcmira.RefusedQuote | undefined;
+            limit?: Arcmira.Limit | undefined;
         }
     }
 }

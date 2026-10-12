@@ -13,17 +13,14 @@ export interface TranscriptSearchResponse {
     window: Arcmira.PublicationWindow;
     /** Ranked slices. Empty means no hit in the shows we index; say so, never search the open web. */
     chunks: Arcmira.TranscriptSearchChunk[];
-    /** True when some retrieval batches failed and these chunks are what survived. */
-    partial?: boolean | undefined;
-    /** How many batches failed when partial is true. */
-    failed_batches?: number | undefined;
     /** Newest published_at among the chunks. Null when there are none. */
     as_of: string | null;
     /** Health of the search index behind these results. Catalog routes are unaffected by it. */
     search_index: TranscriptSearchResponse.SearchIndex;
     /** The gate that reduced this response. Present only when something was withheld; carries the same code, gate, and unlock an outright refusal would. */
     access?: TranscriptSearchResponse.Access | undefined;
-    /** Present when your plan's freshness gate cut the window and nothing older matched; note says so. */
+    freshness?: Arcmira.Freshness | undefined;
+    /** Present with freshness when your plan's freshness gate cut the window; note says so. */
     unlock?: TranscriptSearchResponse.Unlock | undefined;
     /** One steering sentence for the agent reading this. */
     note: string;
@@ -168,11 +165,12 @@ export namespace TranscriptSearchResponse {
          */
         export interface Details {
             quote?: Arcmira.RefusedQuote | undefined;
+            limit?: Arcmira.Limit | undefined;
         }
     }
 
     /**
-     * Present when your plan's freshness gate cut the window and nothing older matched; note says so.
+     * Present with freshness when your plan's freshness gate cut the window; note says so.
      */
     export interface Unlock {
         /** The plan that lifts the freshness gate. */

@@ -44,7 +44,7 @@ if (read.state === "ready") {
 }
 ```
 
-A Premium read is one GET. When your account does not own the transcript yet, the read starts transcribing it and uses credits from your plan, then your on-demand budget. You set that budget in the dashboard, and it is the approval. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never use credits twice. When the last transcription failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and uses no credits; read with `retry: true` to transcribe it again, which uses credits again. `transcripts.quote({ video_id })` shows the credits first, free.
+A Premium read is one GET. When your account does not own the transcript yet, the read starts transcribing it and uses credits from your plan, then your on-demand budget. You set that budget in the dashboard, and Arcmira enforces it, so no call takes a spending amount. The answer is `state: "ready"` (HTTP 200) with the lines, or `state: "pending"` (HTTP 202) with the `job` while it transcribes. Read again after `Retry-After` or `job.next_poll_seconds`. Repeated and concurrent reads join the same job and never use credits twice. When the last transcription failed or was refunded, the read answers `state: "failed"` (HTTP 200) with `last_attempt` and uses no credits; read with `retry: true` to transcribe it again, which uses credits again. `transcripts.quote({ video_id })` shows the credits first, free.
 
 A read your plan and budget cannot cover throws instead. `PaymentRequiredError` carries `quota_exceeded` or `spend_limit_exceeded`, and `ForbiddenError` carries `paid_plan_required` on a free plan. Both carry the price in `err.body.error.details.quote`.
 
@@ -182,7 +182,7 @@ Data commands (they mirror the MCP client; filters take ids, arcmira resolve fin
   arcmira search <query>              spoken transcript passages for a topic or phrase; --about, --by, --entity (ent_ ids), --channel (UC ids), --kind
   arcmira resolve <name>              a name to one entity id: the best match, an assumed pick, or options; --context settles close calls
   arcmira mentions --entity <ent_id>  where an entity was mentioned, newest first
-  arcmira momentum <ent_id>...        7 and 30 day volume for one to four entities
+  arcmira momentum <ent_id>...        volume in a window against the one before, for one to four entities; --days 7 to 365
   arcmira sponsors <UC id>            recurring sponsors of a YouTube channel
   arcmira recommendations <ent_id>    who recommends an entity on air: --kind sponsored, organic, mention or all
   arcmira episodes <UC id>            newest indexed videos of a channel

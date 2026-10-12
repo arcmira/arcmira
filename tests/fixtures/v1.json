@@ -17,6 +17,50 @@
       }
     }
   },
+  "get_openapi_document": {
+    "status": 200,
+    "body": {
+      "openapi": "x",
+      "info": {
+        "title": "x",
+        "version": "x",
+        "contact": {
+          "name": "x",
+          "url": "x"
+        }
+      },
+      "servers": [
+        {
+          "url": "x"
+        }
+      ],
+      "paths": {},
+      "components": {}
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "openapi": "x",
+          "info": {
+            "title": "x",
+            "version": "x",
+            "contact": {
+              "name": "x",
+              "url": "x"
+            }
+          },
+          "servers": [
+            {
+              "url": "x"
+            }
+          ],
+          "paths": {},
+          "components": {}
+        }
+      }
+    }
+  },
   "get_me": {
     "status": 200,
     "body": {
@@ -39,6 +83,10 @@
       ],
       "rate_limit": 1,
       "recommendations_api_enabled": true,
+      "freshness": {
+        "delay_days": 1,
+        "served_through": "x"
+      },
       "usage": {
         "rows_used": 1,
         "rows_remaining": 1,
@@ -76,6 +124,10 @@
           ],
           "rate_limit": 1,
           "recommendations_api_enabled": true,
+          "freshness": {
+            "delay_days": 1,
+            "served_through": "x"
+          },
           "usage": {
             "rows_used": 1,
             "rows_remaining": 1,
@@ -93,116 +145,82 @@
       }
     }
   },
-  "search": {
+  "update_my_settings": {
     "status": 200,
     "body": {
-      "query": "x",
-      "limit": 1,
-      "returned": 1,
-      "filters": {
-        "channel_ids": [
-          "x"
-        ],
-        "entity_ids": [
-          "x"
-        ],
-        "about": [
-          {
-            "id": "x",
-            "name": "x",
-            "type": "x"
-          }
-        ],
-        "by": [
-          {
-            "id": "x",
-            "name": "x",
-            "type": "x"
-          }
-        ],
-        "kind": [
-          "sponsored"
-        ]
-      },
-      "window": {
-        "after": "x",
-        "before": "x"
-      },
-      "chunks": [
-        {
-          "id": "x",
-          "video_id": "x",
-          "channel_id": "x",
-          "source": "x",
-          "published_at": "x",
-          "text": "x",
-          "start_seconds": 1,
-          "watch_url": "x",
-          "score": 1
+      "settings": {
+        "transcripts": {
+          "quality": "captions",
+          "language": "x",
+          "timestamps": true
         }
-      ],
-      "as_of": "x",
-      "search_index": {
-        "state": "live",
-        "missing_before": "x"
-      },
-      "note": "x"
+      }
     },
     "responses": {
       "200": {
         "status": 200,
         "body": {
-          "query": "x",
-          "limit": 1,
-          "returned": 1,
-          "filters": {
-            "channel_ids": [
-              "x"
-            ],
-            "entity_ids": [
-              "x"
-            ],
-            "about": [
-              {
-                "id": "x",
-                "name": "x",
-                "type": "x"
-              }
-            ],
-            "by": [
-              {
-                "id": "x",
-                "name": "x",
-                "type": "x"
-              }
-            ],
-            "kind": [
-              "sponsored"
-            ]
-          },
-          "window": {
-            "after": "x",
-            "before": "x"
-          },
-          "chunks": [
-            {
-              "id": "x",
-              "video_id": "x",
-              "channel_id": "x",
-              "source": "x",
-              "published_at": "x",
-              "text": "x",
-              "start_seconds": 1,
-              "watch_url": "x",
-              "score": 1
+          "settings": {
+            "transcripts": {
+              "quality": "captions",
+              "language": "x",
+              "timestamps": true
             }
-          ],
-          "as_of": "x",
-          "search_index": {
-            "state": "live",
-            "missing_before": "x"
+          }
+        }
+      }
+    }
+  },
+  "create_signup": {
+    "status": 202,
+    "body": {
+      "next": {
+        "method": "POST",
+        "url": "x"
+      },
+      "expires_in": 1
+    },
+    "responses": {
+      "202": {
+        "status": 202,
+        "body": {
+          "next": {
+            "method": "POST",
+            "url": "x"
           },
-          "note": "x"
+          "expires_in": 1
+        }
+      }
+    }
+  },
+  "verify_signup": {
+    "status": 201,
+    "body": {
+      "key": "x",
+      "key_id": "x",
+      "header": "x",
+      "scopes": [
+        "x"
+      ],
+      "tier": "x",
+      "rows_allotted": 1,
+      "next": "x",
+      "docs_url": "x"
+    },
+    "responses": {
+      "201": {
+        "status": 201,
+        "body": {
+          "key": "x",
+          "key_id": "x",
+          "header": "x",
+          "scopes": [
+            "x"
+          ],
+          "tier": "x",
+          "rows_allotted": 1,
+          "next": "x",
+          "docs_url": "x"
         }
       }
     }
@@ -315,6 +333,54 @@
             }
           ],
           "note": "x"
+        }
+      }
+    }
+  },
+  "get_entity": {
+    "status": 200,
+    "body": {
+      "entity": {
+        "id": "x",
+        "canonical_id": "x",
+        "name": "x",
+        "type": "x",
+        "platform": "x",
+        "url": "x",
+        "image_url": "x",
+        "image_checked_at": "x",
+        "owner_entity_id": "x",
+        "is_canonical": true,
+        "merged_from_id": "x",
+        "slug": "x",
+        "route": "x",
+        "page": "x",
+        "appearances_page": "x",
+        "mentions_page": "x"
+      }
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "entity": {
+            "id": "x",
+            "canonical_id": "x",
+            "name": "x",
+            "type": "x",
+            "platform": "x",
+            "url": "x",
+            "image_url": "x",
+            "image_checked_at": "x",
+            "owner_entity_id": "x",
+            "is_canonical": true,
+            "merged_from_id": "x",
+            "slug": "x",
+            "route": "x",
+            "page": "x",
+            "appearances_page": "x",
+            "mentions_page": "x"
+          }
         }
       }
     }
@@ -577,70 +643,92 @@
       }
     }
   },
-  "get_entity_momentum": {
+  "submit_feedback": {
     "status": 200,
     "body": {
-      "entity": {
-        "id": "x",
-        "name": "x",
-        "type": "x",
-        "slug": "x",
-        "page": "x"
-      },
-      "verdict": "accelerating",
-      "as_of": "x",
-      "coverage": "x",
-      "volume": {
-        "mentions_7d": 1,
-        "mentions_30d": 1,
-        "mentions_prior_30d": 1,
-        "delta_30d_absolute": 1,
-        "delta_30d_pct": 1,
-        "mentions_90d": 1,
-        "total": 1
-      },
-      "top_shows": [
+      "feedback_id": "x",
+      "type": "x",
+      "query": {},
+      "applied": 1,
+      "unchanged": 1,
+      "failed": 1,
+      "logged": 1,
+      "corrections": [
         {
-          "channel_id": "x",
-          "channel_name": "x",
-          "channel_page": "x",
-          "mentions": 1
+          "item_id": "x",
+          "item_kind": "x",
+          "status": "applied"
         }
-      ],
-      "note": "x"
+      ]
     },
     "responses": {
       "200": {
         "status": 200,
         "body": {
-          "entity": {
-            "id": "x",
-            "name": "x",
-            "type": "x",
-            "slug": "x",
-            "page": "x"
-          },
-          "verdict": "accelerating",
-          "as_of": "x",
-          "coverage": "x",
-          "volume": {
-            "mentions_7d": 1,
-            "mentions_30d": 1,
-            "mentions_prior_30d": 1,
-            "delta_30d_absolute": 1,
-            "delta_30d_pct": 1,
-            "mentions_90d": 1,
-            "total": 1
-          },
-          "top_shows": [
+          "feedback_id": "x",
+          "type": "x",
+          "query": {},
+          "applied": 1,
+          "unchanged": 1,
+          "failed": 1,
+          "logged": 1,
+          "corrections": [
             {
-              "channel_id": "x",
-              "channel_name": "x",
-              "channel_page": "x",
-              "mentions": 1
+              "item_id": "x",
+              "item_kind": "x",
+              "status": "applied"
             }
-          ],
-          "note": "x"
+          ]
+        }
+      }
+    }
+  },
+  "get_feedback": {
+    "status": 200,
+    "body": {
+      "feedback_id": "x",
+      "type": "x",
+      "status": "pending_review",
+      "query": {},
+      "notes": "x",
+      "created_at": "x",
+      "corrections": [
+        {
+          "item_id": "x",
+          "item_kind": "x",
+          "issue_type": "x",
+          "reason": "x",
+          "suggested_change": {},
+          "notes": "x",
+          "status": "pending_review",
+          "resolution_note": "x",
+          "created_at": "x"
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "feedback_id": "x",
+          "type": "x",
+          "status": "pending_review",
+          "query": {},
+          "notes": "x",
+          "created_at": "x",
+          "corrections": [
+            {
+              "item_id": "x",
+              "item_kind": "x",
+              "issue_type": "x",
+              "reason": "x",
+              "suggested_change": {},
+              "notes": "x",
+              "status": "pending_review",
+              "resolution_note": "x",
+              "created_at": "x"
+            }
+          ]
         }
       }
     }
@@ -721,6 +809,242 @@
       }
     }
   },
+  "search": {
+    "status": 200,
+    "body": {
+      "query": "x",
+      "limit": 1,
+      "returned": 1,
+      "filters": {
+        "channel_ids": [
+          "x"
+        ],
+        "entity_ids": [
+          "x"
+        ],
+        "about": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "by": [
+          {
+            "id": "x",
+            "name": "x",
+            "type": "x"
+          }
+        ],
+        "kind": [
+          "sponsored"
+        ]
+      },
+      "window": {
+        "after": "x",
+        "before": "x"
+      },
+      "chunks": [
+        {
+          "id": "x",
+          "video_id": "x",
+          "channel_id": "x",
+          "source": "x",
+          "published_at": "x",
+          "text": "x",
+          "start_seconds": 1,
+          "watch_url": "x",
+          "score": 1
+        }
+      ],
+      "as_of": "x",
+      "search_index": {
+        "state": "live",
+        "missing_before": "x"
+      },
+      "note": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "query": "x",
+          "limit": 1,
+          "returned": 1,
+          "filters": {
+            "channel_ids": [
+              "x"
+            ],
+            "entity_ids": [
+              "x"
+            ],
+            "about": [
+              {
+                "id": "x",
+                "name": "x",
+                "type": "x"
+              }
+            ],
+            "by": [
+              {
+                "id": "x",
+                "name": "x",
+                "type": "x"
+              }
+            ],
+            "kind": [
+              "sponsored"
+            ]
+          },
+          "window": {
+            "after": "x",
+            "before": "x"
+          },
+          "chunks": [
+            {
+              "id": "x",
+              "video_id": "x",
+              "channel_id": "x",
+              "source": "x",
+              "published_at": "x",
+              "text": "x",
+              "start_seconds": 1,
+              "watch_url": "x",
+              "score": 1
+            }
+          ],
+          "as_of": "x",
+          "search_index": {
+            "state": "live",
+            "missing_before": "x"
+          },
+          "note": "x"
+        }
+      }
+    }
+  },
+  "get_entity_momentum": {
+    "status": 200,
+    "body": {
+      "entity": {
+        "id": "x",
+        "name": "x",
+        "type": "x",
+        "slug": "x",
+        "page": "x"
+      },
+      "verdict": "accelerating",
+      "as_of": "x",
+      "window": {
+        "after": "x",
+        "before": "x",
+        "days": 1
+      },
+      "coverage": "x",
+      "volume": {
+        "mentions_7d": 1,
+        "mentions_30d": 1,
+        "mentions_prior_30d": 1,
+        "delta_30d_absolute": 1,
+        "delta_30d_pct": 1,
+        "mentions_90d": 1,
+        "total": 1,
+        "mentions_window": 1,
+        "mentions_prior_window": 1,
+        "delta_window_absolute": 1,
+        "delta_window_pct": 1
+      },
+      "top_shows": [
+        {
+          "channel_id": "x",
+          "channel_name": "x",
+          "channel_page": "x",
+          "mentions": 1
+        }
+      ],
+      "note": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "entity": {
+            "id": "x",
+            "name": "x",
+            "type": "x",
+            "slug": "x",
+            "page": "x"
+          },
+          "verdict": "accelerating",
+          "as_of": "x",
+          "window": {
+            "after": "x",
+            "before": "x",
+            "days": 1
+          },
+          "coverage": "x",
+          "volume": {
+            "mentions_7d": 1,
+            "mentions_30d": 1,
+            "mentions_prior_30d": 1,
+            "delta_30d_absolute": 1,
+            "delta_30d_pct": 1,
+            "mentions_90d": 1,
+            "total": 1,
+            "mentions_window": 1,
+            "mentions_prior_window": 1,
+            "delta_window_absolute": 1,
+            "delta_window_pct": 1
+          },
+          "top_shows": [
+            {
+              "channel_id": "x",
+              "channel_name": "x",
+              "channel_page": "x",
+              "mentions": 1
+            }
+          ],
+          "note": "x"
+        }
+      }
+    }
+  },
+  "get_channel_coverage": {
+    "status": 200,
+    "body": {
+      "channel": {
+        "youtube_channel_id": "x",
+        "searchable_videos": 1,
+        "indexed_through": "x",
+        "search_indexed_through": "x",
+        "source_mix": {
+          "arcmira_premium": 1,
+          "creator_captions": 1,
+          "third_party_quick": 1
+        }
+      },
+      "note": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "channel": {
+            "youtube_channel_id": "x",
+            "searchable_videos": 1,
+            "indexed_through": "x",
+            "search_indexed_through": "x",
+            "source_mix": {
+              "arcmira_premium": 1,
+              "creator_captions": 1,
+              "third_party_quick": 1
+            }
+          },
+          "note": "x"
+        }
+      }
+    }
+  },
   "list_channel_videos": {
     "status": 200,
     "body": {
@@ -789,6 +1113,722 @@
           "index_age_days": 1,
           "as_of": "x",
           "note": "x"
+        }
+      }
+    }
+  },
+  "count_mentions": {
+    "status": 200,
+    "body": {
+      "mode": "mentions",
+      "window": {
+        "after": "x",
+        "before": "x"
+      },
+      "channel_ids": [
+        "x"
+      ],
+      "video_ids": [
+        "x"
+      ],
+      "rows": [
+        {
+          "entity_id": "x",
+          "name": "x",
+          "type": "x",
+          "page": "x",
+          "appearances_page": "x",
+          "mentions_page": "x",
+          "slug": "x",
+          "channel_id": "x",
+          "channel_name": "x",
+          "channel_page": "x",
+          "count": 1,
+          "occurrences": 1,
+          "as_of": "x"
+        }
+      ],
+      "returned": 1,
+      "has_more": true,
+      "shared": [
+        {
+          "entity_id": "x",
+          "name": "x",
+          "type": "x",
+          "page": "x",
+          "appearances_page": "x",
+          "mentions_page": "x",
+          "slug": "x",
+          "channel_count": 1,
+          "by_channel": [
+            {
+              "channel_id": "x",
+              "channel_name": "x",
+              "channel_page": "x",
+              "count": 1,
+              "occurrences": 1,
+              "as_of": "x"
+            }
+          ]
+        }
+      ],
+      "as_of": "x",
+      "note": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "mode": "mentions",
+          "window": {
+            "after": "x",
+            "before": "x"
+          },
+          "channel_ids": [
+            "x"
+          ],
+          "video_ids": [
+            "x"
+          ],
+          "rows": [
+            {
+              "entity_id": "x",
+              "name": "x",
+              "type": "x",
+              "page": "x",
+              "appearances_page": "x",
+              "mentions_page": "x",
+              "slug": "x",
+              "channel_id": "x",
+              "channel_name": "x",
+              "channel_page": "x",
+              "count": 1,
+              "occurrences": 1,
+              "as_of": "x"
+            }
+          ],
+          "returned": 1,
+          "has_more": true,
+          "shared": [
+            {
+              "entity_id": "x",
+              "name": "x",
+              "type": "x",
+              "page": "x",
+              "appearances_page": "x",
+              "mentions_page": "x",
+              "slug": "x",
+              "channel_count": 1,
+              "by_channel": [
+                {
+                  "channel_id": "x",
+                  "channel_name": "x",
+                  "channel_page": "x",
+                  "count": 1,
+                  "occurrences": 1,
+                  "as_of": "x"
+                }
+              ]
+            }
+          ],
+          "as_of": "x",
+          "note": "x"
+        }
+      }
+    }
+  },
+  "list_monitors": {
+    "status": 200,
+    "body": {
+      "monitors": [
+        {
+          "id": "x",
+          "name": "x",
+          "paused": true,
+          "notify_emails": [
+            "x"
+          ],
+          "notify_webhook": true,
+          "webhook_disabled_at": "x",
+          "webhook_disabled_reason": "x",
+          "notify_slack": true,
+          "slack_integration_id": "x",
+          "slack_channel_id": "x",
+          "created_at": "x",
+          "updated_at": "x",
+          "access": "account",
+          "tracker_count": 1,
+          "alerts_this_month": 1
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "monitors": [
+            {
+              "id": "x",
+              "name": "x",
+              "paused": true,
+              "notify_emails": [
+                "x"
+              ],
+              "notify_webhook": true,
+              "webhook_disabled_at": "x",
+              "webhook_disabled_reason": "x",
+              "notify_slack": true,
+              "slack_integration_id": "x",
+              "slack_channel_id": "x",
+              "created_at": "x",
+              "updated_at": "x",
+              "access": "account",
+              "tracker_count": 1,
+              "alerts_this_month": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  "create_monitor": {
+    "status": 200,
+    "body": {
+      "monitor": {
+        "id": "x",
+        "name": "x",
+        "paused": true,
+        "notify_emails": [
+          "x"
+        ],
+        "notify_webhook": true,
+        "webhook_disabled_at": "x",
+        "webhook_disabled_reason": "x",
+        "notify_slack": true,
+        "slack_integration_id": "x",
+        "slack_channel_id": "x",
+        "created_at": "x",
+        "updated_at": "x",
+        "access": "account",
+        "tracker_count": 1
+      },
+      "message": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "monitor": {
+            "id": "x",
+            "name": "x",
+            "paused": true,
+            "notify_emails": [
+              "x"
+            ],
+            "notify_webhook": true,
+            "webhook_disabled_at": "x",
+            "webhook_disabled_reason": "x",
+            "notify_slack": true,
+            "slack_integration_id": "x",
+            "slack_channel_id": "x",
+            "created_at": "x",
+            "updated_at": "x",
+            "access": "account",
+            "tracker_count": 1
+          },
+          "message": "x"
+        }
+      },
+      "201": {
+        "status": 201,
+        "body": {
+          "monitor": {
+            "id": "x",
+            "name": "x",
+            "paused": true,
+            "notify_emails": [
+              "x"
+            ],
+            "notify_webhook": true,
+            "webhook_disabled_at": "x",
+            "webhook_disabled_reason": "x",
+            "notify_slack": true,
+            "slack_integration_id": "x",
+            "slack_channel_id": "x",
+            "created_at": "x",
+            "updated_at": "x",
+            "access": "account",
+            "tracker_count": 1
+          },
+          "message": "x"
+        }
+      }
+    }
+  },
+  "update_monitor": {
+    "status": 200,
+    "body": {
+      "monitor": {
+        "id": "x",
+        "name": "x",
+        "paused": true,
+        "notify_emails": [
+          "x"
+        ],
+        "notify_webhook": true,
+        "webhook_disabled_at": "x",
+        "webhook_disabled_reason": "x",
+        "notify_slack": true,
+        "slack_integration_id": "x",
+        "slack_channel_id": "x",
+        "created_at": "x",
+        "updated_at": "x",
+        "access": "account",
+        "tracker_count": 1
+      },
+      "message": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "monitor": {
+            "id": "x",
+            "name": "x",
+            "paused": true,
+            "notify_emails": [
+              "x"
+            ],
+            "notify_webhook": true,
+            "webhook_disabled_at": "x",
+            "webhook_disabled_reason": "x",
+            "notify_slack": true,
+            "slack_integration_id": "x",
+            "slack_channel_id": "x",
+            "created_at": "x",
+            "updated_at": "x",
+            "access": "account",
+            "tracker_count": 1
+          },
+          "message": "x"
+        }
+      }
+    }
+  },
+  "delete_monitor": {
+    "status": 200,
+    "body": {
+      "message": "x",
+      "trackers_deleted": 1
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "message": "x",
+          "trackers_deleted": 1
+        }
+      }
+    }
+  },
+  "rotate_monitor_webhook_secret": {
+    "status": 200,
+    "body": {
+      "webhook_secret": "x",
+      "webhook_secret_hint": "x",
+      "previous_secret_expires_at": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "webhook_secret": "x",
+          "webhook_secret_hint": "x",
+          "previous_secret_expires_at": "x"
+        }
+      }
+    }
+  },
+  "list_monitor_trackers": {
+    "status": 200,
+    "body": {
+      "trackers": [
+        {
+          "id": "x",
+          "entity_name": "x",
+          "entity_type": "x",
+          "display_name": "x",
+          "paused": true,
+          "paused_at": "x",
+          "last_notified_at": "x",
+          "created_at": "x",
+          "updated_at": "x",
+          "monitor_id": "x"
+        }
+      ],
+      "count": 1
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "trackers": [
+            {
+              "id": "x",
+              "entity_name": "x",
+              "entity_type": "x",
+              "display_name": "x",
+              "paused": true,
+              "paused_at": "x",
+              "last_notified_at": "x",
+              "created_at": "x",
+              "updated_at": "x",
+              "monitor_id": "x"
+            }
+          ],
+          "count": 1
+        }
+      }
+    }
+  },
+  "add_monitor_trackers": {
+    "status": 200,
+    "body": {
+      "attached_count": 1,
+      "message": "x",
+      "monitor_id": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "attached_count": 1,
+          "message": "x",
+          "monitor_id": "x"
+        }
+      }
+    }
+  },
+  "list_monitor_alerts": {
+    "status": 200,
+    "body": {
+      "alerts": [
+        {
+          "id": "x",
+          "tracker_id": "x",
+          "monitor_id": "x",
+          "entity_id": "x",
+          "mention_id": "x",
+          "video_id": "x",
+          "excerpt_id": "x",
+          "evidence_kind": "excerpt",
+          "channel": "x",
+          "status": "x",
+          "final_status": "x",
+          "error_message": "x",
+          "scheduled_at": "x",
+          "sent_at": "x",
+          "created_at": "x",
+          "tracker": {
+            "id": "x",
+            "entity_name": "x",
+            "entity_type": "x",
+            "display_name": "x"
+          },
+          "monitor": {
+            "id": "x",
+            "name": "x"
+          }
+        }
+      ],
+      "has_more": true,
+      "next_cursor": null
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "alerts": [
+            {
+              "id": "x",
+              "tracker_id": "x",
+              "monitor_id": "x",
+              "entity_id": "x",
+              "mention_id": "x",
+              "video_id": "x",
+              "excerpt_id": "x",
+              "evidence_kind": "excerpt",
+              "channel": "x",
+              "status": "x",
+              "final_status": "x",
+              "error_message": "x",
+              "scheduled_at": "x",
+              "sent_at": "x",
+              "created_at": "x",
+              "tracker": {
+                "id": "x",
+                "entity_name": "x",
+                "entity_type": "x",
+                "display_name": "x"
+              },
+              "monitor": {
+                "id": "x",
+                "name": "x"
+              }
+            }
+          ],
+          "has_more": true,
+          "next_cursor": null
+        }
+      }
+    }
+  },
+  "add_monitor_entities": {
+    "status": 200,
+    "body": {
+      "monitor_id": "x",
+      "results": [
+        {
+          "tracker_id": "x",
+          "created": true,
+          "attached": true
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "monitor_id": "x",
+          "results": [
+            {
+              "tracker_id": "x",
+              "created": true,
+              "attached": true
+            }
+          ]
+        }
+      }
+    }
+  },
+  "list_slack_integrations": {
+    "status": 200,
+    "body": {
+      "integrations": [
+        {
+          "id": "x",
+          "team_name": "x",
+          "default_channel_id": "x",
+          "channels": [
+            {
+              "id": "x",
+              "name": "x"
+            }
+          ]
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "integrations": [
+            {
+              "id": "x",
+              "team_name": "x",
+              "default_channel_id": "x",
+              "channels": [
+                {
+                  "id": "x",
+                  "name": "x"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "list_trackers": {
+    "status": 200,
+    "body": {
+      "trackers": [
+        {
+          "id": "x",
+          "entity_name": "x",
+          "entity_type": "x",
+          "display_name": "x",
+          "filters": {},
+          "paused": true,
+          "paused_at": "x",
+          "last_notified_at": "x",
+          "created_at": "x",
+          "updated_at": "x",
+          "monitor_id": "x",
+          "email_delivery_count": 1,
+          "webhook_delivery_count": 1,
+          "slack_delivery_count": 1
+        }
+      ],
+      "count": 1
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "trackers": [
+            {
+              "id": "x",
+              "entity_name": "x",
+              "entity_type": "x",
+              "display_name": "x",
+              "filters": {},
+              "paused": true,
+              "paused_at": "x",
+              "last_notified_at": "x",
+              "created_at": "x",
+              "updated_at": "x",
+              "monitor_id": "x",
+              "email_delivery_count": 1,
+              "webhook_delivery_count": 1,
+              "slack_delivery_count": 1
+            }
+          ],
+          "count": 1
+        }
+      }
+    }
+  },
+  "update_tracker": {
+    "status": 200,
+    "body": {
+      "tracker": {
+        "id": "x",
+        "entity_name": "x",
+        "entity_type": "x",
+        "display_name": "x",
+        "filters": {},
+        "paused": true,
+        "paused_at": "x",
+        "last_notified_at": "x",
+        "created_at": "x",
+        "updated_at": "x",
+        "monitor_id": "x",
+        "email_delivery_count": 1,
+        "webhook_delivery_count": 1,
+        "slack_delivery_count": 1
+      },
+      "message": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "tracker": {
+            "id": "x",
+            "entity_name": "x",
+            "entity_type": "x",
+            "display_name": "x",
+            "filters": {},
+            "paused": true,
+            "paused_at": "x",
+            "last_notified_at": "x",
+            "created_at": "x",
+            "updated_at": "x",
+            "monitor_id": "x",
+            "email_delivery_count": 1,
+            "webhook_delivery_count": 1,
+            "slack_delivery_count": 1
+          },
+          "message": "x"
+        }
+      }
+    }
+  },
+  "delete_tracker": {
+    "status": 200,
+    "body": {
+      "message": "x"
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "message": "x"
+        }
+      }
+    }
+  },
+  "list_tracker_alerts": {
+    "status": 200,
+    "body": {
+      "alerts": [
+        {
+          "id": "x",
+          "tracker_id": "x",
+          "monitor_id": "x",
+          "entity_id": "x",
+          "mention_id": "x",
+          "video_id": "x",
+          "excerpt_id": "x",
+          "evidence_kind": "excerpt",
+          "channel": "x",
+          "status": "x",
+          "final_status": "x",
+          "error_message": "x",
+          "scheduled_at": "x",
+          "sent_at": "x",
+          "created_at": "x",
+          "tracker": {
+            "id": "x",
+            "entity_name": "x",
+            "entity_type": "x",
+            "display_name": "x"
+          },
+          "monitor": {
+            "id": "x",
+            "name": "x"
+          }
+        }
+      ],
+      "has_more": true,
+      "next_cursor": null
+    },
+    "responses": {
+      "200": {
+        "status": 200,
+        "body": {
+          "alerts": [
+            {
+              "id": "x",
+              "tracker_id": "x",
+              "monitor_id": "x",
+              "entity_id": "x",
+              "mention_id": "x",
+              "video_id": "x",
+              "excerpt_id": "x",
+              "evidence_kind": "excerpt",
+              "channel": "x",
+              "status": "x",
+              "final_status": "x",
+              "error_message": "x",
+              "scheduled_at": "x",
+              "sent_at": "x",
+              "created_at": "x",
+              "tracker": {
+                "id": "x",
+                "entity_name": "x",
+                "entity_type": "x",
+                "display_name": "x"
+              },
+              "monitor": {
+                "id": "x",
+                "name": "x"
+              }
+            }
+          ],
+          "has_more": true,
+          "next_cursor": null
         }
       }
     }
@@ -972,162 +2012,6 @@
       }
     }
   },
-  "count_mentions": {
-    "status": 200,
-    "body": {
-      "mode": "mentions",
-      "window": {
-        "after": "x",
-        "before": "x"
-      },
-      "channel_ids": [
-        "x"
-      ],
-      "video_ids": [
-        "x"
-      ],
-      "rows": [
-        {
-          "entity_id": "x",
-          "name": "x",
-          "type": "x",
-          "page": "x",
-          "appearances_page": "x",
-          "mentions_page": "x",
-          "slug": "x",
-          "channel_id": "x",
-          "channel_name": "x",
-          "channel_page": "x",
-          "count": 1,
-          "occurrences": 1,
-          "as_of": "x"
-        }
-      ],
-      "returned": 1,
-      "has_more": true,
-      "shared": [
-        {
-          "entity_id": "x",
-          "name": "x",
-          "type": "x",
-          "page": "x",
-          "appearances_page": "x",
-          "mentions_page": "x",
-          "slug": "x",
-          "channel_count": 1,
-          "by_channel": [
-            {
-              "channel_id": "x",
-              "channel_name": "x",
-              "channel_page": "x",
-              "count": 1,
-              "occurrences": 1,
-              "as_of": "x"
-            }
-          ]
-        }
-      ],
-      "as_of": "x",
-      "note": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "mode": "mentions",
-          "window": {
-            "after": "x",
-            "before": "x"
-          },
-          "channel_ids": [
-            "x"
-          ],
-          "video_ids": [
-            "x"
-          ],
-          "rows": [
-            {
-              "entity_id": "x",
-              "name": "x",
-              "type": "x",
-              "page": "x",
-              "appearances_page": "x",
-              "mentions_page": "x",
-              "slug": "x",
-              "channel_id": "x",
-              "channel_name": "x",
-              "channel_page": "x",
-              "count": 1,
-              "occurrences": 1,
-              "as_of": "x"
-            }
-          ],
-          "returned": 1,
-          "has_more": true,
-          "shared": [
-            {
-              "entity_id": "x",
-              "name": "x",
-              "type": "x",
-              "page": "x",
-              "appearances_page": "x",
-              "mentions_page": "x",
-              "slug": "x",
-              "channel_count": 1,
-              "by_channel": [
-                {
-                  "channel_id": "x",
-                  "channel_name": "x",
-                  "channel_page": "x",
-                  "count": 1,
-                  "occurrences": 1,
-                  "as_of": "x"
-                }
-              ]
-            }
-          ],
-          "as_of": "x",
-          "note": "x"
-        }
-      }
-    }
-  },
-  "get_channel_coverage": {
-    "status": 200,
-    "body": {
-      "channel": {
-        "youtube_channel_id": "x",
-        "searchable_videos": 1,
-        "indexed_through": "x",
-        "search_indexed_through": "x",
-        "source_mix": {
-          "arcmira_premium": 1,
-          "creator_captions": 1,
-          "third_party_quick": 1
-        }
-      },
-      "note": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "channel": {
-            "youtube_channel_id": "x",
-            "searchable_videos": 1,
-            "indexed_through": "x",
-            "search_indexed_through": "x",
-            "source_mix": {
-              "arcmira_premium": 1,
-              "creator_captions": 1,
-              "third_party_quick": 1
-            }
-          },
-          "note": "x"
-        }
-      }
-    }
-  },
   "quote_transcription": {
     "status": 200,
     "body": {
@@ -1212,360 +2096,6 @@
           ],
           "has_more": true,
           "next_cursor": "x"
-        }
-      }
-    }
-  },
-  "list_monitors": {
-    "status": 200,
-    "body": {
-      "monitors": [
-        {
-          "id": "x",
-          "name": "x",
-          "paused": true,
-          "notify_emails": [
-            "x"
-          ],
-          "notify_webhook": true,
-          "webhook_disabled_at": "x",
-          "webhook_disabled_reason": "x",
-          "notify_slack": true,
-          "slack_integration_id": "x",
-          "slack_channel_id": "x",
-          "created_at": "x",
-          "updated_at": "x",
-          "access": "account",
-          "tracker_count": 1,
-          "alerts_this_month": 1
-        }
-      ]
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "monitors": [
-            {
-              "id": "x",
-              "name": "x",
-              "paused": true,
-              "notify_emails": [
-                "x"
-              ],
-              "notify_webhook": true,
-              "webhook_disabled_at": "x",
-              "webhook_disabled_reason": "x",
-              "notify_slack": true,
-              "slack_integration_id": "x",
-              "slack_channel_id": "x",
-              "created_at": "x",
-              "updated_at": "x",
-              "access": "account",
-              "tracker_count": 1,
-              "alerts_this_month": 1
-            }
-          ]
-        }
-      }
-    }
-  },
-  "create_monitor": {
-    "status": 200,
-    "body": {
-      "monitor": {
-        "id": "x",
-        "name": "x",
-        "paused": true,
-        "notify_emails": [
-          "x"
-        ],
-        "notify_webhook": true,
-        "webhook_disabled_at": "x",
-        "webhook_disabled_reason": "x",
-        "notify_slack": true,
-        "slack_integration_id": "x",
-        "slack_channel_id": "x",
-        "created_at": "x",
-        "updated_at": "x",
-        "access": "account",
-        "tracker_count": 1
-      },
-      "message": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "monitor": {
-            "id": "x",
-            "name": "x",
-            "paused": true,
-            "notify_emails": [
-              "x"
-            ],
-            "notify_webhook": true,
-            "webhook_disabled_at": "x",
-            "webhook_disabled_reason": "x",
-            "notify_slack": true,
-            "slack_integration_id": "x",
-            "slack_channel_id": "x",
-            "created_at": "x",
-            "updated_at": "x",
-            "access": "account",
-            "tracker_count": 1
-          },
-          "message": "x"
-        }
-      },
-      "201": {
-        "status": 201,
-        "body": {
-          "monitor": {
-            "id": "x",
-            "name": "x",
-            "paused": true,
-            "notify_emails": [
-              "x"
-            ],
-            "notify_webhook": true,
-            "webhook_disabled_at": "x",
-            "webhook_disabled_reason": "x",
-            "notify_slack": true,
-            "slack_integration_id": "x",
-            "slack_channel_id": "x",
-            "created_at": "x",
-            "updated_at": "x",
-            "access": "account",
-            "tracker_count": 1
-          },
-          "message": "x"
-        }
-      }
-    }
-  },
-  "update_monitor": {
-    "status": 200,
-    "body": {
-      "monitor": {
-        "id": "x",
-        "name": "x",
-        "paused": true,
-        "notify_emails": [
-          "x"
-        ],
-        "notify_webhook": true,
-        "webhook_disabled_at": "x",
-        "webhook_disabled_reason": "x",
-        "notify_slack": true,
-        "slack_integration_id": "x",
-        "slack_channel_id": "x",
-        "created_at": "x",
-        "updated_at": "x",
-        "access": "account",
-        "tracker_count": 1
-      },
-      "message": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "monitor": {
-            "id": "x",
-            "name": "x",
-            "paused": true,
-            "notify_emails": [
-              "x"
-            ],
-            "notify_webhook": true,
-            "webhook_disabled_at": "x",
-            "webhook_disabled_reason": "x",
-            "notify_slack": true,
-            "slack_integration_id": "x",
-            "slack_channel_id": "x",
-            "created_at": "x",
-            "updated_at": "x",
-            "access": "account",
-            "tracker_count": 1
-          },
-          "message": "x"
-        }
-      }
-    }
-  },
-  "list_monitor_trackers": {
-    "status": 200,
-    "body": {
-      "trackers": [
-        {
-          "id": "x",
-          "entity_name": "x",
-          "entity_type": "x",
-          "display_name": "x",
-          "paused": true,
-          "paused_at": "x",
-          "last_notified_at": "x",
-          "created_at": "x",
-          "updated_at": "x",
-          "monitor_id": "x"
-        }
-      ],
-      "count": 1
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "trackers": [
-            {
-              "id": "x",
-              "entity_name": "x",
-              "entity_type": "x",
-              "display_name": "x",
-              "paused": true,
-              "paused_at": "x",
-              "last_notified_at": "x",
-              "created_at": "x",
-              "updated_at": "x",
-              "monitor_id": "x"
-            }
-          ],
-          "count": 1
-        }
-      }
-    }
-  },
-  "add_monitor_trackers": {
-    "status": 200,
-    "body": {
-      "attached_count": 1,
-      "message": "x",
-      "monitor_id": "x"
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "attached_count": 1,
-          "message": "x",
-          "monitor_id": "x"
-        }
-      }
-    }
-  },
-  "add_monitor_entities": {
-    "status": 200,
-    "body": {
-      "monitor_id": "x",
-      "results": [
-        {
-          "tracker_id": "x",
-          "created": true,
-          "attached": true
-        }
-      ]
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "monitor_id": "x",
-          "results": [
-            {
-              "tracker_id": "x",
-              "created": true,
-              "attached": true
-            }
-          ]
-        }
-      }
-    }
-  },
-  "list_slack_integrations": {
-    "status": 200,
-    "body": {
-      "integrations": [
-        {
-          "id": "x",
-          "team_name": "x",
-          "default_channel_id": "x",
-          "channels": [
-            {
-              "id": "x",
-              "name": "x"
-            }
-          ]
-        }
-      ]
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "integrations": [
-            {
-              "id": "x",
-              "team_name": "x",
-              "default_channel_id": "x",
-              "channels": [
-                {
-                  "id": "x",
-                  "name": "x"
-                }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  },
-  "list_trackers": {
-    "status": 200,
-    "body": {
-      "trackers": [
-        {
-          "id": "x",
-          "entity_name": "x",
-          "entity_type": "x",
-          "display_name": "x",
-          "filters": {},
-          "paused": true,
-          "paused_at": "x",
-          "last_notified_at": "x",
-          "created_at": "x",
-          "updated_at": "x",
-          "monitor_id": "x",
-          "email_delivery_count": 1,
-          "webhook_delivery_count": 1,
-          "slack_delivery_count": 1
-        }
-      ],
-      "count": 1
-    },
-    "responses": {
-      "200": {
-        "status": 200,
-        "body": {
-          "trackers": [
-            {
-              "id": "x",
-              "entity_name": "x",
-              "entity_type": "x",
-              "display_name": "x",
-              "filters": {},
-              "paused": true,
-              "paused_at": "x",
-              "last_notified_at": "x",
-              "created_at": "x",
-              "updated_at": "x",
-              "monitor_id": "x",
-              "email_delivery_count": 1,
-              "webhook_delivery_count": 1,
-              "slack_delivery_count": 1
-            }
-          ],
-          "count": 1
         }
       }
     }
