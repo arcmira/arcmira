@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+Generated from the API document of 2026-10-15.
+
+- Error and access details expose the optional `url` field for Terms of Service responses.
+- The API document includes the current Terms error codes and clarifies that the remaining rate limit is an estimate.
+- Published from the current public source history with a matching release tag.
+
 ## 0.6.0
 
 Generated from the API document of 2026-10-12, after the clear-language release (arcmira/mcp 0.10.7). One field set is removed, so it is a minor bump while the package is 0.x.

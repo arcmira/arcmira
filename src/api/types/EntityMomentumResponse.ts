@@ -172,6 +172,8 @@ export namespace EntityMomentumResponse {
         export interface Details {
             quote?: Arcmira.RefusedQuote | undefined;
             limit?: Arcmira.Limit | undefined;
+            /** On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page. */
+            url?: string | undefined;
         }
     }
 
