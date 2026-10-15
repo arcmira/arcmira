@@ -464,8 +464,9 @@ g.docs = {
     rule: "docs prints the docs address; docs <query> searches the docs site and prints titles and links",
 };
 const readme = readFileSync(join(root, "README.md"), "utf8");
+const guide = readFileSync(join(root, "GUIDE.md"), "utf8");
 const treeNames = [...Object.keys(COMMANDS), "transcript", "follow", "login", "logout", "auth login", "auth logout", "auth status", "auth token", "schema", "docs", ...RESERVED];
-g.readme = { pass: /telemetry/i.test(readme) && treeNames.every((n) => readme.includes(`arcmira ${n}`)), rule: "README states the telemetry policy and lists the full command tree" };
+g.readme = { pass: /telemetry/i.test(readme) && readme.includes("GUIDE.md#command-line") && treeNames.every((n) => guide.includes(`arcmira ${n}`)), rule: "README states the telemetry policy and links the guide with the full command tree" };
 
 const times = [];
 for (let i = 0; i < 9; i++) times.push((await run(["--version"], { key: null })).ms);

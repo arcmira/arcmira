@@ -1,0 +1,21 @@
+{
+  ".": "Arcmira SDK for YouTube transcript search, timestamped quotes, and company monitoring. Create an ArcmiraClient with your API key to call the API.",
+  "./channels": "Check a YouTube channel's transcript coverage and access its indexed videos and sponsors. Channel reads take a YouTube channel id, not a name or handle.",
+  "./channels/sponsors": "List the sponsors identified in a YouTube channel's indexed videos. Use channels.sponsors.list with a YouTube channel id.",
+  "./channels/videos": "Page through a channel's indexed videos. Use channels.videos.list with a YouTube channel id and stop iterating when you have enough results.",
+  "./entities": "Resolve a person, company, product, or show name to an id before filtering reads. Handle best, suggested, and ask results explicitly. Also read entity details and mention momentum.",
+  "./feedback": "Submit a correction or report an API issue, then retrieve its status with the returned feedback id.",
+  "./health": "Check API availability with health.check before diagnosing a failed integration.",
+  "./integrations": "Discover account integrations available for monitor delivery. Slack connections are configured in the dashboard.",
+  "./integrations/slack": "List connected Slack workspaces and channels before configuring a monitor's Slack destination.",
+  "./me": "Read the account, plan, scopes, and role associated with the current API key, or update account settings.",
+  "./mentions": "Find where an entity was mentioned in indexed media or count occurrences across channels and videos. Resolve names to entity ids first; dated reads use an inclusive after and exclusive before.",
+  "./monitors": "Create and manage monitors that group tracked names and set alert delivery. Creating a monitor changes account state. Delivered alerts use credits from your plan, then your on-demand budget.",
+  "./monitors/alerts": "Read a monitor's recent alerts. The result is one page; inspect the response before deciding whether you need a larger limit.",
+  "./monitors/entities": "Follow indexed entities or exact names in a monitor. Inspect each attached result and its reason; an existing tracker may belong to another monitor.",
+  "./monitors/trackers": "List a monitor's trackers or attach existing trackers by id. Attaching changes which monitor delivers their alerts.",
+  "./recommendations": "Find on-air recommendations for an entity and distinguish organic recommendations from sponsored mentions. Resolve the entity name first and retain the verbatim quote and source.",
+  "./trackers": "List, update, or remove followed names. Create trackers through monitors.entities.add so each tracker has a monitor for delivery.",
+  "./trackers/alerts": "Read recent alerts for one tracker. Retain the source media and timestamps when presenting results.",
+  "./transcripts": "Pull YouTube transcripts or search indexed spoken passages with timestamps and source links. A default read returns captions. Quote Premium credits before reading with quality premium; handle ready, pending, and failed states."
+}
