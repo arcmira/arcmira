@@ -28,7 +28,7 @@ for (const hit of hits.chunks) {
 console.log(hits.note);
 ```
 
-For a research workflow, [compare what Jensen Huang said about TSMC across two months](https://github.com/arcmira/arcmira/blob/master/GUIDE.md#compare-a-speakers-comments-over-time). Filter by speaker and date, then inspect the quoted passages in context.
+Find investment research leads in how executives discuss suppliers, demand, and capacity. [Compare what Jensen Huang said about TSMC across two months](https://github.com/arcmira/arcmira/blob/master/GUIDE.md#compare-a-speakers-comments-over-time). Filter by speaker and date, with links to the original passages.
 
 Search covers indexed transcripts within your plan's date window. Check `window`, `search_index`, and `note` before drawing conclusions from missing results.
 

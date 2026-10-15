@@ -29,7 +29,7 @@ Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authenti
 
 ## Compare a speaker's comments over time
 
-Compare what Jensen Huang said about TSMC in August and September 2026. Resolve his name, filter by who is speaking, and retrieve dated passages to review side by side.
+Look for changes in supplier commitments, capacity constraints, and demand expectations across executive interviews. Compare what Jensen Huang said about TSMC in August and September 2026, with dates and links to the original passages.
 
 ```ts
 import { ArcmiraClient } from "arcmira";
@@ -38,7 +38,7 @@ const client = new ArcmiraClient({ apiKey: process.env.ARCMIRA_API_KEY });
 const match = await client.entities.resolve({
 	q: "Jensen Huang",
 	type: "person",
-	context: "NVIDIA CEO discussing chip suppliers",
+	context: "NVIDIA CEO",
 });
 if (!match.best) throw new Error(JSON.stringify(match.ask ?? match.suggested ?? match.note));
 
@@ -56,7 +56,9 @@ If the resolver returns a suggested match or several options, confirm the intend
 
 The `by` filter selects passages in which the resolved person speaks. Passages can include other speakers, so keep the speaker labels and read the surrounding exchange. Dates filter publication time, which may differ from when a recording was made.
 
-In a search on October 15, 2026, these windows returned comments about [wafer demand in August](https://arcmira.com/watch?v=JAg8MM5onsE&t=511) and [US manufacturing commitments in September](https://arcmira.com/watch?v=HjurAWAr_nY&t=5274). They also returned a shorter upload of the same August exchange. Treat repeated clips as one source when comparing statements.
+In a search on October 15, 2026, these windows returned comments about [a wafer-demand analogy in August](https://arcmira.com/watch?v=JAg8MM5onsE&t=511) and [US manufacturing commitments in September](https://arcmira.com/watch?v=HjurAWAr_nY&t=5274). The August passage uses wafer demand as an analogy for AI token demand. The results also included a shorter upload of that exchange. Treat repeated clips as one source when comparing statements.
+
+Does a passage add a new commitment, name a constraint, or repeat an existing view? Check recording dates and earlier disclosures before treating a difference as new information.
 
 Use the reported `window`, `search_index`, and `note` to describe coverage. Speaker labels cover only part of the index, and results depend on your plan's date window. Review the passages before concluding that a stance changed. Replace the dates and topic to investigate another period or supplier.
 

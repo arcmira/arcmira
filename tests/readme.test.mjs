@@ -59,7 +59,7 @@ test("the supplier comparison resolves a speaker and searches both publication w
             ["GET", "/v1/entities/resolve"], ["GET", "/v1/search"], ["GET", "/v1/search"],
         ]);
         assert.deepEqual(fake.requests[0].query, {
-            q: "Jensen Huang", type: "person", context: "NVIDIA CEO discussing chip suppliers",
+            q: "Jensen Huang", type: "person", context: "NVIDIA CEO",
         });
         assert.deepEqual(fake.requests.slice(1).map(r => r.query), [
             { q: "TSMC", by: "ent_14", after: "2026-08-01", before: "2026-09-01", limit: "5" },
