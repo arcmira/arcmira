@@ -42,7 +42,7 @@
         }
       },
       "RateLimit-Remaining": {
-        "description": "Requests left in the current window.",
+        "description": "An estimate of the requests left in the current window. Limits are counted at each Cloudflare location, so it can read high; a 429 is the final word.",
         "schema": {
           "type": "integer"
         }
@@ -332,6 +332,10 @@
                   },
                   "limit": {
                     "$ref": "#/components/schemas/Limit"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page."
                   }
                 },
                 "description": "Machine data the refusal carries for you to act on. Present only on the codes that name a field here."
@@ -614,6 +618,16 @@
             "code": "team_id_retired",
             "type": "invalid_request_error",
             "description": "team_id is retired: a monitor belongs to the account the key acts in. Omit team_id or send null."
+          },
+          {
+            "code": "terms_acceptance_required",
+            "type": "permission_error",
+            "description": "The person the key or token acts for has not accepted the updated Terms of Service. details.url is the page where they accept; the key or token works again as soon as they do."
+          },
+          {
+            "code": "terms_updated",
+            "type": "permission_error",
+            "description": "The Terms of Service changed since the person the key or token acts for last accepted them. This call was not run. Continuing to use the API accepts the updated terms, so the same call succeeds when sent again. details.url is the terms page. Sent once per person."
           },
           {
             "code": "tracker_create_retired",
@@ -3433,6 +3447,10 @@
                   },
                   "limit": {
                     "$ref": "#/components/schemas/Limit"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page."
                   }
                 },
                 "description": "Machine data the refusal carries for you to act on. Present only on the codes that name a field here."
@@ -3767,6 +3785,10 @@
                   },
                   "limit": {
                     "$ref": "#/components/schemas/Limit"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page."
                   }
                 },
                 "description": "Machine data the refusal carries for you to act on. Present only on the codes that name a field here."
@@ -4308,6 +4330,10 @@
                   },
                   "limit": {
                     "$ref": "#/components/schemas/Limit"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page."
                   }
                 },
                 "description": "Machine data the refusal carries for you to act on. Present only on the codes that name a field here."
@@ -6352,6 +6378,10 @@
                   },
                   "limit": {
                     "$ref": "#/components/schemas/Limit"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "On terms_acceptance_required: the page where the person accepts the updated Terms of Service. On terms_updated: the Terms of Service page."
                   }
                 },
                 "description": "Machine data the refusal carries for you to act on. Present only on the codes that name a field here."
