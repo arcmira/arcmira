@@ -63,6 +63,13 @@ def prepare(output: Path) -> None:
         if not (output / source).is_file():
             raise ValueError(f"Missing SDK source entry: {source}")
         exports[name] = source
+    module_docs = json.loads((ROOT / "jsr/modules.json").read_text())
+    if module_docs.keys() != exports.keys():
+        raise ValueError("Document every SDK entry point in jsr/modules.json.")
+    for name, source in exports.items():
+        path = output / source
+        description = module_docs[name]
+        path.write_text("/**\n * " + description + "\n * @module\n */\n" + path.read_text())
     config = {
         "name": "@arcmira/sdk", "version": version, "license": package["license"],
         "exports": exports,

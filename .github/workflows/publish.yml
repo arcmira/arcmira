@@ -1,5 +1,5 @@
-name: Publish to npm
-run-name: Publish arcmira to npm from ${{ github.ref_name }}
+name: Publish SDK
+run-name: Publish SDK from ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
@@ -48,3 +48,16 @@ jobs:
             exit 0
           fi
           npm publish --access public --provenance --loglevel verbose
+
+  jsr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.3
+      - name: Prepare JSR package
+        run: python3 scripts/prepare-jsr.py "$RUNNER_TEMP/arcmira-jsr"
+      - name: Publish to JSR with provenance
+        working-directory: ${{ runner.temp }}/arcmira-jsr
+        run: deno publish --config jsr.json

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2
+
+- Lead the README with tested examples for transcript reads, quotes with source links, and company monitoring. Keep detailed usage in the SDK guide.
+- Document every JSR entry point and publish npm and JSR packages from the same release tag.
+- Verify the JSR package in Node.js as well as Deno.
+
 ## 0.6.1
 
 Generated from the API document of 2026-10-15.

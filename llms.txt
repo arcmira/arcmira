@@ -4,6 +4,10 @@
 
 This repo and the `arcmira` npm package are the official TypeScript and JavaScript SDK plus the `arcmira` command line. The live agent index is on the website; fetch that first.
 
+## Tasks
+
+Use Arcmira to pull YouTube transcripts, find quotes with timestamps, research podcast sponsors, and monitor company mentions. Start with the README examples. Keep source links beside quotes, preserve the reported coverage window, and distinguish captions from Premium transcripts. For agent tasks, connect the MCP server; for an application, use this SDK.
+
 ## Canonical
 
 - [Site llms.txt](https://arcmira.com/llms.txt): Fetch this first. Product, API, citation rules.

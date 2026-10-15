@@ -1,6 +1,6 @@
 {
   "name": "arcmira",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "YouTube transcript search with timestamps, mentions, sponsors and recommendations. Official Arcmira TypeScript SDK and CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
@@ -36,7 +36,8 @@
     "reference.md",
     "README.md",
     "LICENSE",
-    "llms.txt"
+    "llms.txt",
+    "GUIDE.md"
   ],
   "scripts": {
     "build": "npm run build:cjs && npm run build:esm && npm run build:cli",
