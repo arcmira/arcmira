@@ -27,6 +27,39 @@ npx arcmira setup             # apply, then sign in once per agent
 
 Get a key at [arcmira.com/docs/authentication](https://arcmira.com/docs/authentication) and set `ARCMIRA_API_KEY`, or pass `apiKey` to the client.
 
+## Compare a speaker's comments over time
+
+Compare what Jensen Huang said about TSMC in August and September 2026. Resolve his name, filter by who is speaking, and retrieve dated passages to review side by side.
+
+```ts
+import { ArcmiraClient } from "arcmira";
+
+const client = new ArcmiraClient({ apiKey: process.env.ARCMIRA_API_KEY });
+const match = await client.entities.resolve({
+	q: "Jensen Huang",
+	type: "person",
+	context: "NVIDIA CEO discussing chip suppliers",
+});
+if (!match.best) throw new Error(JSON.stringify(match.ask ?? match.suggested ?? match.note));
+
+for (const [after, before] of [["2026-08-01", "2026-09-01"], ["2026-09-01", "2026-10-01"]]) {
+	const hits = await client.transcripts.search({ q: "TSMC", by: match.best.id, after, before, limit: 5 });
+	console.log(hits.window, hits.search_index, hits.note);
+	for (const hit of hits.chunks) {
+		console.log(hit.published_at, hit.text);
+		console.log(new URL(hit.watch_url, "https://arcmira.com").href);
+	}
+}
+```
+
+If the resolver returns a suggested match or several options, confirm the intended person before continuing.
+
+The `by` filter selects passages in which the resolved person speaks. Passages can include other speakers, so keep the speaker labels and read the surrounding exchange. Dates filter publication time, which may differ from when a recording was made.
+
+In a search on October 15, 2026, these windows returned comments about [wafer demand in August](https://arcmira.com/watch?v=JAg8MM5onsE&t=511) and [US manufacturing commitments in September](https://arcmira.com/watch?v=HjurAWAr_nY&t=5274). They also returned a shorter upload of the same August exchange. Treat repeated clips as one source when comparing statements.
+
+Use the reported `window`, `search_index`, and `note` to describe coverage. Speaker labels cover only part of the index, and results depend on your plan's date window. Review the passages before concluding that a stance changed. Replace the dates and topic to investigate another period or supplier.
+
 ## Premium transcripts
 
 A Premium read uses credits from your plan, then your on-demand budget. `transcripts.quote({ video_id })` shows how many credits a read of the video will use, free, before you read it.

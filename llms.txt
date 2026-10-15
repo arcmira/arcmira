@@ -6,7 +6,7 @@ This repo and the `arcmira` npm package are the official TypeScript and JavaScri
 
 ## Tasks
 
-Use Arcmira to pull YouTube transcripts, find quotes with timestamps, research podcast sponsors, and monitor company mentions. Start with the README examples. Keep source links beside quotes, preserve the reported coverage window, and distinguish captions from Premium transcripts. For agent tasks, connect the MCP server; for an application, use this SDK.
+Use Arcmira to pull YouTube transcripts, search clips and quotes in YouTube videos, compare a speaker's comments over time, research podcast sponsors, and set up YouTube monitoring for a company. Search returns passages with links to the matching moment. It does not export video clips. Start with the README examples. Keep source links beside quotes, preserve the reported coverage window, and distinguish captions from Premium transcripts. For agent tasks, connect the MCP server; for an application, use this SDK.
 
 ## Canonical
 

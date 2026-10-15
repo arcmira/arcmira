@@ -12,15 +12,15 @@ deno add jsr:@arcmira/sdk
 
 Set `ARCMIRA_API_KEY` to your API key. Save an example as `example.ts` and run `deno run --allow-env=ARCMIRA_API_KEY --allow-net=api.arcmira.com example.ts`.
 
-## Find quotes with source links
+## Search clips and quotes in YouTube videos
 
-Search YouTube and podcast transcripts by topic. Keep the source link beside each quote so readers can check the original.
+Find spoken passages in YouTube videos and podcasts, then jump to the matching moment. Search a topic, company, or phrase.
 
 ```ts
 import { ArcmiraClient } from "jsr:@arcmira/sdk";
 
 const client = new ArcmiraClient({ apiKey: Deno.env.get("ARCMIRA_API_KEY") });
-const hits = await client.transcripts.search({ q: "agent payments", limit: 5 });
+const hits = await client.transcripts.search({ q: "TSMC", limit: 5 });
 for (const hit of hits.chunks) {
   console.log(hit.text);
   console.log(new URL(hit.watch_url, "https://arcmira.com").href);
@@ -28,11 +28,15 @@ for (const hit of hits.chunks) {
 console.log(hits.note);
 ```
 
-Search covers indexed transcripts within your plan's date window. Check `window`, `search_index`, and `note` before treating an empty result as evidence that nobody said it.
+For a research workflow, [compare what Jensen Huang said about TSMC across two months](https://github.com/arcmira/arcmira/blob/master/GUIDE.md#compare-a-speakers-comments-over-time). Filter by speaker and date, then inspect the quoted passages in context.
 
-## Pull a YouTube transcript
+Search covers indexed transcripts within your plan's date window. Check `window`, `search_index`, and `note` before drawing conclusions from missing results.
 
-Read available captions with timestamps. Replace the video id with the video you need.
+## Transcribe a YouTube video
+
+Start free with 1,000 credits a month, enough for up to 250 caption transcripts of videos up to 15 minutes each. Captions use 4 credits per started 15 minutes from the same balance as search and alerts. [Plans and usage](https://arcmira.com/pricing).
+
+Pull an available YouTube caption track with timestamps. Replace the video id below with yours. For a new transcription of the audio with speaker labels, use Premium on a paid plan.
 
 ```ts
 import { ArcmiraClient } from "jsr:@arcmira/sdk";
@@ -44,11 +48,13 @@ if (transcript.state === "ready") {
 }
 ```
 
-For a Premium transcript with speaker labels, first call `client.transcripts.quote({ video_id })` for a free quote, then read with `quality: "premium"`. A Premium read uses credits from your plan, then your on-demand budget. It may return `pending`; poll after `job.next_poll_seconds`. A `failed` result needs an explicit retry. [Premium states and polling](https://github.com/arcmira/arcmira/blob/master/GUIDE.md#premium-transcripts).
+Get a free cost estimate with `client.transcripts.quote({ video_id })`, then read with `quality: "premium"`. Premium uses credits from your plan, then your on-demand budget. If `pending`, poll after `job.next_poll_seconds`. [Premium states, polling, and retries](https://github.com/arcmira/arcmira/blob/master/GUIDE.md#premium-transcripts).
 
-## Monitor company mentions
+## Set up YouTube monitoring for your company
 
-Follow an exact name in newly analyzed media, even before it is indexed. Replace `you@example.com` with your alert address. External recipients must confirm before delivery.
+Follow 2 names and get up to 40 alert deliveries a month on a free account, if you use all 1,000 monthly credits for alerts. Each delivery uses 25 credits. Get alerts by email or [Slack](https://arcmira.com/docs/monitors#delivery), or use a [webhook](https://arcmira.com/docs/monitors#verify-webhooks) on a paid plan.
+
+Follow your company or a competitor in newly analyzed YouTube videos and podcasts. Replace `Ramp` and `you@example.com` below. External email recipients must confirm before delivery.
 
 ```ts
 import { ArcmiraClient } from "jsr:@arcmira/sdk";
@@ -68,7 +74,7 @@ for (const result of results) {
 }
 ```
 
-This creates a monitor and tracker in your account. Creation is free; delivered alerts use credits from your plan, then your on-demand budget. Check each `attached` result because a name may already belong to another monitor. For retries of writes, reuse the same `Idempotency-Key`.
+This creates a monitor and tracker in your account. Check each `attached` result. Alerts cover newly analyzed episodes published within the last 14 days. Multiple recipients or channels can use multiple deliveries per mention. For retries of writes, reuse the same `Idempotency-Key`.
 
 ## Choose the next task
 
