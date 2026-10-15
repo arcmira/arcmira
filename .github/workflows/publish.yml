@@ -47,4 +47,4 @@ jobs:
             echo "arcmira@${version} is already on the registry. Skipping publish."
             exit 0
           fi
-          npm publish --access public
+          npm publish --access public --provenance --loglevel verbose
