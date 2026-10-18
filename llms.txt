@@ -6,9 +6,13 @@ This repo and the `arcmira` npm package are the official TypeScript and JavaScri
 
 ## Tasks
 
-Use Arcmira to pull YouTube transcripts, search clips and quotes in YouTube videos, compare a speaker's comments over time, research podcast sponsors, and set up YouTube monitoring for a company. Search returns passages with links to the matching moment. It does not export video clips. Start with the README examples. Keep source links beside quotes, preserve the reported coverage window, and distinguish captions from Premium transcripts. For agent tasks, connect the MCP server; for an application, use this SDK.
+Use Arcmira to pull YouTube transcripts, search YouTube videos and podcast transcripts for quotes and clips, compare a speaker's comments over time, research podcast sponsors, and set up YouTube monitoring for a person, company, product, or topic. Search returns passages with links to the matching moment. It does not export video clips. Start with the README examples. Keep source links beside quotes, preserve the reported coverage window, and distinguish captions from Premium transcripts. For agent tasks, connect the MCP server; for an application, use this SDK.
 
 ## Canonical
+
+- [SDK guide](GUIDE.md): Research examples, entity mentions, media appearances, organic endorsements, sponsors, momentum, and monitoring.
+- [Investment research workflow](https://arcmira.com/docs/workflows/investment-research): Test competing explanations, inspect source exchanges, and write a sourced research brief.
+- [Help shape Arcmira](https://arcmira.com/docs/feedback): Request coverage and capabilities, correct results, or explain what would make a paid plan useful.
 
 - [Site llms.txt](https://arcmira.com/llms.txt): Fetch this first. Product, API, citation rules.
 - [Docs index](https://arcmira.com/docs/llms.txt): Catalog of every docs page.
@@ -26,7 +30,7 @@ Use Arcmira to pull YouTube transcripts, search clips and quotes in YouTube vide
 ## Use
 
 - Install: `npm install arcmira`. Key: `ARCMIRA_API_KEY` or `new ArcmiraClient({ apiKey })`.
-- Client: `client.entities.resolve` (best, suggested or ask; reads take the ids it returns), `client.transcripts.search` (GET /v1/search), `client.transcripts.get` (a Premium read uses credits from the plan, then the on-demand budget, and answers pending on 202 until ready), `client.mentions.list` and `client.recommendations.list` (entity_id required, auto-paging), `client.entities.momentum`, `client.channels.sponsors.list`, `client.monitors.create`, `client.monitors.entities.add` (follow ids, or exact names with a type, in a monitor) and the rest, all in reference.md. Dated reads take `after` (inclusive) and `before` (exclusive).
+- Client: `client.entities.resolve` (best, suggested or ask; entity filters take the IDs it returns), `client.transcripts.search` (GET /v1/search), `client.transcripts.get` (a Premium read uses credits from the plan, then the on-demand budget, and answers pending on 202 until ready), `client.mentions.list` and `client.recommendations.list` (entity_id required, auto-paging), `client.entities.momentum`, `client.channels.sponsors.list`, `client.monitors.create`, `client.monitors.entities.add` (follow ids, or exact names with a type, in a monitor) and the rest, all in reference.md. Dated reads take `after` (inclusive) and `before` (exclusive).
 - CLI: `npx arcmira setup` connects the MCP server and the Arcmira skills to Claude Code, Codex, Cursor, VS Code and Gemini CLI. `npx arcmira search "agent payments"`, `resolve` (`--context` for the user's words), `mentions`, `momentum`, `sponsors`, `recommendations`, `episodes`, `transcripts get|quote` (`transcript` is short for `transcripts get`), `occurrences`, `status`, `trackers create|list` (`follow` is short for `trackers create`, which takes `--monitor`), `monitors list|create|update|trackers|add|attach`, `integrations slack`, `login`, `logout`, `whoami`, `auth token`; any endpoint with `arcmira api GET /v1/...` (gh api grammar, `--paginate`), its parameters with `arcmira schema <command|operationId>`, docs search with `arcmira docs <query>`, worked tasks with `arcmira examples`. Filters take ids (`ent_`, `UC`); a name exits 2 with the resolve command. `--json` for the raw response, errors as JSON on stderr; exit 2 on bad input, 1 on API errors, 4 while Premium transcribes.
 - Errors: typed classes under the `Arcmira` namespace with `err.body.error` (`type`, `code`, `gate`, `unlock.url`, `details.quote`).
 
