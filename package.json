@@ -4,7 +4,7 @@
   "description": "YouTube transcript search with timestamps, mentions, sponsors and recommendations. Official Arcmira TypeScript SDK and CLI.",
   "license": "Apache-2.0",
   "author": "Arcmira",
-  "homepage": "https://arcmira.com/docs",
+  "homepage": "https://arcmira.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/arcmira/arcmira.git"
