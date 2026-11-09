@@ -8,10 +8,14 @@ export interface TranscriptResponse {
     quality: TranscriptResponse.Quality;
     /** Public source class. creator_captions were written or approved by the channel, third_party_quick are YouTube automatic captions, arcmira_premium is our own diarized transcript. */
     source: TranscriptResponse.Source;
-    /** The resolved track code, asr-en style when the track is automatic. */
+    /** The language of the lines: the resolved track code (asr-en style when the track is automatic) or, when the transcript was translated, the code it was translated into. */
     language: string;
+    /** The transcript's own language, as a code (en, es): the original caption track's, or the language a Premium transcript was spoken and transcribed in. language= returns the transcript in it; a language other than base_language means the lines were translated. */
+    base_language: string;
     /** Every caption track the video offers. Empty when we did not list them on this call. */
     languages: Arcmira.CaptionTrack[];
+    /** The codes language can name on this read. On captions, only the languages YouTube makes available for the video (its own tracks, and its auto-translate languages); on Premium, every language Arcmira translates into, at the Premium rate. */
+    translation_languages: string[];
     /** Present when timestamps is true. Cite start with watch_url. */
     lines?: TranscriptResponse.Lines.Item[] | undefined;
     /** Present when timestamps is false. Lines joined on speaker changes for Premium and on sentence boundaries for captions. */
@@ -22,7 +26,7 @@ export interface TranscriptResponse {
     revision?: string | undefined;
     /** Echoed when you sent start and end. Lines overlapping the window are returned. On captions only the window is billed. An explicit Premium read is charged for the whole video, from the account's plan credits and then its on-demand budget; the window only trims the returned content. */
     range?: TranscriptResponse.Range | undefined;
-    /** Credits this captions read used, in rows (a row is 4 credits): 4 credits per started 15 minutes. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window. Premium reads report 0, because the Premium transcript job carries their charge. */
+    /** Credits this captions read used, in rows (a row is 4 credits): 4 credits per started 15 minutes. 0 on a repeat of the same video, quality, language, translation, and range inside the 7 day dedupe window. Premium reads report 0, because the Premium transcript job carries their charge, except the read that pays for a Premium transcript in another language, which reports its rows. */
     rows_billed: number;
     /** When the transcript was produced. */
     as_of: string | null;

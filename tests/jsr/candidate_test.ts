@@ -10,6 +10,7 @@ const result = {
     id: "fixture-1", video_id: "abcdefghijk", channel_id: null,
     source: "arcmira_premium", published_at: null,
     text: "A synthetic passage for the SDK test.", start_seconds: 42,
+    line_start_seconds: 42, match: "partial",
     watch_url: "/watch?v=abcdefghijk&t=42", score: 1,
   }],
   as_of: null,

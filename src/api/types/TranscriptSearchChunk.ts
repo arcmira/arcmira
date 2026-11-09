@@ -25,16 +25,30 @@ export interface TranscriptSearchChunk {
     published_at: string | null;
     /** The spoken slice. Search results include text on every plan within the permitted publication-date window. */
     text: string;
-    /** Offset of the slice in the video, in seconds. */
+    /** Where the slice starts in the video, in seconds. The line that matched q can be up to a minute later; line_start_seconds says when it is said. */
     start_seconds: number | null;
-    /** Absolute watch URL on arcmira.com with the timestamp, e.g. https://arcmira.com/watch?v=...&t=4787. */
+    /** When the line that best matches q starts, in whole seconds from the start of the video: the line where q starts as a phrase, otherwise the first of the fewest consecutive lines holding the most words of q. With by, the person's own line. watch_url and cite_line open here. Null when no line can be placed, for example on a passage indexed before line times were stored; watch_url and cite_line then open at start_seconds. */
+    line_start_seconds: number | null;
+    /** Absolute watch URL on arcmira.com at line_start_seconds (start_seconds when it is null), e.g. https://arcmira.com/watch?v=...&t=4787. */
     watch_url: string;
-    /** A ready citation line: title, clock, channel, date. */
+    /** A ready citation line: title, clock, channel, date. The clock is the second watch_url opens at. */
     cite_line?: (string | null) | undefined;
     /** Retrieval score. Higher is a closer match. Not comparable across calls. */
     score: number;
+    /** How the passage holds q, ignoring case and punctuation: phrase holds every word of q in order, all_words holds each content word somewhere, partial holds only some. Passages holding the phrase or every word rank first. When no chunk is a phrase match, note says so. */
+    match: TranscriptSearchChunk.Match;
     /** Entities the passage is tagged about (excerpt pins, exact-name mentions, ad verdicts). Present on passages served from the spoken index. */
     about?: Arcmira.NamedEntityRef[] | undefined;
     /** The people speaking in the passage, as ids with names. Present on passages served from the spoken index. */
     speakers_by?: Arcmira.NamedEntityRef[] | undefined;
+}
+
+export namespace TranscriptSearchChunk {
+    /** How the passage holds q, ignoring case and punctuation: phrase holds every word of q in order, all_words holds each content word somewhere, partial holds only some. Passages holding the phrase or every word rank first. When no chunk is a phrase match, note says so. */
+    export const Match = {
+        Phrase: "phrase",
+        AllWords: "all_words",
+        Partial: "partial",
+    } as const;
+    export type Match = (typeof Match)[keyof typeof Match];
 }

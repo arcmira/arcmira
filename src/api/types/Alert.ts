@@ -22,7 +22,7 @@ export interface Alert {
     evidence_kind: Alert.EvidenceKind | null;
     /** Delivery channel. Values: email (sent by email), webhook (POSTed to the configured webhook URL), slack (sent to Slack). */
     channel: string;
-    /** Delivery status. Values: pending (queued for delivery), sent (delivered), failed (delivery failed; see error_message), skipped (delivery intentionally skipped). */
+    /** Delivery status. Values: pending (queued for delivery), sending (handed to the destination, answer not yet recorded), sent (delivered), unconfirmed (handed to the destination with no answer recorded; counted as delivered), failed (delivery failed; see error_message), skipped (delivery intentionally skipped). */
     status: string;
     /** Terminal status after retries. Null while delivery is still in progress. */
     final_status: string | null;

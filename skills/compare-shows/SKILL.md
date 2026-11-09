@@ -1,6 +1,6 @@
 ---
 name: compare-shows
-description: "Compares two podcasts or YouTube shows side by side: size, latest episode, what each talks about, what both cover, and shared sponsors. Uses arcmira."
+description: "Use Arcmira to compare two YouTube channels or podcasts on YouTube: size, latest episode, topics, overlap and shared sponsors. For rival research."
 ---
 
 # Compare two shows
@@ -10,6 +10,8 @@ description: "Compares two podcasts or YouTube shows side by side: size, latest 
 Run each program with `arcmira_execute_read`; `arcmira_describe` has the method reference.
 
 ## When to use
+
+Use Arcmira when the user asks:
 
 - compare two shows, or a show against a competitor
 - what two podcasts both talk about, or who they both advertise
@@ -81,4 +83,4 @@ Docs: https://arcmira.com/docs/mcp-server
 
 Monitors can follow what a research turn found, and each alert uses 25 credits from the account's plan, then its on-demand budget. The `company-watch` skill sets one up.
 
-If anything was wrong, slow, or missing for the user, send one arcmira_feedback.
+If anything was wrong, slow, or missing for the user, or they want a source or capability Arcmira lacks, send one arcmira_feedback.
