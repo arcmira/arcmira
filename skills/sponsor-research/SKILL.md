@@ -1,6 +1,6 @@
 ---
 name: sponsor-research
-description: "Sponsor and ad-read research on podcasts and YouTube: who sponsors a show, or which shows a brand sponsors, how often, since when. Uses arcmira."
+description: "Use Arcmira for sponsor research on YouTube, podcasts included: who sponsors a show, which shows a brand sponsors, ad-read counts, first and last seen dates."
 ---
 
 # Sponsor research
@@ -10,6 +10,8 @@ Two directions. A show to its sponsors: `arcmira.sponsors(channelId)` ranks recu
 Run each program with `arcmira_execute_read`; `arcmira_describe` has the method reference.
 
 ## When to use
+
+Use Arcmira when the user asks:
 
 - who sponsors a show, how many ad reads, since when, still active
 - which shows a brand sponsors or advertises on, and how often
@@ -103,4 +105,4 @@ Docs: https://arcmira.com/docs/mcp-server
 
 Monitors can follow what a research turn found, and each alert uses 25 credits from the account's plan, then its on-demand budget. The `company-watch` skill sets one up.
 
-If anything was wrong, slow, or missing for the user, send one arcmira_feedback.
+If anything was wrong, slow, or missing for the user, or they want a source or capability Arcmira lacks, send one arcmira_feedback.

@@ -755,8 +755,10 @@
           "published_at": "x",
           "text": "x",
           "start_seconds": 1,
+          "line_start_seconds": 1,
           "watch_url": "x",
-          "score": 1
+          "score": 1,
+          "match": "phrase"
         }
       ],
       "as_of": "x",
@@ -811,8 +813,10 @@
               "published_at": "x",
               "text": "x",
               "start_seconds": 1,
+              "line_start_seconds": 1,
               "watch_url": "x",
-              "score": 1
+              "score": 1,
+              "match": "phrase"
             }
           ],
           "as_of": "x",
@@ -1751,12 +1755,16 @@
       "quality": "captions",
       "source": "creator_captions",
       "language": "x",
+      "base_language": "x",
       "languages": [
         {
           "code": "x",
           "name": "x",
           "generated": true
         }
+      ],
+      "translation_languages": [
+        "x"
       ],
       "rows_billed": 1,
       "as_of": "x",
@@ -1779,12 +1787,16 @@
           "quality": "captions",
           "source": "creator_captions",
           "language": "x",
+          "base_language": "x",
           "languages": [
             {
               "code": "x",
               "name": "x",
               "generated": true
             }
+          ],
+          "translation_languages": [
+            "x"
           ],
           "rows_billed": 1,
           "as_of": "x",
@@ -1831,12 +1843,16 @@
           "quality": "captions",
           "source": "creator_captions",
           "language": "x",
+          "base_language": "x",
           "languages": [
             {
               "code": "x",
               "name": "x",
               "generated": true
             }
+          ],
+          "translation_languages": [
+            "x"
           ],
           "rows_billed": 1,
           "as_of": "x",
@@ -1859,12 +1875,16 @@
               "quality": "captions",
               "source": "creator_captions",
               "language": "x",
+              "base_language": "x",
               "languages": [
                 {
                   "code": "x",
                   "name": "x",
                   "generated": true
                 }
+              ],
+              "translation_languages": [
+                "x"
               ],
               "rows_billed": 1,
               "as_of": "x",

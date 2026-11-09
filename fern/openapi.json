@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arcmira API",
-    "description": "Search YouTube transcripts for timestamped passages. Find mentions of people, organizations, products and topics; research channel sponsors and recommendations; retrieve creator captions or Premium transcripts with speaker identification; and monitor entities for new mentions. Official API guides: https://arcmira.com/docs. An explicit Premium read uses credits from the account's plan, then its on-demand budget.",
+    "description": "YouTube transcript search and monitoring. Search transcripts for timestamped passages. Find mentions of people, organizations, products and topics; research channel sponsors and recommendations; retrieve creator captions or Premium transcripts with speaker identification; and monitor entities for new mentions. Official API guides: https://arcmira.com/docs. An explicit Premium read uses credits from the account's plan, then its on-demand budget.",
     "version": "1.0.0",
     "contact": {
       "name": "Arcmira",
@@ -394,7 +394,7 @@
           {
             "code": "fair_use_cap",
             "type": "quota_exceeded",
-            "description": "Ultra plan credits cover 80 Premium transcript hours a month, and this month's are used. Past them a Premium transcript uses granted or on-demand credits, and the account has none. Nothing was charged. details.limit carries the hours and what is used. An admin turns on on-demand usage or raises its budget, or the hours reset with the month."
+            "description": "A fair-use cap on the plan's credits is reached for this use this month, and the account has no granted or on-demand credits to use instead. Nothing was charged. details.limit carries the cap and what is used. An admin turns on on-demand usage or raises its budget, or the cap resets with the month."
           },
           {
             "code": "feature_not_available",
@@ -600,6 +600,11 @@
             "description": "Unexpected failure. Retry with backoff and quote request_id if it persists."
           },
           {
+            "code": "service_unavailable",
+            "type": "server_error",
+            "description": "The database was briefly overloaded or restarting (HTTP 503). Retry-After carries the wait; send the same request again."
+          },
+          {
             "code": "signup_code_invalid",
             "type": "invalid_request_error",
             "description": "The signup code is wrong, expired, or spent; message names the attempts left."
@@ -647,7 +652,7 @@
           {
             "code": "transcript_fetching",
             "type": "server_error",
-            "description": "The caption track is being fetched now (HTTP 503). Retry-After carries the wait; nothing was charged."
+            "description": "The caption track is being fetched, or the transcript translated, now (HTTP 503). Retry-After carries the wait; nothing was charged."
           },
           {
             "code": "transcript_requires_account",
@@ -2436,7 +2441,7 @@
               "string",
               "null"
             ],
-            "description": "One-sentence description of the mention context. Null when not generated."
+            "description": "One sentence on why the entity comes up in this video, written to sit under the quoted line. Some mentions read in October 2026 hold the quoted transcript line instead. Null when not generated."
           },
           "confidence": {
             "type": [
@@ -3889,13 +3894,15 @@
                 "John Coogan"
               ],
               "source": "creator_captions",
-              "source_label": "Creator captions",
+              "source_label": "3rd Party (Video Creator)",
               "published_at": "2026-08-04T17:00:00.000Z",
-              "text": "Ramp has been on the show for a while now and the pitch is still the same, spend less time on expenses.",
+              "text": "Ramp corporate cards have been on the show for a while now, and the pitch is still the same: spend less time on expenses.",
               "start_seconds": 4787,
+              "line_start_seconds": 4787,
               "watch_url": "/watch?v=dQw4w9WgXcQ&t=4787",
               "cite_line": "[TBPN | Tuesday, August 4](/watch?v=dQw4w9WgXcQ&t=4787) · @1:19:47 · TBPN · Aug 4, 2026",
               "score": 0.71,
+              "match": "phrase",
               "about": [
                 {
                   "id": "ent_14",
@@ -4024,22 +4031,38 @@
               "integer",
               "null"
             ],
-            "description": "Offset of the slice in the video, in seconds."
+            "description": "Where the slice starts in the video, in seconds. The line that matched q can be up to a minute later; line_start_seconds says when it is said."
+          },
+          "line_start_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "When the line that best matches q starts, in whole seconds from the start of the video: the line where q starts as a phrase, otherwise the first of the fewest consecutive lines holding the most words of q. With by, the person's own line. watch_url and cite_line open here. Null when no line can be placed, for example on a passage indexed before line times were stored; watch_url and cite_line then open at start_seconds."
           },
           "watch_url": {
             "type": "string",
-            "description": "Absolute watch URL on arcmira.com with the timestamp, e.g. https://arcmira.com/watch?v=...&t=4787."
+            "description": "Absolute watch URL on arcmira.com at line_start_seconds (start_seconds when it is null), e.g. https://arcmira.com/watch?v=...&t=4787."
           },
           "cite_line": {
             "type": [
               "string",
               "null"
             ],
-            "description": "A ready citation line: title, clock, channel, date."
+            "description": "A ready citation line: title, clock, channel, date. The clock is the second watch_url opens at."
           },
           "score": {
             "type": "number",
             "description": "Retrieval score. Higher is a closer match. Not comparable across calls."
+          },
+          "match": {
+            "type": "string",
+            "enum": [
+              "phrase",
+              "all_words",
+              "partial"
+            ],
+            "description": "How the passage holds q, ignoring case and punctuation: phrase holds every word of q in order, all_words holds each content word somewhere, partial holds only some. Passages holding the phrase or every word rank first. When no chunk is a phrase match, note says so."
           },
           "about": {
             "type": "array",
@@ -4064,8 +4087,10 @@
           "published_at",
           "text",
           "start_seconds",
+          "line_start_seconds",
           "watch_url",
-          "score"
+          "score",
+          "match"
         ]
       },
       "EntityMomentumResponse": {
@@ -5667,7 +5692,7 @@
           },
           "status": {
             "type": "string",
-            "description": "Delivery status. Values: pending (queued for delivery), sent (delivered), failed (delivery failed; see error_message), skipped (delivery intentionally skipped)."
+            "description": "Delivery status. Values: pending (queued for delivery), sending (handed to the destination, answer not yet recorded), sent (delivered), unconfirmed (handed to the destination with no answer recorded; counted as delivered), failed (delivery failed; see error_message), skipped (delivery intentionally skipped)."
           },
           "final_status": {
             "type": [
@@ -6122,7 +6147,11 @@
           },
           "language": {
             "type": "string",
-            "description": "The resolved track code, asr-en style when the track is automatic."
+            "description": "The language of the lines: the resolved track code (asr-en style when the track is automatic) or, when the transcript was translated, the code it was translated into."
+          },
+          "base_language": {
+            "type": "string",
+            "description": "The transcript's own language, as a code (en, es): the original caption track's, or the language a Premium transcript was spoken and transcribed in. language= returns the transcript in it; a language other than base_language means the lines were translated."
           },
           "languages": {
             "type": "array",
@@ -6130,6 +6159,13 @@
               "$ref": "#/components/schemas/CaptionTrack"
             },
             "description": "Every caption track the video offers. Empty when we did not list them on this call."
+          },
+          "translation_languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The codes language can name on this read. On captions, only the languages YouTube makes available for the video (its own tracks, and its auto-translate languages); on Premium, every language Arcmira translates into, at the Premium rate."
           },
           "lines": {
             "type": "array",
@@ -6247,7 +6283,7 @@
           },
           "rows_billed": {
             "type": "integer",
-            "description": "Credits this captions read used, in rows (a row is 4 credits): 4 credits per started 15 minutes. 0 on a repeat of the same video, quality, language, and range inside the 7 day dedupe window. Premium reads report 0, because the Premium transcript job carries their charge."
+            "description": "Credits this captions read used, in rows (a row is 4 credits): 4 credits per started 15 minutes. 0 on a repeat of the same video, quality, language, translation, and range inside the 7 day dedupe window. Premium reads report 0, because the Premium transcript job carries their charge, except the read that pays for a Premium transcript in another language, which reports its rows."
           },
           "as_of": {
             "type": [
@@ -6413,7 +6449,9 @@
           "quality",
           "source",
           "language",
+          "base_language",
           "languages",
+          "translation_languages",
           "rows_billed",
           "as_of",
           "note"
@@ -6432,12 +6470,24 @@
             "quality": "captions",
             "source": "creator_captions",
             "language": "en",
+            "base_language": "en",
             "languages": [
               {
                 "code": "en",
                 "name": "English",
                 "generated": false
               }
+            ],
+            "translation_languages": [
+              "ar",
+              "de",
+              "es",
+              "fr",
+              "hi",
+              "ja",
+              "ko",
+              "pt",
+              "zh-Hans"
             ],
             "lines": [
               {
@@ -6468,12 +6518,24 @@
             "quality": "premium",
             "source": "arcmira_premium",
             "language": "en",
+            "base_language": "en",
             "languages": [
               {
                 "code": "en",
                 "name": "English",
                 "generated": false
               }
+            ],
+            "translation_languages": [
+              "ar",
+              "de",
+              "es",
+              "fr",
+              "hi",
+              "ja",
+              "ko",
+              "pt",
+              "zh-Hans"
             ],
             "lines": [
               {
@@ -7518,7 +7580,7 @@
         ],
         "operationId": "list_mentions",
         "summary": "Search mentions across media",
-        "description": "Cursor-paginated mentions filtered by entity (entity_id is required; resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter), channel (channel_id), text query, sentiment, appearance flag, and publication window [after, before). The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing mentions remain live. Positions are start_seconds and end_seconds (integer seconds; 0 means full episode). is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.",
+        "description": "Find where a person, company, product, or topic is mentioned in indexed videos and podcasts. For a person, set `is_appearance` to true to find media appearances, false for mentions by others, or omit it for both. Results include a description, source video, and available timestamps. Cursor-paginated, filtered by entity (`entity_id` is required; resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter), channel (`channel_id`), text query, sentiment, appearance flag, and publication window [after, before). The signed continuation binds the route, filters, caller and visibility; invalid or old cursors return invalid_cursor. A first-page ID fence excludes later insertions, including old-date backfills. Edits and deletions to existing mentions remain live. Positions are start_seconds and end_seconds (integer seconds; 0 means full episode). is_appearance filtering applies to person entities only; passing is_appearance=true for any other type returns a 400 (appearances_person_only). details=full attaches per-mention commercial recommendations and requires a Pro+ plan.",
         "security": [
           {
             "bearerAuth": []
@@ -7879,7 +7941,7 @@
         ],
         "operationId": "submit_feedback",
         "summary": "Submit feedback and corrections for a prior API query",
-        "description": "Attach corrections to the exact query you ran: pass the feedback type, the query object you sent, and optional per-item corrections. Public submissions are recorded for human review (status \"logged\"); nothing is auto-applied. Read the review status back later via GET /v1/feedback/{feedback_id}. recommendations and channel_sponsors feedback types require a Pro+ plan; every other type needs read. monitor_alert feedback targets fired alerts: query carries monitor_id and/or tracker_id and/or alert_id, corrections target the alert id, and every referenced alert must belong to the caller (otherwise 404 alert_not_found). missed_alert corrections are expectations with nothing to target: omit the correction id and put { source_url, approximate_timestamp_seconds?, entity_id? } in suggested_change. delivery_issue corrections may carry { channel } in suggested_change. experience feedback says how a task went as a whole rather than correcting a result: it requires category and notes, refuses corrections (400 invalid_feedback_request), and needs no query. category and mcp_call_id, when sent, are recorded in the stored query.",
+        "description": "Help shape Arcmira. Report a wrong result, request sources or capabilities, or tell us what would make your workflow more useful. To correct a result, attach corrections to the exact query you ran: pass the feedback type, the query object you sent, and optional per-item corrections. Public submissions are recorded for human review (status \"logged\"); nothing is auto-applied. Read the review status back later via GET /v1/feedback/{feedback_id}. recommendations and channel_sponsors feedback types require a Pro+ plan; every other type needs read. monitor_alert feedback targets fired alerts: query carries monitor_id and/or tracker_id and/or alert_id, corrections target the alert id, and every referenced alert must belong to the caller (otherwise 404 alert_not_found). missed_alert corrections are expectations with nothing to target: omit the correction id and put { source_url, approximate_timestamp_seconds?, entity_id? } in suggested_change. delivery_issue corrections may carry { channel } in suggested_change. experience feedback says how a task went as a whole rather than correcting a result: it requires category and notes, refuses corrections (400 invalid_feedback_request), and needs no query. category and mcp_call_id, when sent, are recorded in the stored query.",
         "security": [
           {
             "bearerAuth": []
@@ -8390,7 +8452,7 @@
         ],
         "operationId": "search",
         "summary": "Retrieve spoken transcript slices for one topic",
-        "description": "Search indexed YouTube and podcast transcripts for short spoken slices. Each result includes spoken text, a watch URL, and a publish date. Scope with channel_ids (or channel) and entity_ids (a person id filters to that person's appearances); narrow to passages about entities with about, to a speaker with by, and to sponsored, organic or mention passages with kind. Every filter takes ids, never names: resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter. Results carry names beside ids (filters.about, filters.by, chunk about and speakers_by). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. An after later than the plan's freshness gate is refused with freshness_requires_paid rather than widened. A window the gate cut carries freshness (delay_days, served_through), unlock, and a note that says where results on this plan stop. Uses 4 credits per chunk returned past the first 5. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
+        "description": "Search indexed YouTube and podcast transcripts for passages matching a word or phrase. Returns passage text, source metadata, publication dates, and timestamped watch links. Narrow to passages about an entity with `about`, or passages where a person speaks with `by`. Scope with `channel_ids` (or `channel`) and `entity_ids` (a person id filters to that person's appearances). Filter to sponsored, organic or mention passages with `kind`. Every filter takes ids, never names: resolve a name first with GET /v1/entities/resolve, or the call answers 400 id_required naming the parameter. Results carry names beside ids (filters.about, filters.by, chunk about and speakers_by). Use one topic per call. Search results include text on every plan within the plan's publication-date window. Explicitly requesting source=arcmira_premium on a plan without Premium transcripts is refused with filter_requires_paid. An after later than the plan's freshness gate is refused with freshness_requires_paid rather than widened. A window the gate cut carries freshness (delay_days, served_through), unlock, and a note that says where results on this plan stop. Uses 4 credits per chunk returned past the first 5. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
         "security": [
           {
             "bearerAuth": []
@@ -8451,20 +8513,20 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people says the query words (each line of a chunk is labeled with its speaker); a non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve."
+              "description": "Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people speaks the query words. A passage can include other speakers' lines; each line with a known speaker starts with that speaker's name. A non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve."
             },
             "required": false,
-            "description": "Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people says the query words (each line of a chunk is labeled with its speaker); a non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve.",
+            "description": "Comma-separated person ids (ent_{n}), at most 8. Only passages where one of these people speaks the query words. A passage can include other speakers' lines; each line with a known speaker starts with that speaker's name. A non-person id is refused with invalid_query naming its type. Speaker labels cover a minority of shows; an empty result carries a note saying whether the person is labeled anywhere. Ids only: a name answers 400 id_required. Resolve names first with GET /v1/entities/resolve.",
             "name": "by",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated passage classes: sponsored, organic, mention. Combine with about to read what was said about a brand in ad reads or in organic talk."
+              "description": "Comma-separated passage classes: sponsored, organic, mention. Combine with about to read what was said about a brand in ad reads or in organic talk. organic and mention leave out every passage tagged as an ad read, including one that also names other brands; add sponsored to include them."
             },
             "required": false,
-            "description": "Comma-separated passage classes: sponsored, organic, mention. Combine with about to read what was said about a brand in ad reads or in organic talk.",
+            "description": "Comma-separated passage classes: sponsored, organic, mention. Combine with about to read what was said about a brand in ad reads or in organic talk. organic and mention leave out every passage tagged as an ad read, including one that also names other brands; add sponsored to include them.",
             "name": "kind",
             "in": "query"
           },
@@ -8610,7 +8672,7 @@
         ],
         "operationId": "get_entity_momentum",
         "summary": "Spoken-web heat for one entity",
-        "description": "Mentions in a lookback window of days (7 to 365, default 30) against the same number of days before it, an absolute-delta verdict on that window (accelerating, flat, fading, none), the newest media date, and the top shows in the window. Pass the window the rest of your answer uses: days=90 for a 90-day answer. The fixed 7, 30 and 90 day counts stay on every card. It counts the shows we index, not the whole internet, and it is a count, not a score. On a Pro+ plan the card also carries paid_vs_organic for the window; otherwise that field is absent and access names the gate. On a plan with a freshness gate, the window ends at the cutoff and the card carries freshness, unlock, and a note that says where results stop. Uses 10 credits from your plan at any window, the default included. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
+        "description": "Compare an entity's mention volume with the preceding period. Returns the counts, absolute and percentage change, momentum verdict, latest source date, and top shows. Choose a rolling window of 7 to 365 days with `days` (default 30). The preceding period is the same number of days before the window, and the verdict (accelerating, flat, fading, none) reads the absolute change. Pass the window the rest of your answer uses: days=90 for a 90-day answer. The fixed 7, 30 and 90 day counts stay on every card. It counts the shows we index, not the whole internet, and it is a count, not a score. On a Pro+ plan the card also carries paid_vs_organic for the window; otherwise that field is absent and access names the gate. On a plan with a freshness gate, the window ends at the cutoff and the card carries freshness, unlock, and a note that says where results stop. Uses 10 credits from your plan at any window, the default included. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
         "security": [
           {
             "bearerAuth": []
@@ -8713,7 +8775,7 @@
         ],
         "operationId": "get_channel_coverage",
         "summary": "What the index holds for a channel",
-        "description": "How many videos of a YouTube channel are searchable, the newest publish date among them, and the split by transcript source class. Call it when a search or mention lookup came back empty, before telling anyone we do not cover a show, and cite indexed_through as the as-of date for mentions and search_indexed_through for transcript search. It cannot request indexing; channel backfill is not available yet. Free; uses no credits. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
+        "description": "How many videos of a YouTube channel are searchable, the newest publish date among them, and the split by transcript source class. Call it when a search or mention lookup came back empty, before telling anyone we do not cover a show, and cite indexed_through as the as-of date for mentions and search_indexed_through for transcript search. It cannot request indexing; to ask for a channel, send feedback with its channel id. Free; uses no credits. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
         "security": [
           {
             "bearerAuth": []
@@ -8800,7 +8862,7 @@
         ],
         "operationId": "list_channel_videos",
         "summary": "Newest indexed videos of a channel",
-        "description": "The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Pass next_cursor as cursor to continue. The signed token binds the route, filters, caller and visibility; invalid or old tokens return invalid_cursor. A first-page media ID fence excludes later insertions, including old-date backfills; edits and deletions to existing videos remain live. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; channel backfill is not available yet. Uses 4 credits per video returned past the first 5. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
+        "description": "The indexed videos of a YouTube channel, newest first, each with its video_id, title, publish date, duration, view count, and watch_url on arcmira.com. Pass next_cursor as cursor to continue. The signed token binds the route, filters, caller and visibility; invalid or old tokens return invalid_cursor. A first-page media ID fence excludes later insertions, including old-date backfills; edits and deletions to existing videos remain live. Call it for the latest or most recent episode of a show, or to list what a show published in a window, then pass a video_id to GET /v1/mentions/counts video_ids for what that episode mentions or to GET /v1/transcripts/{video_id} to read it. indexed_through is the newest date we hold for the channel. An empty list means nothing is indexed; this route cannot add a channel. Uses 4 credits per video returned past the first 5. Every gate is a typed error whose error.unlock.url names the plan that lifts it; pass src=mcp-tool only from the Arcmira MCP server.",
         "security": [
           {
             "bearerAuth": []
@@ -10695,7 +10757,7 @@
         ],
         "operationId": "get_transcript",
         "summary": "Get a video transcript",
-        "description": "Caption reads use 4 credits per started 15 minutes. quality=premium is one read. An owned transcript answers 200 ready at no charge. Otherwise this call starts a Premium transcript of the whole video, 300 credits per started 15 minutes, using credits from the account's plan first and then the account's on-demand budget up to its limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same job and never charge twice. When the last Premium transcript for the video failed, the read answers 200 state failed with the job and last_attempt and charges nothing; retry=true starts a new one. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and the limit it met in limit, and nothing is charged. A default-premium account with nothing owned reads captions with a note. On captions, start and end set the billed window: 4 credits per started 15 minutes of end minus start. On Premium they only trim the returned content, and the charge is the whole video. language selects caption tracks, timestamps=false returns paragraphs. Premium lines carry speaker and index, and the body carries speakers and revision.",
+        "description": "Caption reads use 4 credits per started 15 minutes. quality=premium is one read. An owned transcript answers 200 ready at no charge. Otherwise this call starts a Premium transcript of the whole video, 300 credits per started 15 minutes, using credits from the account's plan first and then the account's on-demand budget up to its limit, and answers 202 pending with the job and Retry-After until the transcript is ready. Read again after Retry-After; repeated reads join the same job and never charge twice. When the last Premium transcript for the video failed, the read answers 200 state failed with the job and last_attempt and charges nothing; retry=true starts a new one. When the plan or the budget blocks, 403 paid_plan_required (with unlock) or 402 quota_exceeded or spend_limit_exceeded carries the price in quote and the limit it met in limit, and nothing is charged. A default-premium account with nothing owned reads captions with a note. On captions, start and end set the billed window: 4 credits per started 15 minutes of end minus start. On Premium they only trim the returned content, and the charge is the whole video. language selects caption tracks, timestamps=false returns paragraphs. Premium lines carry speaker and index, and the body carries speakers and revision. language picks the language: language= returns the base transcript (base_language), and a language the transcript is not in returns it translated, line for line with the same timestamps and speakers. Captions offer only the languages YouTube makes available for the video (translation_languages), billed as a caption read; any other language is Premium: an owned Premium transcript in another language costs the Premium rate once per account and language.",
         "security": [
           {
             "bearerAuth": []
@@ -10729,10 +10791,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated caption language priority list, at most 5, tried in order (e.g. \"de,en\"). Use asr for the first automatic track and asr-<code> for a specific one. Default en. languages[] in the response lists every track the video offers."
+              "description": "The language to read the transcript in, as a code (e.g. \"es\") or a comma-separated priority list of at most 5 (e.g. \"de,en\"); asr picks the first automatic caption track and asr-<code> a specific one. Every transcript has a base language, base_language in the response: the language of the original caption track, or the language a Premium transcript was spoken and transcribed in. language= with no value returns the base transcript; so does a code in the base language. Omitted, the account default applies (en unless changed), falling back to the base transcript. When no code in the list matches, the transcript is translated into the first code, line for line with the same timestamps and speakers. Captions translate only into the languages YouTube makes available for the video (translation_languages in the response, or GET /v1/videos/{video_id}/captions), billed as a caption read of the window, 4 credits per started 15 minutes; any other code answers 400 invalid_query naming the Premium read. On a Premium transcript the account owns, each other language costs the Premium rate, 300 credits per started 15 minutes, once per account and language, and is free after that. While a translation runs the read answers 503 transcript_fetching with Retry-After and progress, and charges nothing. languages[] lists every caption track the video offers."
             },
             "required": false,
-            "description": "Comma-separated caption language priority list, at most 5, tried in order (e.g. \"de,en\"). Use asr for the first automatic track and asr-<code> for a specific one. Default en. languages[] in the response lists every track the video offers.",
+            "description": "The language to read the transcript in, as a code (e.g. \"es\") or a comma-separated priority list of at most 5 (e.g. \"de,en\"); asr picks the first automatic caption track and asr-<code> a specific one. Every transcript has a base language, base_language in the response: the language of the original caption track, or the language a Premium transcript was spoken and transcribed in. language= with no value returns the base transcript; so does a code in the base language. Omitted, the account default applies (en unless changed), falling back to the base transcript. When no code in the list matches, the transcript is translated into the first code, line for line with the same timestamps and speakers. Captions translate only into the languages YouTube makes available for the video (translation_languages in the response, or GET /v1/videos/{video_id}/captions), billed as a caption read of the window, 4 credits per started 15 minutes; any other code answers 400 invalid_query naming the Premium read. On a Premium transcript the account owns, each other language costs the Premium rate, 300 credits per started 15 minutes, once per account and language, and is free after that. While a translation runs the read answers 503 transcript_fetching with Retry-After and progress, and charges nothing. languages[] lists every caption track the video offers.",
             "name": "language",
             "in": "query"
           },
@@ -10810,7 +10872,7 @@
         ],
         "responses": {
           "200": {
-            "description": "state ready: the transcript (video, quality, source, language, languages, lines or paragraphs, speakers and revision on Premium, rows_billed, as_of, note). state failed (Premium only): the last Premium transcript for this video failed; job and last_attempt say why, nothing was charged, and retry=true starts a new one.",
+            "description": "state ready: the transcript (video, quality, source, language, base_language, languages, translation_languages, lines or paragraphs, speakers and revision on Premium, rows_billed, as_of, note). state failed (Premium only): the last Premium transcript for this video failed; job and last_attempt say why, nothing was charged, and retry=true starts a new one.",
             "headers": {
               "X-Request-Id": {
                 "$ref": "#/components/headers/X-Request-Id"
@@ -10929,7 +10991,7 @@
             "$ref": "#/components/responses/ServerError"
           },
           "503": {
-            "description": "transcript_fetching. The caption track is being fetched now. Retry-After and retry_after_seconds carry the wait; nothing was charged.",
+            "description": "transcript_fetching. The caption track is being fetched, or the transcript translated, now. Retry-After and retry_after_seconds carry the wait; a translation also carries progress (done and total lines). Nothing was charged by this call.",
             "headers": {
               "X-Request-Id": {
                 "$ref": "#/components/headers/X-Request-Id"

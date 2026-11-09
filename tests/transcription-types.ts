@@ -7,6 +7,10 @@ async function consumer() {
     }
     const result = await client.transcripts.get({ video_id: 'dQw4w9WgXcQ', quality: 'premium' });
     if (result.state === 'ready') {
+        const baseLanguage: string = result.base_language;
+        const translationLanguages: string[] = result.translation_languages;
+        void baseLanguage;
+        void translationLanguages;
         result.lines?.map(line => line.text);
         const speaker: string | null | undefined = result.speakers?.[0]?.entity_id;
         void speaker;
@@ -28,6 +32,13 @@ async function consumer() {
         void kind;
     }
     await client.monitors.entities.add({ id: 'mon_1', names: [{ name: 'Ramp', type: 'organization' }] });
+    const hits = await client.transcripts.search({ q: 'GPU demand', limit: 20 });
+    for (const hit of hits.chunks) {
+        const match: 'phrase' | 'all_words' | 'partial' = hit.match;
+        const matchedLine: number | null = hit.line_start_seconds;
+        void match;
+        void matchedLine;
+    }
     const me = await client.me.get();
     const kind: 'personal' | 'team' = me.account.kind;
     const role: 'owner' | 'admin' | 'member' = me.role;

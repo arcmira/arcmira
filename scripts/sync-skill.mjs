@@ -33,8 +33,11 @@ for (const { name, text } of skills) {
     const path = join(target, name, "SKILL.md");
     const before = existsSync(path) ? readFileSync(path, "utf8") : undefined;
     mkdirSync(join(target, name), { recursive: true });
-    writeFileSync(path, text);
-    console.log(before === text ? `skills/${name} unchanged` : `skills/${name} ${before === undefined ? "added" : "updated"}`);
+    // Setup installs SKILL.md only; keep supporting documents reachable on GitHub.
+    const linked = text.replace(/\]\((references\/[^)]+)\)/g,
+        (_, reference) => `](https://github.com/${REPO}/blob/master/${DIR}/${name}/${reference})`);
+    writeFileSync(path, linked);
+    console.log(before === linked ? `skills/${name} unchanged` : `skills/${name} ${before === undefined ? "added" : "updated"}`);
 }
 for (const name of readdirSync(target)) {
     if (skills.some((s) => s.name === name)) continue;

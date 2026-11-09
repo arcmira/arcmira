@@ -13,7 +13,7 @@ export interface Mention {
     end_seconds: number | null;
     /** True when the person physically appears/speaks in the media (person entities only). Always false for organization, product, topic, and channel entities. Filtering with is_appearance=true on a non-person entity returns a 400 (appearances_person_only). */
     is_appearance: boolean;
-    /** One-sentence description of the mention context. Null when not generated. */
+    /** One sentence on why the entity comes up in this video, written to sit under the quoted line. Some mentions read in October 2026 hold the quoted transcript line instead. Null when not generated. */
     description: string | null;
     /** Analyzer confidence between 0 and 1. Null for legacy mentions analyzed before confidence scoring. */
     confidence: number | null;
